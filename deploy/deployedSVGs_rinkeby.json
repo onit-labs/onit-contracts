@@ -1,0 +1,15 @@
+{
+  "fields": {
+    "fieldSVGs1": "0x9990a4603259edc354ff58e151aeb3888bd28d36",
+    "fieldSVGs3": "0x8c871a1bb49c2e89703922e7ee806b70a265db5f",
+    "fieldSVGs23": "0x3102b799f445d82ad8b396304acedda9b20f9c7e"
+  },
+  "hardwares": {
+    "hardwareSVGs1": "0x9a9c359f5fea179931ec207f79ee79b12efaf89e",
+    "hardwareSVGs29": "0xff3249a5d340c793c60844a97fadf907154c8f42"
+  },
+  "frames": {
+    "frameSVGs1": "0x133f5a8672ad113000a952d161b2f5a247b80c21",
+    "frameSVGs2": "0x92c946e14a03e79ded7ea8262b49540b7bd9e839"
+  }
+}
