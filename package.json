@@ -35,6 +35,7 @@
 		"@openzeppelin/contracts": "^4.5.0",
 		"hardhat-deploy": "^0.11.0",
 		"hardhat-typechain": "^0.3.5",
+		"solc": "^0.8.17",
 		"ts-node": "^10.8.0",
 		"typescript": "^4.8.4",
 		"web3-utils": "^1.7.1"
