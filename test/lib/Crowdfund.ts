@@ -1,35 +1,35 @@
-import { expect } from '../utils/expect';
+import { expect } from '../utils/expect'
 
-import { TOKEN, ZERO_ADDRESS } from '../config';
+import { TOKEN, ZERO_ADDRESS } from '../config'
 
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
-import { BigNumber, Contract, ContractFactory, ethers, Signer } from 'ethers';
-import { parseEther } from 'ethers/lib/utils';
-import { deployments, ethers as hardhatEthers } from 'hardhat';
-import { beforeEach, describe, it } from 'mocha';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
+import { BigNumber, Contract, ContractFactory, ethers, Signer } from 'ethers'
+import { parseEther } from 'ethers/lib/utils'
+import { deployments, ethers as hardhatEthers } from 'hardhat'
+import { beforeEach, describe, it } from 'mocha'
 
 // Defaults to e18 using amount * 10^18
 function getBigNumber(amount: number, decimals = 18) {
-	return BigNumber.from(amount).mul(BigNumber.from(10).pow(decimals));
+	return BigNumber.from(amount).mul(BigNumber.from(10).pow(decimals))
 }
 
 describe.only('Crowdfund', function () {
-	let forum: Contract; // ForumGroup contract instance
-	let crowdfund: Contract; // Fundraise contract instance
-	let proposer: SignerWithAddress; // signerA
-	let alice: SignerWithAddress; // signerB
-	let bob: SignerWithAddress; // signerC
-	let crowdsaleInput: any;
+	let forum: Contract // ForumGroup contract instance
+	let crowdfund: Contract // Fundraise contract instance
+	let proposer: SignerWithAddress // signerA
+	let alice: SignerWithAddress // signerB
+	let bob: SignerWithAddress // signerC
+	let crowdsaleInput: any
 
 	beforeEach(async () => {
-		[proposer, alice, bob] = await hardhatEthers.getSigners();
+		;[proposer, alice, bob] = await hardhatEthers.getSigners()
 
 		// TODO implement non avax funding in version 2
 
 		// Similar to deploying the master forum multisig
-		await deployments.fixture(['Forum', 'Shields']);
-		forum = await hardhatEthers.getContract('ForumGroup');
-		crowdfund = await hardhatEthers.getContract('ForumCrowdfund');
+		await deployments.fixture(['Forum', 'Shields'])
+		forum = await hardhatEthers.getContract('ForumGroup')
+		crowdfund = await hardhatEthers.getContract('ForumCrowdfund')
 
 		crowdsaleInput = {
 			creator: proposer.address,
@@ -38,9 +38,9 @@ describe.only('Crowdfund', function () {
 			deadline: 1000000,
 			groupName: 'TEST',
 			symbol: 'T',
-			calldata: '0X123',
-		};
-	});
+			calldata: '0X123'
+		}
+	})
 	it('Should initiate crowdsale', async function () {
 		await crowdfund.initiateCrowdfund(
 			proposer.address,
@@ -50,50 +50,70 @@ describe.only('Crowdfund', function () {
 			ethers.utils.formatBytes32String('TEST'),
 			ethers.utils.formatBytes32String('T'),
 			ethers.utils.formatBytes32String('0X123')
-		);
+		)
 
-		const cf = await crowdfund.getCrowdfund(
+		const crowdfundDetails = await crowdfund.getCrowdfund(
 			ethers.utils.formatBytes32String(crowdsaleInput.groupName)
-		);
+		)
 
 		// Check initial state
-		expect(cf.deadline).to.equal(crowdsaleInput.deadline);
+		console.log(crowdfundDetails.contributors)
+		console.log(crowdfundDetails.contributors[0])
+		expect(crowdfundDetails.targetContract).to.equal(crowdsaleInput.targetContract)
+		expect(crowdfundDetails.targetPrice).to.equal(crowdsaleInput.targetPrice)
+		expect(crowdfundDetails.deadline).to.equal(crowdsaleInput.deadline)
+		// ! check name and payload return
+		//expect(crowdfundDetails.groupName).to.equal(crowdsaleInput.groupName)
+		//expect(crowdfundDetails.symbol).to.equal(crowdsaleInput.symbol)
+		//expect(crowdfundDetails.payload).to.equal(crowdsaleInput.payload)
+	})
+	// TODO need a check for previously deployed group with same name - create2 will fail, we should catch this
+	it('Should revert if crowdsale for duplicate name exists', async function () {
+		await crowdfund.initiateCrowdfund(
+			proposer.address,
+			ZERO_ADDRESS,
+			getBigNumber(1),
+			1000000,
+			ethers.utils.formatBytes32String('TEST'),
+			ethers.utils.formatBytes32String('T'),
+			ethers.utils.formatBytes32String('0X123')
+		)
 
-		// await crowdfund
-		// 	.connect(alice)
-		// 	.submitFundContribution(forum.address, { value: getBigNumber(50) });
+		await expect(
+			crowdfund.initiateCrowdfund(
+				proposer.address,
+				ZERO_ADDRESS,
+				getBigNumber(1),
+				1000000,
+				ethers.utils.formatBytes32String('TEST'),
+				ethers.utils.formatBytes32String('T'),
+				ethers.utils.formatBytes32String('0X123')
+			)
+		).to.be.revertedWith('OpenFund()')
+	})
+	it('Should ', async function () {
+		await crowdfund.initiateCrowdfund(
+			proposer.address,
+			ZERO_ADDRESS,
+			getBigNumber(1),
+			1000000,
+			ethers.utils.formatBytes32String('TEST'),
+			ethers.utils.formatBytes32String('T'),
+			ethers.utils.formatBytes32String('0X123')
+		)
 
-		// const deets = await crowdfund.getFund(forum.address);
+		const crowdfundDetails = await crowdfund.getCrowdfund(
+			ethers.utils.formatBytes32String(crowdsaleInput.groupName)
+		)
 
-		// console.log(deets.individualContribution.toString());
-		// console.log(deets.contributors);
-		// console.log(deets.valueNumerator.toString());
-		// console.log(deets.valueDenominator.toString());
+		// Check initial state
+		console.log(crowdfundDetails.contributors)
+		console.log(crowdfundDetails.contributors[0])
+		expect(crowdfundDetails.targetContract).to.equal(crowdsaleInput.targetContract)
 
-		// // Check state after second contribution
-		// expect(
-		// 	(await crowdfund.getFund(forum.address)).contributors.length
-		// ).to.equal(2);
-		// expect(
-		// 	(await crowdfund.getFund(forum.address)).individualContribution
-		// ).to.equal(getBigNumber(50));
+		await crowdfund.submitContribution()
+	})
 
-		// await crowdfund.processFundRound(forum.address);
-
-		// // After processing, the accounts should be given tokens, and dao balance should be updated
-		// expect(await hardhatEthers.provider.getBalance(forum.address)).to.equal(
-		// 	getBigNumber(100)
-		// );
-		// expect(await hardhatEthers.provider.getBalance(crowdfund.address)).to.equal(
-		// 	getBigNumber(0)
-		// );
-		// expect(await forum.balanceOf(proposer.address, TOKEN)).to.equal(
-		// 	getBigNumber(50)
-		// );
-		// expect(await forum.balanceOf(alice.address, TOKEN)).to.equal(
-		// 	getBigNumber(50)
-		// );
-	});
 	// it('Should process native `value` crowdfund with unitValue multiplier', async function () {
 	// 	// Delete existing crowdfund for test
 	// 	await crowdfund.cancelFundRound(forum.address);
@@ -227,4 +247,4 @@ describe.only('Crowdfund', function () {
 	// 	expect(deletedFund.valueNumerator).to.equal(getBigNumber(0));
 	// 	expect(deletedFund.valueDenominator).to.equal(getBigNumber(0));
 	// });
-});
+})

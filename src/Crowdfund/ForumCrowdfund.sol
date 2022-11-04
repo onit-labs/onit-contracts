@@ -105,12 +105,6 @@ contract ForumCrowdfund is ReentrancyGuard {
         if (crowdfunds[groupName].deadline != 0) revert OpenFund();
 
         // No gas saving to use Fund({}) format, and since we need to push to the arry, we assign each element individually.
-        // funds[groupAddress].contributors.push(msg.sender);
-        // funds[groupAddress].individualContribution = msg.value;
-        // funds[groupAddress].valueNumerator = valueNumerator;
-        // funds[groupAddress].valueDenominator = valueDenominator;
-        // contributionTracker[groupAddress][msg.sender] = true;
-
         crowdfunds[groupName].contributors.push(creator);
         crowdfunds[groupName].contributions.push(msg.value);
         crowdfunds[groupName].targetPrice = targetPrice;
