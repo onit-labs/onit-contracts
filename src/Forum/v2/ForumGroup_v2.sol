@@ -8,7 +8,7 @@ import {Multicall} from "../../utils/Multicall.sol";
 import {NFTreceiver} from "../../utils/NFTreceiver.sol";
 import {ReentrancyGuard} from "../../utils/ReentrancyGuard.sol";
 
-import {IForumGroupTypes} from "../../interfaces/IForumGroupTypes.sol";
+import {IForumGroupTypes} from "../../interfaces/IForumGroupTypes_v2.sol";
 import {IForumGroupExtension} from "../../interfaces/IForumGroupExtension.sol";
 import {IPfpStaker} from "../../interfaces/IPfpStaker.sol";
 import {IERC1271} from "../../interfaces/IERC1271.sol";
@@ -21,7 +21,7 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
  * @notice Forum investment group multisig wallet
  * @author Modified from KaliDAO (https://github.com/lexDAO/Kali/blob/main/contracts/KaliDAO.sol)
  */
-contract ForumGroup is
+contract ForumGroup_v2 is
     IForumGroupTypes,
     ForumGovernance,
     ReentrancyGuard,
@@ -85,7 +85,7 @@ contract ForumGroup is
 
     uint256 public proposalCount;
     uint32 public votingPeriod;
-    uint32 public gracePeriod;
+    uint32 public memberLimit; // 1-100
     uint32 public tokenVoteThreshold; // 1-100
     uint32 public memberVoteThreshold; // 1-100
 
@@ -117,7 +117,7 @@ contract ForumGroup is
      * @param symbol_ for the group token
      * @param members_ initial members
      * @param extensions_ initial extensions enabled
-     * @param govSettings_ settings for voting and proposals
+     * @param govSettings_ settings for voting, proposals, and group size
      */
     function init(
         string memory name_,
@@ -131,7 +131,8 @@ contract ForumGroup is
         if (govSettings_[0] == 0 || govSettings_[0] > 365 days)
             revert PeriodBounds();
 
-        if (govSettings_[1] > 1 days) revert PeriodBounds();
+        if (govSettings_[1] < 1 || govSettings_[1] > 100)
+            revert MemberLimitExceeded();
 
         if (govSettings_[2] < 1 || govSettings_[2] > 100)
             revert VoteThresholdBounds();
@@ -154,7 +155,7 @@ contract ForumGroup is
 
         votingPeriod = govSettings_[0];
 
-        gracePeriod = govSettings_[1];
+        memberLimit = govSettings_[1];
 
         memberVoteThreshold = govSettings_[2];
 
@@ -212,8 +213,9 @@ contract ForumGroup is
         if (proposalType == ProposalType.VPERIOD)
             if (amounts[0] == 0 || amounts[0] > 365 days) revert PeriodBounds();
 
-        if (proposalType == ProposalType.GPERIOD)
-            if (amounts[0] > 1 days) revert PeriodBounds();
+        if (proposalType == ProposalType.MEMBER_LIMIT)
+            if (amounts[0] > 100 || amounts[0] < memberLimit)
+                revert MemberLimitExceeded();
 
         if (
             proposalType == ProposalType.MEMBER_THRESHOLD ||
@@ -227,7 +229,7 @@ contract ForumGroup is
                 revert TypeBounds();
 
         if (proposalType == ProposalType.MINT)
-            if ((memberCount + accounts.length) > 12)
+            if ((memberCount + accounts.length) > memberLimit)
                 revert MemberLimitExceeded();
 
         // Cannot realistically overflow on human timescales
@@ -275,16 +277,7 @@ contract ForumGroup is
 
         if (prop.creationTime == 0) revert NotCurrentProposal();
 
-        // This is safe from overflow because `votingPeriod` and `gracePeriod` are capped
-        // so they will not combine with unix time to exceed the max uint256 value.
-        unchecked {
-            // If gracePeriod is set to 0 we do not wait, instead proposal is processed when ready
-            // allowing for faster execution.
-            if (
-                gracePeriod != 0 &&
-                block.timestamp < prop.creationTime + votingPeriod + gracePeriod
-            ) revert VotingNotEnded();
-        }
+        // ! need to consider voting period here as grace period has been removed
 
         uint256 votes;
 
@@ -390,8 +383,8 @@ contract ForumGroup is
                 if (prop.proposalType == ProposalType.VPERIOD)
                     votingPeriod = uint32(prop.amounts[0]);
 
-                if (prop.proposalType == ProposalType.GPERIOD)
-                    gracePeriod = uint32(prop.amounts[0]);
+                if (prop.proposalType == ProposalType.MEMBER_LIMIT)
+                    memberLimit = uint32(prop.amounts[0]);
 
                 if (prop.proposalType == ProposalType.MEMBER_THRESHOLD)
                     memberVoteThreshold = uint32(prop.amounts[0]);
@@ -458,9 +451,7 @@ contract ForumGroup is
         } else {
             // Only delete and update the proposal settings if there are not enough votes AND the time limit has passed
             // This prevents deleting proposals unfairly
-            if (
-                block.timestamp > prop.creationTime + votingPeriod + gracePeriod
-            ) {
+            if (block.timestamp > prop.creationTime + votingPeriod) {
                 delete proposals[proposal];
 
                 emit ProposalProcessed(
