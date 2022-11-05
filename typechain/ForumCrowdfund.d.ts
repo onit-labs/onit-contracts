@@ -11,6 +11,7 @@ import {
   PopulatedTransaction,
   BaseContract,
   ContractTransaction,
+  Overrides,
   PayableOverrides,
   CallOverrides,
 } from "ethers";
@@ -21,12 +22,17 @@ import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 
 interface ForumCrowdfundInterface extends ethers.utils.Interface {
   functions: {
+    "cancelCrowdfund(bytes32)": FunctionFragment;
     "contributionTracker(address,address)": FunctionFragment;
     "getCrowdfund(bytes32)": FunctionFragment;
-    "initiateCrowdfund(address,address,uint256,uint32,bytes32,bytes32,bytes)": FunctionFragment;
+    "initiateCrowdfund((address,uint256,uint32,string,string,bytes))": FunctionFragment;
     "submitContribution(bytes32)": FunctionFragment;
   };
 
+  encodeFunctionData(
+    functionFragment: "cancelCrowdfund",
+    values: [BytesLike]
+  ): string;
   encodeFunctionData(
     functionFragment: "contributionTracker",
     values: [string, string]
@@ -38,13 +44,14 @@ interface ForumCrowdfundInterface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: "initiateCrowdfund",
     values: [
-      string,
-      string,
-      BigNumberish,
-      BigNumberish,
-      BytesLike,
-      BytesLike,
-      BytesLike
+      {
+        targetContract: string;
+        targetPrice: BigNumberish;
+        deadline: BigNumberish;
+        groupName: string;
+        symbol: string;
+        payload: BytesLike;
+      }
     ]
   ): string;
   encodeFunctionData(
@@ -52,6 +59,10 @@ interface ForumCrowdfundInterface extends ethers.utils.Interface {
     values: [BytesLike]
   ): string;
 
+  decodeFunctionResult(
+    functionFragment: "cancelCrowdfund",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "contributionTracker",
     data: BytesLike
@@ -70,10 +81,10 @@ interface ForumCrowdfundInterface extends ethers.utils.Interface {
   ): Result;
 
   events: {
-    "Cancelled(bytes32)": EventFragment;
-    "FundsAdded(bytes32,address,uint256)": EventFragment;
-    "NewCrowdfund(bytes32,bytes32,address,uint256,uint32)": EventFragment;
-    "Processed(bytes32,address)": EventFragment;
+    "Cancelled(string)": EventFragment;
+    "FundsAdded(string,address,uint256)": EventFragment;
+    "NewCrowdfund(string)": EventFragment;
+    "Processed(string,address)": EventFragment;
   };
 
   getEvent(nameOrSignatureOrTopic: "Cancelled"): EventFragment;
@@ -92,15 +103,7 @@ export type FundsAddedEvent = TypedEvent<
   }
 >;
 
-export type NewCrowdfundEvent = TypedEvent<
-  [string, string, string, BigNumber, number] & {
-    groupName: string;
-    symbol: string;
-    proposer: string;
-    targetPrice: BigNumber;
-    deadline: number;
-  }
->;
+export type NewCrowdfundEvent = TypedEvent<[string] & { groupName: string }>;
 
 export type ProcessedEvent = TypedEvent<
   [string, string] & { groupName: string; groupAddress: string }
@@ -150,6 +153,11 @@ export class ForumCrowdfund extends BaseContract {
   interface: ForumCrowdfundInterface;
 
   functions: {
+    cancelCrowdfund(
+      groupNameHash: BytesLike,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
     contributionTracker(
       arg0: string,
       arg1: string,
@@ -157,23 +165,156 @@ export class ForumCrowdfund extends BaseContract {
     ): Promise<[boolean]>;
 
     getCrowdfund(
-      groupName: BytesLike,
+      groupNameHash: BytesLike,
       overrides?: CallOverrides
     ): Promise<
       [
         [
-          string,
           string[],
           BigNumber[],
-          BigNumber,
-          number,
-          string,
-          string,
-          string
+          [string, BigNumber, number, string, string, string] & {
+            targetContract: string;
+            targetPrice: BigNumber;
+            deadline: number;
+            groupName: string;
+            symbol: string;
+            payload: string;
+          }
         ] & {
-          targetContract: string;
           contributors: string[];
           contributions: BigNumber[];
+          parameters: [string, BigNumber, number, string, string, string] & {
+            targetContract: string;
+            targetPrice: BigNumber;
+            deadline: number;
+            groupName: string;
+            symbol: string;
+            payload: string;
+          };
+        }
+      ] & {
+        crowdfundDetails: [
+          string[],
+          BigNumber[],
+          [string, BigNumber, number, string, string, string] & {
+            targetContract: string;
+            targetPrice: BigNumber;
+            deadline: number;
+            groupName: string;
+            symbol: string;
+            payload: string;
+          }
+        ] & {
+          contributors: string[];
+          contributions: BigNumber[];
+          parameters: [string, BigNumber, number, string, string, string] & {
+            targetContract: string;
+            targetPrice: BigNumber;
+            deadline: number;
+            groupName: string;
+            symbol: string;
+            payload: string;
+          };
+        };
+      }
+    >;
+
+    initiateCrowdfund(
+      parameters: {
+        targetContract: string;
+        targetPrice: BigNumberish;
+        deadline: BigNumberish;
+        groupName: string;
+        symbol: string;
+        payload: BytesLike;
+      },
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
+    submitContribution(
+      groupNameHash: BytesLike,
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+  };
+
+  cancelCrowdfund(
+    groupNameHash: BytesLike,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
+  contributionTracker(
+    arg0: string,
+    arg1: string,
+    overrides?: CallOverrides
+  ): Promise<boolean>;
+
+  getCrowdfund(
+    groupNameHash: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<
+    [
+      string[],
+      BigNumber[],
+      [string, BigNumber, number, string, string, string] & {
+        targetContract: string;
+        targetPrice: BigNumber;
+        deadline: number;
+        groupName: string;
+        symbol: string;
+        payload: string;
+      }
+    ] & {
+      contributors: string[];
+      contributions: BigNumber[];
+      parameters: [string, BigNumber, number, string, string, string] & {
+        targetContract: string;
+        targetPrice: BigNumber;
+        deadline: number;
+        groupName: string;
+        symbol: string;
+        payload: string;
+      };
+    }
+  >;
+
+  initiateCrowdfund(
+    parameters: {
+      targetContract: string;
+      targetPrice: BigNumberish;
+      deadline: BigNumberish;
+      groupName: string;
+      symbol: string;
+      payload: BytesLike;
+    },
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
+  submitContribution(
+    groupNameHash: BytesLike,
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
+  callStatic: {
+    cancelCrowdfund(
+      groupNameHash: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    contributionTracker(
+      arg0: string,
+      arg1: string,
+      overrides?: CallOverrides
+    ): Promise<boolean>;
+
+    getCrowdfund(
+      groupNameHash: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<
+      [
+        string[],
+        BigNumber[],
+        [string, BigNumber, number, string, string, string] & {
+          targetContract: string;
           targetPrice: BigNumber;
           deadline: number;
           groupName: string;
@@ -181,19 +322,10 @@ export class ForumCrowdfund extends BaseContract {
           payload: string;
         }
       ] & {
-        crowdfundDetails: [
-          string,
-          string[],
-          BigNumber[],
-          BigNumber,
-          number,
-          string,
-          string,
-          string
-        ] & {
+        contributors: string[];
+        contributions: BigNumber[];
+        parameters: [string, BigNumber, number, string, string, string] & {
           targetContract: string;
-          contributors: string[];
-          contributions: BigNumber[];
           targetPrice: BigNumber;
           deadline: number;
           groupName: string;
@@ -204,129 +336,34 @@ export class ForumCrowdfund extends BaseContract {
     >;
 
     initiateCrowdfund(
-      creator: string,
-      targetContract: string,
-      targetPrice: BigNumberish,
-      deadline: BigNumberish,
-      groupName: BytesLike,
-      symbol: BytesLike,
-      payload: BytesLike,
-      overrides?: PayableOverrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>;
-
-    submitContribution(
-      groupName: BytesLike,
-      overrides?: PayableOverrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>;
-  };
-
-  contributionTracker(
-    arg0: string,
-    arg1: string,
-    overrides?: CallOverrides
-  ): Promise<boolean>;
-
-  getCrowdfund(
-    groupName: BytesLike,
-    overrides?: CallOverrides
-  ): Promise<
-    [
-      string,
-      string[],
-      BigNumber[],
-      BigNumber,
-      number,
-      string,
-      string,
-      string
-    ] & {
-      targetContract: string;
-      contributors: string[];
-      contributions: BigNumber[];
-      targetPrice: BigNumber;
-      deadline: number;
-      groupName: string;
-      symbol: string;
-      payload: string;
-    }
-  >;
-
-  initiateCrowdfund(
-    creator: string,
-    targetContract: string,
-    targetPrice: BigNumberish,
-    deadline: BigNumberish,
-    groupName: BytesLike,
-    symbol: BytesLike,
-    payload: BytesLike,
-    overrides?: PayableOverrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
-
-  submitContribution(
-    groupName: BytesLike,
-    overrides?: PayableOverrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
-
-  callStatic: {
-    contributionTracker(
-      arg0: string,
-      arg1: string,
-      overrides?: CallOverrides
-    ): Promise<boolean>;
-
-    getCrowdfund(
-      groupName: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<
-      [
-        string,
-        string[],
-        BigNumber[],
-        BigNumber,
-        number,
-        string,
-        string,
-        string
-      ] & {
+      parameters: {
         targetContract: string;
-        contributors: string[];
-        contributions: BigNumber[];
-        targetPrice: BigNumber;
-        deadline: number;
+        targetPrice: BigNumberish;
+        deadline: BigNumberish;
         groupName: string;
         symbol: string;
-        payload: string;
-      }
-    >;
-
-    initiateCrowdfund(
-      creator: string,
-      targetContract: string,
-      targetPrice: BigNumberish,
-      deadline: BigNumberish,
-      groupName: BytesLike,
-      symbol: BytesLike,
-      payload: BytesLike,
+        payload: BytesLike;
+      },
       overrides?: CallOverrides
     ): Promise<void>;
 
     submitContribution(
-      groupName: BytesLike,
+      groupNameHash: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>;
   };
 
   filters: {
-    "Cancelled(bytes32)"(
-      groupName?: BytesLike | null
+    "Cancelled(string)"(
+      groupName?: string | null
     ): TypedEventFilter<[string], { groupName: string }>;
 
     Cancelled(
-      groupName?: BytesLike | null
+      groupName?: string | null
     ): TypedEventFilter<[string], { groupName: string }>;
 
-    "FundsAdded(bytes32,address,uint256)"(
-      groupName?: BytesLike | null,
+    "FundsAdded(string,address,uint256)"(
+      groupName?: string | null,
       contributor?: null,
       contribution?: null
     ): TypedEventFilter<
@@ -335,7 +372,7 @@ export class ForumCrowdfund extends BaseContract {
     >;
 
     FundsAdded(
-      groupName?: BytesLike | null,
+      groupName?: string | null,
       contributor?: null,
       contribution?: null
     ): TypedEventFilter<
@@ -343,42 +380,16 @@ export class ForumCrowdfund extends BaseContract {
       { groupName: string; contributor: string; contribution: BigNumber }
     >;
 
-    "NewCrowdfund(bytes32,bytes32,address,uint256,uint32)"(
-      groupName?: BytesLike | null,
-      symbol?: null,
-      proposer?: null,
-      targetPrice?: null,
-      deadline?: null
-    ): TypedEventFilter<
-      [string, string, string, BigNumber, number],
-      {
-        groupName: string;
-        symbol: string;
-        proposer: string;
-        targetPrice: BigNumber;
-        deadline: number;
-      }
-    >;
+    "NewCrowdfund(string)"(
+      groupName?: string | null
+    ): TypedEventFilter<[string], { groupName: string }>;
 
     NewCrowdfund(
-      groupName?: BytesLike | null,
-      symbol?: null,
-      proposer?: null,
-      targetPrice?: null,
-      deadline?: null
-    ): TypedEventFilter<
-      [string, string, string, BigNumber, number],
-      {
-        groupName: string;
-        symbol: string;
-        proposer: string;
-        targetPrice: BigNumber;
-        deadline: number;
-      }
-    >;
+      groupName?: string | null
+    ): TypedEventFilter<[string], { groupName: string }>;
 
-    "Processed(bytes32,address)"(
-      groupName?: BytesLike | null,
+    "Processed(string,address)"(
+      groupName?: string | null,
       groupAddress?: string | null
     ): TypedEventFilter<
       [string, string],
@@ -386,7 +397,7 @@ export class ForumCrowdfund extends BaseContract {
     >;
 
     Processed(
-      groupName?: BytesLike | null,
+      groupName?: string | null,
       groupAddress?: string | null
     ): TypedEventFilter<
       [string, string],
@@ -395,6 +406,11 @@ export class ForumCrowdfund extends BaseContract {
   };
 
   estimateGas: {
+    cancelCrowdfund(
+      groupNameHash: BytesLike,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
     contributionTracker(
       arg0: string,
       arg1: string,
@@ -402,28 +418,34 @@ export class ForumCrowdfund extends BaseContract {
     ): Promise<BigNumber>;
 
     getCrowdfund(
-      groupName: BytesLike,
+      groupNameHash: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     initiateCrowdfund(
-      creator: string,
-      targetContract: string,
-      targetPrice: BigNumberish,
-      deadline: BigNumberish,
-      groupName: BytesLike,
-      symbol: BytesLike,
-      payload: BytesLike,
+      parameters: {
+        targetContract: string;
+        targetPrice: BigNumberish;
+        deadline: BigNumberish;
+        groupName: string;
+        symbol: string;
+        payload: BytesLike;
+      },
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
     submitContribution(
-      groupName: BytesLike,
+      groupNameHash: BytesLike,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
   };
 
   populateTransaction: {
+    cancelCrowdfund(
+      groupNameHash: BytesLike,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
     contributionTracker(
       arg0: string,
       arg1: string,
@@ -431,23 +453,24 @@ export class ForumCrowdfund extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     getCrowdfund(
-      groupName: BytesLike,
+      groupNameHash: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     initiateCrowdfund(
-      creator: string,
-      targetContract: string,
-      targetPrice: BigNumberish,
-      deadline: BigNumberish,
-      groupName: BytesLike,
-      symbol: BytesLike,
-      payload: BytesLike,
+      parameters: {
+        targetContract: string;
+        targetPrice: BigNumberish;
+        deadline: BigNumberish;
+        groupName: string;
+        symbol: string;
+        payload: BytesLike;
+      },
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
     submitContribution(
-      groupName: BytesLike,
+      groupNameHash: BytesLike,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
   };

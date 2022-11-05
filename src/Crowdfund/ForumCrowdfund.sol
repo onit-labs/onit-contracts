@@ -2,6 +2,7 @@
 
 pragma solidity ^0.8.15;
 
+import "hardhat/console.sol";
 import {SafeTransferLib} from "../libraries/SafeTransferLib.sol";
 
 import {ReentrancyGuard} from "../utils/ReentrancyGuard.sol";
@@ -19,23 +20,17 @@ contract ForumCrowdfund is ReentrancyGuard {
     /// Events
     /// -----------------------------------------------------------------------
 
-    event NewCrowdfund(
-        bytes32 indexed groupName,
-        bytes32 symbol,
-        address proposer,
-        uint256 targetPrice,
-        uint32 deadline
-    );
+    event NewCrowdfund(string indexed groupName);
 
     event FundsAdded(
-        bytes32 indexed groupName,
+        string indexed groupName,
         address contributor,
         uint256 contribution
     );
 
-    event Cancelled(bytes32 indexed groupName);
+    event Cancelled(string indexed groupName);
 
-    event Processed(bytes32 indexed groupName, address indexed groupAddress);
+    event Processed(string indexed groupName, address indexed groupAddress);
 
     /// -----------------------------------------------------------------------
     /// Errors
@@ -47,7 +42,9 @@ contract ForumCrowdfund is ReentrancyGuard {
 
     error MembersMissing();
 
-    error FundraiseMissing();
+    error MissingCrowdfund();
+
+    error MemberLimitReached();
 
     error IncorrectContribution();
 
@@ -57,21 +54,21 @@ contract ForumCrowdfund is ReentrancyGuard {
     /// Crowdfund Storage
     /// -----------------------------------------------------------------------
 
-    struct Crowdfund {
+    struct CrowdfundParameters {
         address targetContract;
-        address[] contributors;
-        uint256[] contributions;
         uint256 targetPrice;
         uint32 deadline;
-        bytes32 groupName;
-        bytes32 symbol;
+        string groupName;
+        string symbol;
         bytes payload;
     }
 
-    uint256 private constant MEMBERSHIP = 0;
-    uint256 private constant TOKEN = 1;
+    struct Crowdfund {
+        address[] contributors;
+        uint256[] contributions;
+        CrowdfundParameters parameters;
+    }
 
-    // todo maybe improve key
     mapping(bytes32 => Crowdfund) private crowdfunds;
 
     mapping(address => mapping(address => bool)) public contributionTracker;
@@ -83,108 +80,130 @@ contract ForumCrowdfund is ReentrancyGuard {
     // todo consider commission and fit into target value
     /**
      * @notice Initiate a crowdfund to buy an asset
-     * @param creator of the fund
-     * @param targetContract where the asset is to be purchased
-     * @param targetPrice of the asset
-     * @param deadline until when the crowdfund is valid, cancelled if not met
-     * @param groupName of the group to be deployed
-     * @param symbol of the group to be deployed
-     * @param payload calldata for the target asset
+     * @param parameters the parameters struct for the crowdfund
      */
-    function initiateCrowdfund(
-        address creator,
-        address targetContract,
-        uint256 targetPrice,
-        uint32 deadline,
-        bytes32 groupName,
-        bytes32 symbol,
-        bytes calldata payload
-    ) public payable virtual nonReentrant {
-        // maybe check the amount?
-        // maybe check sender?
-        if (crowdfunds[groupName].deadline != 0) revert OpenFund();
-
-        // No gas saving to use Fund({}) format, and since we need to push to the arry, we assign each element individually.
-        crowdfunds[groupName].contributors.push(creator);
-        crowdfunds[groupName].contributions.push(msg.value);
-        crowdfunds[groupName].targetPrice = targetPrice;
-        crowdfunds[groupName].targetContract = targetContract;
-        crowdfunds[groupName].deadline = deadline;
-        crowdfunds[groupName].groupName = groupName;
-        crowdfunds[groupName].symbol = symbol;
-        crowdfunds[groupName].payload = payload;
-
-        // crowdfunds[groupName] = Crowdfund({
-        //     contributors: [],
-        //     contributions: [],
-        //     targetPrice: targetPrice,
-        //     targetContract: targetContract,
-        //     deadline: deadline,
-        //     groupName: groupName,
-        //     symbol: symbol,
-        //     payload: payload
-        // });
-
-        emit NewCrowdfund(groupName, symbol, creator, targetPrice, deadline);
-    }
-
-    // ! need to prevent same address from being added twice - sum their contribution somehow? or just limit to one contribution per address
-    /**
-     * @notice Submit a crowdfund contribution
-     * @param groupName name of group
-     */
-    function submitContribution(bytes32 groupName)
+    function initiateCrowdfund(CrowdfundParameters calldata parameters)
         public
         payable
         virtual
         nonReentrant
     {
-        // ! NEED TO IMPLEMENT THIS
-        // // Can only contribute once per fund
-        // if (contributionTracker[groupAddress][msg.sender])
-        //     revert IncorrectContribution();
+        // Using the bytes32 hash of the name as mapping key saves ~250 gas per write
+        bytes32 groupNameHash = keccak256(abi.encode(parameters.groupName));
 
+        // maybe check the amount?
+        // maybe check sender?
+        if (crowdfunds[groupNameHash].parameters.deadline != 0)
+            revert OpenFund();
+
+        // No gas saving to use Fund({}) format, and since we need to push to the arry, we assign each element individually.
+        crowdfunds[groupNameHash].contributors.push(msg.sender);
+        crowdfunds[groupNameHash].contributions.push(msg.value);
+        crowdfunds[groupNameHash].parameters = parameters;
+
+        emit NewCrowdfund(parameters.groupName);
+    }
+
+    // ! need to prevent same address from being added twice - sum their contribution somehow? or just limit to one contribution per address
+    /**
+     * @notice Submit a crowdfund contribution
+     * @param groupNameHash bytes32 hashed name of group (saves gas compared to string)
+     */
+    function submitContribution(bytes32 groupNameHash)
+        public
+        payable
+        virtual
+        nonReentrant
+    {
         // ! consider a check on contributions and target price
         // if (msg.value != funds[groupAddress].individualContribution)
         //     revert IncorrectContribution();
 
-        if (crowdfunds[groupName].deadline == 0) revert FundraiseMissing();
+        // ! consider member limit
+        if (crowdfunds[groupNameHash].contributors.length == 12)
+            revert MemberLimitReached();
 
-        crowdfunds[groupName].contributors.push(msg.sender);
-        crowdfunds[groupName].contributions.push(msg.value);
+        if (crowdfunds[groupNameHash].parameters.deadline == 0)
+            revert MissingCrowdfund();
 
-        emit FundsAdded(groupName, msg.sender, msg.value);
+        crowdfunds[groupNameHash].contributors.push(msg.sender);
+        crowdfunds[groupNameHash].contributions.push(msg.value);
+
+        emit FundsAdded(
+            crowdfunds[groupNameHash].parameters.groupName,
+            msg.sender,
+            msg.value
+        );
     }
 
-    // /**
-    //  * @notice Cancel a fundraise and return funds to contributors
-    //  * @param groupAddress Address of group
-    //  */
-    // function cancelFundRound(address groupAddress) public virtual nonReentrant {
-    //     if (IForumGroup(groupAddress).balanceOf(msg.sender, MEMBERSHIP) == 0)
-    //         revert NotMember();
+    /**
+     * @notice Cancel a crowdfund and return funds to contributors
+     * @param groupNameHash bytes32 hashed name of group (saves gas compared to string)
+     */
+    function cancelCrowdfund(bytes32 groupNameHash)
+        public
+        virtual
+        nonReentrant
+    {
+        Crowdfund memory fund = crowdfunds[groupNameHash];
 
-    //     Fund storage fund = funds[groupAddress];
+        if (fund.parameters.deadline > block.timestamp) revert OpenFund();
 
-    //     // Only groupAddress or proposer can cancel the fundraise.
-    //     if (!(msg.sender == groupAddress || msg.sender == fund.contributors[0]))
-    //         revert NotProposer();
+        // Return funds from escrow
+        for (uint256 i; i < fund.contributors.length; ) {
+            console.logAddress(fund.contributors[i]);
+            console.logUint(fund.contributions[i]);
+            payable(fund.contributors[i]).transfer(fund.contributions[i]);
 
-    //     // Return funds from escrow
-    //     for (uint256 i; i < fund.contributors.length; ) {
-    //         payable(fund.contributors[i]).transfer(fund.individualContribution);
-    //         contributionTracker[groupAddress][fund.contributors[i]] = false;
+            // Members can only be 12
+            unchecked {
+                ++i;
+            }
+        }
 
-    //         // Members can only be 12
-    //         unchecked {
-    //             ++i;
+        delete crowdfunds[groupNameHash];
+
+        emit Cancelled(fund.parameters.groupName);
+    }
+
+    //     /**
+    //      * @notice Process a crowdfund and deploy a Forum group
+    //      * @param groupNameHash bytes32 hashed name of group (saves gas compared to string)
+    //      */ // todo consider a check on contributions and target price
+    //     function processCrowdfund(bytes32 groupNameHash)
+    //         public
+    //         virtual
+    //         nonReentrant
+    //     {
+    //         Crowdfund memory fund = crowdfunds[groupNameHash];
+
+    // // todo consider block on deadline
+    //         // if (fund.parameters.deadline > block.timestamp) revert OpenFund();
+
+    //         // Deploy the Forum group
+    //         address groupAddress = IForumGroup(fund.parameters.targetContract)
+    //             .deployGroup{value: fund.parameters.targetPrice}(
+    //                 fund.parameters.groupName,
+    //                 fund.parameters.symbol,
+    //                 fund.parameters.payload
+    //             );
+
+    //         // Return funds from escrow
+    //         for (uint256 i; i < fund.contributors.length; ) {
+    //             console.logAddress(fund.contributors[i]);
+    //             console.logUint(fund.contributions[i]);
+    //             payable(fund.contributors[i]).transfer(fund.contributions[i]);
+
+    //             // Members can only be 12
+    //             unchecked {
+    //                 ++i;
+    //             }
     //         }
+
+    //         delete crowdfunds[groupNameHash];
+
+    //         emit Processed(fund.parameters.groupName, groupAddress);
     //     }
-
-    //     delete funds[groupAddress];
-
-    //     emit FundRoundCancelled(groupAddress);
-    // }
 
     // /**
     //  * @notice Process the fundraise, sending AVAX to group and minting tokens to contributors
@@ -198,7 +217,7 @@ contract ForumCrowdfund is ReentrancyGuard {
     //     Fund memory fund = funds[groupAddress];
 
     //     if (funds[groupAddress].individualContribution == 0)
-    //         revert FundraiseMissing();
+    //         revert MemberLimitReached();
 
     //     uint256 memberCount = fund.contributors.length;
 
@@ -240,13 +259,13 @@ contract ForumCrowdfund is ReentrancyGuard {
 
     /**
      * @notice Get the details of a crowdfund
-     * @param groupName name of the group
+     * @param groupNameHash hash of the group name
      */
-    function getCrowdfund(bytes32 groupName)
+    function getCrowdfund(bytes32 groupNameHash)
         public
         view
         returns (Crowdfund memory crowdfundDetails)
     {
-        return crowdfunds[groupName];
+        return crowdfunds[groupNameHash];
     }
 }
