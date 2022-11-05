@@ -15,7 +15,10 @@ function getBigNumber(amount: number, decimals = 18) {
 
 describe.only('Crowdfund', function () {
 	let forum: Contract // ForumGroup contract instance
+	let forumFactory: Contract // ForumFactory contract instance
 	let crowdfund: Contract // Crowdfund contract instance
+	let shieldManager: Contract // shieldManager contract instance
+	let pfpStaker: Contract // pfpStaker contract instance
 	let proposer: SignerWithAddress // signerA
 	let alice: SignerWithAddress // signerB
 	let bob: SignerWithAddress // signerC
@@ -28,11 +31,18 @@ describe.only('Crowdfund', function () {
 		// Similar to deploying the master forum multisig
 		await deployments.fixture(['Forum', 'Shields'])
 		forum = await hardhatEthers.getContract('ForumGroup')
+		forumFactory = await hardhatEthers.getContract('ForumFactory')
 		crowdfund = await hardhatEthers.getContract('ForumCrowdfund')
+		shieldManager = await hardhatEthers.getContract('ShieldManager')
+		pfpStaker = await hardhatEthers.getContract('PfpStaker')
+
+		await forumFactory.setLaunched(true)
+		await forumFactory.setPfpStaker(pfpStaker.address)
+		await shieldManager.setShieldPassPrice(0)
 
 		crowdsaleInput = {
 			targetContract: ZERO_ADDRESS,
-			targetPrice: getBigNumber(1),
+			targetPrice: getBigNumber(2),
 			deadline: 1730817411, // 05-11-2030
 			groupName: 'TEST',
 			symbol: 'T',
@@ -103,7 +113,7 @@ describe.only('Crowdfund', function () {
 			}
 		}
 	})
-	it.only('Should cancel a crowdfund and revert if not cancellable', async function () {
+	it('Should cancel a crowdfund and revert if not cancellable', async function () {
 		await crowdfund.initiateCrowdfund(crowdsaleInput, { value: getBigNumber(1) })
 
 		// Can not cancel before deadline
@@ -116,6 +126,11 @@ describe.only('Crowdfund', function () {
 		await crowdfund.cancelCrowdfund(testGroupNameHash)
 		const bal2 = await hardhatEthers.provider.getBalance(proposer.address)
 		expect(bal2).to.be.gt(bal1)
+	})
+	it.only('Should process a crowdfund', async function () {
+		await crowdfund.initiateCrowdfund(crowdsaleInput, { value: getBigNumber(1) })
+
+		await crowdfund.processCrowdfund(testGroupNameHash)
 	})
 
 	// it('Should process native `value` crowdfund with unitValue multiplier', async function () {

@@ -21,7 +21,7 @@ import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 
 interface IForumGroupFactoryInterface extends ethers.utils.Interface {
   functions: {
-    "deployGroup(string,string,address[],uint8[4])": FunctionFragment;
+    "deployGroup(string,string,address[],uint32[4])": FunctionFragment;
   };
 
   encodeFunctionData(

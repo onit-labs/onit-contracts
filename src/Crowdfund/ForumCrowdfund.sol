@@ -8,6 +8,7 @@ import {SafeTransferLib} from "../libraries/SafeTransferLib.sol";
 import {ReentrancyGuard} from "../utils/ReentrancyGuard.sol";
 
 import {IForumGroup} from "../interfaces/IForumGroup.sol";
+import {IForumGroupFactory} from "../interfaces/IForumGroupFactory.sol";
 
 /**
  * @title Forum Crowdfund
@@ -69,9 +70,19 @@ contract ForumCrowdfund is ReentrancyGuard {
         CrowdfundParameters parameters;
     }
 
+    address public forumFactory;
+
     mapping(bytes32 => Crowdfund) private crowdfunds;
 
     mapping(address => mapping(address => bool)) public contributionTracker;
+
+    /// -----------------------------------------------------------------------
+    /// Constructor
+    /// -----------------------------------------------------------------------
+
+    constructor(address forumFactory_) {
+        forumFactory = forumFactory_;
+    }
 
     /// -----------------------------------------------------------------------
     /// Fundraise Logic
@@ -166,96 +177,61 @@ contract ForumCrowdfund is ReentrancyGuard {
         emit Cancelled(fund.parameters.groupName);
     }
 
-    //     /**
-    //      * @notice Process a crowdfund and deploy a Forum group
-    //      * @param groupNameHash bytes32 hashed name of group (saves gas compared to string)
-    //      */ // todo consider a check on contributions and target price
-    //     function processCrowdfund(bytes32 groupNameHash)
-    //         public
-    //         virtual
-    //         nonReentrant
-    //     {
-    //         Crowdfund memory fund = crowdfunds[groupNameHash];
+    /**
+     * @notice Process a crowdfund and deploy a Forum group
+     * @param groupNameHash bytes32 hashed name of group (saves gas compared to string)
+     */
+    // todo consider a check on contributions and target price
+    function processCrowdfund(bytes32 groupNameHash)
+        public
+        virtual
+        nonReentrant
+    {
+        Crowdfund memory fund = crowdfunds[groupNameHash];
 
-    // // todo consider block on deadline
-    //         // if (fund.parameters.deadline > block.timestamp) revert OpenFund();
+        // todo consider block on deadline
+        // if (fund.parameters.deadline > block.timestamp) revert OpenFund();
 
-    //         // Deploy the Forum group
-    //         address groupAddress = IForumGroup(fund.parameters.targetContract)
-    //             .deployGroup{value: fund.parameters.targetPrice}(
-    //                 fund.parameters.groupName,
-    //                 fund.parameters.symbol,
-    //                 fund.parameters.payload
-    //             );
+        // todo check targetValue is raised
 
-    //         // Return funds from escrow
-    //         for (uint256 i; i < fund.contributors.length; ) {
-    //             console.logAddress(fund.contributors[i]);
-    //             console.logUint(fund.contributions[i]);
-    //             payable(fund.contributors[i]).transfer(fund.contributions[i]);
+        // Deploy the Forum group
+        address forumGroup = IForumGroupFactory(forumFactory).deployGroup(
+            fund.parameters.groupName,
+            fund.parameters.symbol,
+            fund.contributors,
+            [uint32(259200), uint32(0), uint32(80), uint32(80)]
+        );
 
-    //             // Members can only be 12
-    //             unchecked {
-    //                 ++i;
-    //             }
-    //         }
+        // ! consider execution / target value check
+        // ! consider commission
+        // !!! prevent same user being added twice
+        // execute the tx with payload
+        (, bytes memory result) = (fund.parameters.targetContract).call{
+            value: fund.parameters.targetPrice
+        }(fund.parameters.payload);
 
-    //         delete crowdfunds[groupNameHash];
+        // distribute the group funds
+        for (uint256 i; i < fund.contributors.length; ) {
+            console.logAddress(fund.contributors[i]);
+            console.logUint(fund.contributions[i]);
 
-    //         emit Processed(fund.parameters.groupName, groupAddress);
-    //     }
+            // IForumGroup(forumFactory).mintShares(fund.contributors[i], 0, 1);
+            // IForumGroup(forumFactory).mintShares(
+            //     fund.contributors[i],
+            //     1,
+            //     fund.contributions[i]
+            // );
 
-    // /**
-    //  * @notice Process the fundraise, sending AVAX to group and minting tokens to contributors
-    //  * @param groupAddress Address of group
-    //  */
-    // function processFundRound(address groupAddress)
-    //     public
-    //     virtual
-    //     nonReentrant
-    // {
-    //     Fund memory fund = funds[groupAddress];
+            // Members can only be 12
+            unchecked {
+                ++i;
+            }
+        }
 
-    //     if (funds[groupAddress].individualContribution == 0)
-    //         revert MemberLimitReached();
+        delete crowdfunds[groupNameHash];
 
-    //     uint256 memberCount = fund.contributors.length;
-
-    //     // We adjust the number of shares distributed based on the unitValue of group tokens
-    //     // This ensures that members get a fair number of tokens given the value of the treasury at any time
-    //     uint256 adjustedContribution = (fund.individualContribution *
-    //         fund.valueDenominator) / fund.valueNumerator;
-
-    //     if (memberCount != IForumGroup(groupAddress).memberCount())
-    //         revert MembersMissing();
-
-    //     groupAddress._safeTransferETH(
-    //         fund.individualContribution * memberCount
-    //     );
-
-    //     for (uint256 i; i < memberCount; ) {
-    //         // Mint member an share of tokens equal to their contribution and reset their status in the tracker
-    //         IForumGroup(groupAddress).mintShares(
-    //             fund.contributors[i],
-    //             TOKEN,
-    //             adjustedContribution
-    //         );
-    //         contributionTracker[groupAddress][fund.contributors[i]] = false;
-
-    //         // Members can only be 12
-    //         unchecked {
-    //             ++i;
-    //         }
-    //     }
-
-    //     delete funds[groupAddress];
-
-    //     emit FundRoundReleased(
-    //         groupAddress,
-    //         fund.contributors,
-    //         fund.individualContribution
-    //     );
-    // }
+        emit Processed(fund.parameters.groupName, forumGroup);
+    }
 
     /**
      * @notice Get the details of a crowdfund

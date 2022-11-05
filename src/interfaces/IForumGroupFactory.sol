@@ -8,6 +8,6 @@ interface IForumGroupFactory {
         string memory name_,
         string memory symbol_,
         address[] calldata voters_,
-        uint8[4] memory govSettings_
+        uint32[4] memory govSettings_
     ) external payable returns (address);
 }

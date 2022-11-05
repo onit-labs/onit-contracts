@@ -24,8 +24,10 @@ interface ForumCrowdfundInterface extends ethers.utils.Interface {
   functions: {
     "cancelCrowdfund(bytes32)": FunctionFragment;
     "contributionTracker(address,address)": FunctionFragment;
+    "forumFactory()": FunctionFragment;
     "getCrowdfund(bytes32)": FunctionFragment;
     "initiateCrowdfund((address,uint256,uint32,string,string,bytes))": FunctionFragment;
+    "processCrowdfund(bytes32)": FunctionFragment;
     "submitContribution(bytes32)": FunctionFragment;
   };
 
@@ -36,6 +38,10 @@ interface ForumCrowdfundInterface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: "contributionTracker",
     values: [string, string]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "forumFactory",
+    values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "getCrowdfund",
@@ -55,6 +61,10 @@ interface ForumCrowdfundInterface extends ethers.utils.Interface {
     ]
   ): string;
   encodeFunctionData(
+    functionFragment: "processCrowdfund",
+    values: [BytesLike]
+  ): string;
+  encodeFunctionData(
     functionFragment: "submitContribution",
     values: [BytesLike]
   ): string;
@@ -68,11 +78,19 @@ interface ForumCrowdfundInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "forumFactory",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "getCrowdfund",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
     functionFragment: "initiateCrowdfund",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "processCrowdfund",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -164,6 +182,8 @@ export class ForumCrowdfund extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[boolean]>;
 
+    forumFactory(overrides?: CallOverrides): Promise<[string]>;
+
     getCrowdfund(
       groupNameHash: BytesLike,
       overrides?: CallOverrides
@@ -231,6 +251,11 @@ export class ForumCrowdfund extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
+    processCrowdfund(
+      groupNameHash: BytesLike,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
     submitContribution(
       groupNameHash: BytesLike,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
@@ -247,6 +272,8 @@ export class ForumCrowdfund extends BaseContract {
     arg1: string,
     overrides?: CallOverrides
   ): Promise<boolean>;
+
+  forumFactory(overrides?: CallOverrides): Promise<string>;
 
   getCrowdfund(
     groupNameHash: BytesLike,
@@ -289,6 +316,11 @@ export class ForumCrowdfund extends BaseContract {
     overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
+  processCrowdfund(
+    groupNameHash: BytesLike,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
   submitContribution(
     groupNameHash: BytesLike,
     overrides?: PayableOverrides & { from?: string | Promise<string> }
@@ -305,6 +337,8 @@ export class ForumCrowdfund extends BaseContract {
       arg1: string,
       overrides?: CallOverrides
     ): Promise<boolean>;
+
+    forumFactory(overrides?: CallOverrides): Promise<string>;
 
     getCrowdfund(
       groupNameHash: BytesLike,
@@ -344,6 +378,11 @@ export class ForumCrowdfund extends BaseContract {
         symbol: string;
         payload: BytesLike;
       },
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    processCrowdfund(
+      groupNameHash: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>;
 
@@ -417,6 +456,8 @@ export class ForumCrowdfund extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
+    forumFactory(overrides?: CallOverrides): Promise<BigNumber>;
+
     getCrowdfund(
       groupNameHash: BytesLike,
       overrides?: CallOverrides
@@ -432,6 +473,11 @@ export class ForumCrowdfund extends BaseContract {
         payload: BytesLike;
       },
       overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
+    processCrowdfund(
+      groupNameHash: BytesLike,
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
     submitContribution(
@@ -452,6 +498,8 @@ export class ForumCrowdfund extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
+    forumFactory(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
     getCrowdfund(
       groupNameHash: BytesLike,
       overrides?: CallOverrides
@@ -467,6 +515,11 @@ export class ForumCrowdfund extends BaseContract {
         payload: BytesLike;
       },
       overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    processCrowdfund(
+      groupNameHash: BytesLike,
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
     submitContribution(
