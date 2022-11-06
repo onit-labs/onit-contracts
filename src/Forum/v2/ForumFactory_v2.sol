@@ -2,15 +2,12 @@
 
 pragma solidity ^0.8.13;
 
-import {IPfpStaker} from "../../interfaces/IPfpStaker.sol";
-import {IShieldManager} from "../../interfaces/IShieldManager.sol";
-
 import {Owned} from "../../utils/Owned.sol";
 
 import {ForumGroup, Multicall} from "../ForumGroup.sol";
 
 /// @notice Factory to deploy forum group.
-contract ForumFactory is Multicall, Owned {
+contract ForumFactoryV2 is Multicall, Owned {
     /// ----------------------------------------------------------------------------------------
     /// Errors and Events
     /// ----------------------------------------------------------------------------------------
@@ -20,8 +17,7 @@ contract ForumFactory is Multicall, Owned {
         string name,
         string symbol,
         address[] voters,
-        uint32[4] govSettings,
-        uint256 shieldPass
+        uint32[4] govSettings
     );
 
     error NullDeploy();
@@ -34,13 +30,11 @@ contract ForumFactory is Multicall, Owned {
     /// Factory Storage
     /// ----------------------------------------------------------------------------------------
 
-    address payable public forumMaster;
-    address payable public forumRelay;
-    address payable public fundraiseExtension;
-    address payable public executionManager;
-
-    IPfpStaker public pfpStaker;
-    IShieldManager public shieldManager;
+    address public forumMaster;
+    address public forumRelay;
+    address public fundraiseExtension;
+    address public executionManager;
+    address public pfpStaker;
 
     bool public factoryLive = false;
 
@@ -50,15 +44,12 @@ contract ForumFactory is Multicall, Owned {
 
     constructor(
         address deployer,
-        address payable forumMaster_,
-        address payable executionManager_,
-        IShieldManager shieldManager_
+        address forumMaster_,
+        address executionManager_
     ) Owned(deployer) {
         forumMaster = forumMaster_;
 
         executionManager = executionManager_;
-
-        shieldManager = shieldManager_;
     }
 
     /// ----------------------------------------------------------------------------------------
@@ -69,36 +60,26 @@ contract ForumFactory is Multicall, Owned {
         factoryLive = setting;
     }
 
-    function setForumMaster(address payable forumMaster_) external onlyOwner {
+    function setForumMaster(address forumMaster_) external onlyOwner {
         forumMaster = forumMaster_;
     }
 
-    function setForumRelay(address payable forumRelay_) external onlyOwner {
+    function setForumRelay(address forumRelay_) external onlyOwner {
         forumRelay = forumRelay_;
     }
 
-    function setShieldManager(address payable shieldManager_)
-        external
-        onlyOwner
-    {
-        shieldManager = IShieldManager(shieldManager_);
+    function setPfpStaker(address pfpStaker_) external onlyOwner {
+        pfpStaker = pfpStaker_;
     }
 
-    function setPfpStaker(address payable pfpStaker_) external onlyOwner {
-        pfpStaker = IPfpStaker(pfpStaker_);
-    }
-
-    function setFundraiseExtension(address payable fundraiseExtension_)
+    function setFundraiseExtension(address fundraiseExtension_)
         external
         onlyOwner
     {
         fundraiseExtension = fundraiseExtension_;
     }
 
-    function setExecutionManager(address payable executionManager_)
-        external
-        onlyOwner
-    {
+    function setExecutionManager(address executionManager_) external onlyOwner {
         executionManager = executionManager_;
     }
 
@@ -115,7 +96,7 @@ contract ForumFactory is Multicall, Owned {
         if (!factoryLive)
             if (msg.sender != forumRelay) revert MintingClosed();
 
-        if (voters_.length > 12) revert MemberLimitExceeded();
+        if (voters_.length > 100) revert MemberLimitExceeded();
 
         forumGroup = ForumGroup(_cloneAsMinimalProxy(forumMaster, name_));
 
@@ -133,22 +114,11 @@ contract ForumFactory is Multicall, Owned {
             govSettings_
         );
 
-        // Mint shield pass for new group and stake it to the pfpStaker
-        uint256 shieldPass = shieldManager.mintShieldPass(address(pfpStaker));
-        pfpStaker.stakeInitialShield(address(forumGroup), shieldPass);
-
-        emit GroupDeployed(
-            forumGroup,
-            name_,
-            symbol_,
-            voters_,
-            govSettings_,
-            shieldPass
-        );
+        emit GroupDeployed(forumGroup, name_, symbol_, voters_, govSettings_);
     }
 
     /// @dev modified from Aelin (https://github.com/AelinXYZ/aelin/blob/main/contracts/MinimalProxyFactory.sol)
-    function _cloneAsMinimalProxy(address payable base, string memory name_)
+    function _cloneAsMinimalProxy(address base, string memory name_)
         internal
         virtual
         returns (address payable clone)

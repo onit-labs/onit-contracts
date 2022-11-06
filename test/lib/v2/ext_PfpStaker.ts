@@ -163,7 +163,7 @@ describe('PFP_Staking Module', () => {
 			expect(await test1155.balanceOf(founder.address, 1)).equal(0)
 			expect(await test1155.balanceOf(pfpStaker.address, 1)).equal(1)
 		})
-		it.only('ERC721 get tokenURI', async () => {
+		it('ERC721 get tokenURI', async () => {
 			await pfpStaker.connect(owner).setEnabledContract(testShield721.address)
 			// Must approve staking contract to move token // TODO CONSIDER THIS DIRECT FROM DAO
 			await testShield721.connect(founder).approve(pfpStaker.address, 1)
