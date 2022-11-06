@@ -123,7 +123,7 @@ contract ForumGroupV2 is
         string memory name_,
         string memory symbol_,
         address[] memory members_,
-        address[3] memory extensions_,
+        address[] memory extensions_,
         uint32[4] memory govSettings_
     ) public payable virtual nonReentrant {
         if (votingPeriod != 0) revert Initialized();
@@ -154,6 +154,17 @@ contract ForumGroupV2 is
 
         // Set the fundraise extension to true - allows it to mint shares
         extensions[extensions_[2]] = true;
+
+        if (extensions_.length > 3) {
+            // cannot realistically overflow on human timescales
+            unchecked {
+                for (uint256 i = 3; i < extensions_.length; i++) {
+                    extensions[extensions_[i]] = true;
+
+                    // ! consider setting extension data here too
+                }
+            }
+        }
 
         memberCount = members_.length;
 

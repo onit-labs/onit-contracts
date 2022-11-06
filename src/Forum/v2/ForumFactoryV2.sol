@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 
 import {Owned} from "../../utils/Owned.sol";
 
-import {ForumGroup, Multicall} from "../ForumGroup.sol";
+import {ForumGroupV2, Multicall} from "./ForumGroupV2.sol";
 
 /// @notice Factory to deploy forum group.
 contract ForumFactoryV2 is Multicall, Owned {
@@ -13,7 +13,7 @@ contract ForumFactoryV2 is Multicall, Owned {
     /// ----------------------------------------------------------------------------------------
 
     event GroupDeployed(
-        ForumGroup indexed forumGroup,
+        ForumGroupV2 indexed forumGroup,
         string name,
         string symbol,
         address[] voters,
@@ -31,12 +31,9 @@ contract ForumFactoryV2 is Multicall, Owned {
     /// ----------------------------------------------------------------------------------------
 
     address public forumMaster;
-    address public forumRelay;
     address public fundraiseExtension;
     address public executionManager;
     address public pfpStaker;
-
-    bool public factoryLive = false;
 
     /// ----------------------------------------------------------------------------------------
     /// Constructor
@@ -56,16 +53,8 @@ contract ForumFactoryV2 is Multicall, Owned {
     /// Owner Interface
     /// ----------------------------------------------------------------------------------------
 
-    function setLaunched(bool setting) external onlyOwner {
-        factoryLive = setting;
-    }
-
     function setForumMaster(address forumMaster_) external onlyOwner {
         forumMaster = forumMaster_;
-    }
-
-    function setForumRelay(address forumRelay_) external onlyOwner {
-        forumRelay = forumRelay_;
     }
 
     function setPfpStaker(address pfpStaker_) external onlyOwner {
@@ -88,29 +77,67 @@ contract ForumFactoryV2 is Multicall, Owned {
     /// ----------------------------------------------------------------------------------------
 
     function deployGroup(
-        string memory name_,
-        string memory symbol_,
+        string calldata name_,
+        string calldata symbol_,
         address[] calldata voters_,
-        uint32[4] memory govSettings_
-    ) public payable virtual returns (ForumGroup forumGroup) {
-        if (!factoryLive)
-            if (msg.sender != forumRelay) revert MintingClosed();
-
+        uint32[4] calldata govSettings_,
+        address[] calldata customExtensions_
+    ) public payable virtual returns (ForumGroupV2 forumGroup) {
         if (voters_.length > 100) revert MemberLimitExceeded();
 
-        forumGroup = ForumGroup(_cloneAsMinimalProxy(forumMaster, name_));
+        forumGroup = ForumGroupV2(_cloneAsMinimalProxy(forumMaster, name_));
 
-        address[3] memory initialExtensions = [
-            address(pfpStaker),
+        // Create initialExtensions array of correct length. 3 Forum set extensions + customExtensions
+        uint256 initialExtensionsLength = 3 + customExtensions_.length;
+        address[] memory initialExtensions = new address[](
+            initialExtensionsLength
+        );
+
+        // Set the base Forum extensions
+        (initialExtensions[0], initialExtensions[1], initialExtensions[2]) = (
+            pfpStaker,
             executionManager,
             fundraiseExtension
-        ];
+        );
+
+        // Set the custom extensions
+        if (customExtensions_.length != 0) {
+            // cannot realistically overflow on human timescales
+            unchecked {
+                for (uint256 i = 0; i < customExtensions_.length; i++) {
+                    // +3 is to offset the base Forum extensions
+                    initialExtensions[i + 3] = customExtensions_[i];
+                }
+            }
+        }
 
         forumGroup.init{value: msg.value}(
             name_,
             symbol_,
             voters_,
             initialExtensions,
+            govSettings_
+        );
+
+        emit GroupDeployed(forumGroup, name_, symbol_, voters_, govSettings_);
+    }
+
+    function deployGroup2(
+        string memory name_,
+        string memory symbol_,
+        address[] calldata voters_,
+        uint32[4] memory govSettings_,
+        address[] calldata customExtensions_
+    ) public payable virtual returns (ForumGroupV2 forumGroup) {
+        if (voters_.length > 100) revert MemberLimitExceeded();
+
+        forumGroup = ForumGroupV2(_cloneAsMinimalProxy(forumMaster, name_));
+
+        forumGroup.init{value: msg.value}(
+            name_,
+            symbol_,
+            voters_,
+            customExtensions_,
             govSettings_
         );
 

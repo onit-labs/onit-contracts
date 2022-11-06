@@ -33,7 +33,7 @@ const getGas = async (tx: ContractTransaction) => {
 	return receipt.gasUsed.toString()
 }
 
-describe('Forum Factory', function () {
+describe.only('Forum Factory', function () {
 	let owner: SignerWithAddress
 	let wallet: SignerWithAddress
 	let alice: SignerWithAddress
@@ -71,8 +71,6 @@ describe('Forum Factory', function () {
 	})
 	// eslint-disable-next-line jest/expect-expect
 	it('Should deploy forum via forumFactory contract', async function () {
-		await forumFactory.setLaunched(true)
-
 		const tx = await (
 			await forumFactory
 				.connect(wallet)
@@ -81,6 +79,7 @@ describe('Forum Factory', function () {
 					'T',
 					['0xfF626F22D92506b74eeC6ccb15412E5a9D6A592D'],
 					[30, 12, 50, 60],
+					[],
 					{ value: 0 }
 				)
 		).wait()
@@ -90,17 +89,13 @@ describe('Forum Factory', function () {
 		// ! need to check for success
 	})
 	it('Should revert if over 100 members added', async function () {
-		await forumFactory.setLaunched(true)
-
 		await expect(
 			forumFactory
 				.connect(wallet)
-				.deployGroup('testTable', 'T', beyondMemberLimit101, [30, 0, 50, 60], { value: 0 })
+				.deployGroup('testTable', 'T', beyondMemberLimit101, [30, 0, 50, 60], [], { value: 0 })
 		).revertedWith('MemberLimitExceeded()')
 	})
 	it('Minimal Proxy deployment should cost 10x less than a standard deployment', async function () {
-		await forumFactory.setLaunched(true)
-
 		await forumFactory
 			.connect(wallet)
 			.deployGroup(
@@ -108,6 +103,7 @@ describe('Forum Factory', function () {
 				'T',
 				['0xfF626F22D92506b74eeC6ccb15412E5a9D6A592D'],
 				[30, 12, 50, 60],
+				[],
 				{ value: 0 }
 			)
 

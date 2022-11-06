@@ -36,7 +36,7 @@ interface ForumGroupV2Interface extends ethers.utils.Interface {
     "docs()": FunctionFragment;
     "extensions(address)": FunctionFragment;
     "getProposalArrays(uint256)": FunctionFragment;
-    "init(string,string,address[],address[3],uint32[4])": FunctionFragment;
+    "init(string,string,address[],address[],uint32[4])": FunctionFragment;
     "isApprovedForAll(address,address)": FunctionFragment;
     "isValidSignature(bytes32,bytes)": FunctionFragment;
     "memberCount()": FunctionFragment;
@@ -122,7 +122,7 @@ interface ForumGroupV2Interface extends ethers.utils.Interface {
       string,
       string,
       string[],
-      [string, string, string],
+      string[],
       [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
     ]
   ): string;
@@ -553,7 +553,7 @@ export class ForumGroupV2 extends BaseContract {
       name_: string,
       symbol_: string,
       members_: string[],
-      extensions_: [string, string, string],
+      extensions_: string[],
       govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
@@ -765,7 +765,7 @@ export class ForumGroupV2 extends BaseContract {
     name_: string,
     symbol_: string,
     members_: string[],
-    extensions_: [string, string, string],
+    extensions_: string[],
     govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
     overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
@@ -972,7 +972,7 @@ export class ForumGroupV2 extends BaseContract {
       name_: string,
       symbol_: string,
       members_: string[],
-      extensions_: [string, string, string],
+      extensions_: string[],
       govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
       overrides?: CallOverrides
     ): Promise<void>;
@@ -1361,7 +1361,7 @@ export class ForumGroupV2 extends BaseContract {
       name_: string,
       symbol_: string,
       members_: string[],
-      extensions_: [string, string, string],
+      extensions_: string[],
       govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
@@ -1577,7 +1577,7 @@ export class ForumGroupV2 extends BaseContract {
       name_: string,
       symbol_: string,
       members_: string[],
-      extensions_: [string, string, string],
+      extensions_: string[],
       govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
