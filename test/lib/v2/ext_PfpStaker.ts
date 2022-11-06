@@ -88,7 +88,7 @@ describe('PFP_Staking Module', () => {
 
 		// Deploy PfpStaker with the test erc721 set as default (shield creator) address
 		pfpStaker = (await (
-			await hardhatEthers.getContractFactory('PfpStaker_v2')
+			await hardhatEthers.getContractFactory('PfpStakerV2')
 		).deploy(owner.address, testShield721.address, ZERO_ADDRESS)) as PfpStaker
 	})
 

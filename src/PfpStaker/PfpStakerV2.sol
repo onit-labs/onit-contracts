@@ -19,7 +19,7 @@ import {IERC1155MetadataURI} from "@openzeppelin/contracts/token/ERC1155/extensi
  * @title PfpStaker
  * @notice Allows groups to stake an NFT to use as their pfp - defaults to shield
  */
-contract PfpStaker_v2 is IPfpStaker, ReentrancyGuard, Owned, NFTreceiver {
+contract PfpStakerV2 is IPfpStaker, ReentrancyGuard, Owned, NFTreceiver {
     /// ----------------------------------------------------------------------------------------
     /// EVENTS
     /// ----------------------------------------------------------------------------------------

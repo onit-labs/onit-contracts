@@ -45,7 +45,7 @@ describe.only('Forum Factory', function () {
 
 		// Deploy master ForumGroupV2
 		forumContract = (await (
-			await hardhatEthers.getContractFactory('ForumGroup_v2')
+			await hardhatEthers.getContractFactory('ForumGroupV2')
 		).deploy()) as ForumGroupV2
 
 		// Deploy the Forum Factory
@@ -57,7 +57,7 @@ describe.only('Forum Factory', function () {
 
 	it('Should deploy master forumContract', async function () {
 		forumContract = (await (
-			await hardhatEthers.getContractFactory('ForumGroup_v2')
+			await hardhatEthers.getContractFactory('ForumGroupV2')
 		).deploy()) as ForumGroupV2
 		forumStandaloneGas = await getGas(forumContract.deployTransaction)
 		expect(forumContract.address).not.equal(0x0)

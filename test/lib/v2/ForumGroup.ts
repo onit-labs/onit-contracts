@@ -51,7 +51,7 @@ describe('Forum Multisig V2 Setup and Functions', function () {
 		// Similar to deploying the master forum multisig
 		await deployments.fixture(['Forum', 'Shields'])
 		shieldManager = await hardhatEthers.getContract('ShieldManager')
-		forum = await hardhatEthers.getContract('ForumGroup_v2')
+		forum = await hardhatEthers.getContract('ForumGroupV2')
 
 		await shieldManager.connect(owner).setPublicMintActive(true)
 

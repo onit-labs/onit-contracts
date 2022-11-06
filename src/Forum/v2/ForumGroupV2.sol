@@ -17,11 +17,11 @@ import {IExecutionManager} from "../../interfaces/IExecutionManager.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 /**
- * @title ForumGroup
+ * @title ForumGroupV2
  * @notice Forum investment group multisig wallet
  * @author Modified from KaliDAO (https://github.com/lexDAO/Kali/blob/main/contracts/KaliDAO.sol)
  */
-contract ForumGroup_v2 is
+contract ForumGroupV2 is
     IForumGroupTypes,
     ForumGovernance,
     ReentrancyGuard,
