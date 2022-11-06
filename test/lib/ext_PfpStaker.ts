@@ -27,7 +27,7 @@ import { deployments, ethers as hardhatEthers } from 'hardhat'
 import { beforeEach, describe, it } from 'mocha'
 
 // TODO create a delegator util to tidy code
-describe.only('PFP_Staking Module', () => {
+describe('PFP_Staking Module', () => {
 	let forum: ForumGroup
 	let accessManager: AccessManager
 	let pfpStaker: PfpStaker
@@ -76,7 +76,9 @@ describe.only('PFP_Staking Module', () => {
 			await hardhatEthers.getContractFactory('ShieldManager')
 		).deploy(owner.address, 'Shields', 'SHIELDS', emblemWeaver.address)) as ShieldManager
 		await testShield721.setPublicMintActive(true)
-		await testShield721.mintShieldPass(founder.address, { value: getBigNumber(0.5) })
+		await testShield721.mintShieldPass(founder.address, {
+			value: getBigNumber(0.5)
+		})
 
 		// Test erc1155 , deploy a test 1155 contract and mint a token for founder
 		test1155 = (await (
@@ -192,7 +194,9 @@ describe.only('PFP_Staking Module', () => {
 			expect(await testShield721.ownerOf(1)).equal(pfpStaker.address)
 
 			// Mint a second token, we'll replace token 1 with this
-			await testShield721.mintShieldPass(founder.address, { value: getBigNumber(0.5) })
+			await testShield721.mintShieldPass(founder.address, {
+				value: getBigNumber(0.5)
+			})
 
 			// Approve and stake new token
 			await testShield721.connect(founder).approve(pfpStaker.address, 2)
@@ -234,7 +238,7 @@ describe.only('PFP_Staking Module', () => {
 		})
 	})
 
-	describe.only('PFP Integration Tests (linked to ForumGroup)', () => {
+	describe('PFP Integration Tests (linked to ForumGroup)', () => {
 		let daoAddress: string
 
 		beforeEach(async () => {
@@ -288,7 +292,9 @@ describe.only('PFP_Staking Module', () => {
 		it('Returns initial shield to group if group stake a new one', async () => {
 			// Simulate the factory minting a shield pass for the group
 			const passId = await (
-				await testShield721.mintShieldPass(daoAddress, { value: getBigNumber(0.5) })
+				await testShield721.mintShieldPass(daoAddress, {
+					value: getBigNumber(0.5)
+				})
 			).wait()
 			// console.log(passId)
 
