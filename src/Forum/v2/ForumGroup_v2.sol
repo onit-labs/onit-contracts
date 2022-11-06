@@ -131,8 +131,12 @@ contract ForumGroup_v2 is
         if (govSettings_[0] == 0 || govSettings_[0] > 365 days)
             revert PeriodBounds();
 
-        if (govSettings_[1] < 1 || govSettings_[1] > 100)
-            revert MemberLimitExceeded();
+        // todo possibly condnense these into a single check, do we need <1 check?
+        if (
+            govSettings_[1] < 1 ||
+            govSettings_[1] > 100 ||
+            govSettings_[1] < members_.length
+        ) revert MemberLimitExceeded();
 
         if (govSettings_[2] < 1 || govSettings_[2] > 100)
             revert VoteThresholdBounds();

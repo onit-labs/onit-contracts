@@ -359,7 +359,6 @@ describe.only('Forum Multisig V2 Setup and Functions', function () {
 				'NotVoteable()'
 			);
 		});
-		// ! fix MEMBER_LIMIT int
 		it.only('Should forbid changing member limit beyond bounds, or to below member count', async function () {
 			await forum.init(
 				'FORUM',
@@ -382,31 +381,39 @@ describe.only('Forum Multisig V2 Setup and Functions', function () {
 			await expect(
 				forum
 					.connect(proposer)
-					.propose(4, [ZERO_ADDRESS], [getBigNumber(1)], [0x00])
+					.propose(MEMBER_LIMIT, [ZERO_ADDRESS], [getBigNumber(1)], [0x00])
 			).revertedWith('MemberLimitExceeded()');
 
 			// Fail to change member limit to 101
 			await expect(
 				forum
 					.connect(proposer)
-					.propose(4, [ZERO_ADDRESS], [getBigNumber(101)], [0x00])
+					.propose(MEMBER_LIMIT, [ZERO_ADDRESS], [getBigNumber(101)], [0x00])
 			).revertedWith('MemberLimitExceeded()');
 		});
-		it('Should process membership proposal', async function () {
+		it.only('Should process membership proposal and revert if too many added', async function () {
 			await forum.init(
 				'FORUM',
 				'FORUM',
 				[proposer.address],
 				[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-				[30, 12, 50, 60]
+				[30, 2, 50, 60]
 			);
 			await processProposal(forum, [proposer], 1, {
 				type: MINT,
-				accounts: [proposer.address],
+				accounts: [alice.address],
 				amounts: [getBigNumber(1000)],
 				payloads: [0x00],
 			});
-			expect(await forum.balanceOf(proposer.address, TOKEN)).equal(
+			await expect(
+				processProposal(forum, [proposer], 1, {
+					type: MINT,
+					accounts: [bob.address],
+					amounts: [getBigNumber(1000)],
+					payloads: [0x00],
+				})
+			).revertedWith('MemberLimitExceeded()');
+			expect(await forum.balanceOf(alice.address, TOKEN)).equal(
 				getBigNumber(1000)
 			);
 		});
@@ -427,7 +434,7 @@ describe.only('Forum Multisig V2 Setup and Functions', function () {
 			});
 			expect(await forum.votingPeriod()).equal(90);
 		});
-		it.only('Should process mwember limit proposal', async function () {
+		it.only('Should process member limit proposal', async function () {
 			await forum.init(
 				'FORUM',
 				'FORUM',
@@ -438,7 +445,7 @@ describe.only('Forum Multisig V2 Setup and Functions', function () {
 
 			await processProposal(forum, [proposer], 1, {
 				type: MEMBER_LIMIT,
-				accounts: [],
+				accounts: [ZERO_ADDRESS],
 				amounts: [13],
 				payloads: [0x00],
 			});
