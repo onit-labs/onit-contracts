@@ -5,6 +5,8 @@ import { advanceTime, getBigNumber } from '../../utils/helpers'
 import { createMakerOrder, createTakerOrder } from '../../utils/order-helper'
 import { processProposal } from '../../utils/processProposal'
 
+import { ForumGroupV2 } from '../../../typechain'
+
 import {
 	ALLOW_CONTRACT_SIG,
 	BURN,
@@ -37,7 +39,7 @@ import { beforeEach, describe, it } from 'mocha'
 
 describe('Forum Multisig V2 Setup and Functions', function () {
 	// let Forum: any // ForumGroup contract
-	let forum: Contract // ForumGroup contract instance
+	let forum: ForumGroupV2 // ForumGroup contract instance
 	let shieldManager: Contract // ForumGroup contract instance
 	let owner: SignerWithAddress // signer
 	let proposer: SignerWithAddress // signerA
@@ -59,7 +61,6 @@ describe('Forum Multisig V2 Setup and Functions', function () {
 		tokenId = parseInt(tx.events?.[0].args?.tokenId)
 	})
 	describe('Init', function () {
-		// ! consider member limit
 		it('Should initialize with correct params', async function () {
 			await forum.init(
 				'forum',
@@ -75,6 +76,7 @@ describe('Forum Multisig V2 Setup and Functions', function () {
 			expect(await forum.paused()).equal(true)
 			expect(await forum.balanceOf(proposer.address, 0)).equal(1)
 			expect(await forum.votingPeriod()).equal(30)
+			expect(await forum.memberLimit()).equal(12)
 			expect(await forum.memberVoteThreshold()).equal(50)
 			expect(await forum.tokenVoteThreshold()).equal(52)
 			expect(await forum.proposalVoteTypes(0)).equal(0)
@@ -111,8 +113,25 @@ describe('Forum Multisig V2 Setup and Functions', function () {
 			})
 			expect(await forum.balanceOf(alice.address, MEMBERSHIP)).equal(1)
 		})
-		// ! consider member limit
 		it('Should revert if initialization gov settings exceed bounds', async function () {
+			await expect(
+				forum.init(
+					'FORUM',
+					'FORUM',
+					[proposer.address],
+					[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
+					[30, 101, 1, 60]
+				)
+			).revertedWith('MemberLimitExceeded()')
+			await expect(
+				forum.init(
+					'FORUM',
+					'FORUM',
+					[proposer.address],
+					[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
+					[30, 0, 1, 60]
+				)
+			).revertedWith('MemberLimitExceeded()')
 			await expect(
 				forum.init(
 					'FORUM',
@@ -162,6 +181,7 @@ describe('Forum Multisig V2 Setup and Functions', function () {
 	})
 
 	describe('Proposals', function () {
+		// ! consider this check
 		it("Should revert if proposal arrays don't match", async function () {
 			await forum.init(
 				'FORUM',
@@ -320,6 +340,7 @@ describe('Forum Multisig V2 Setup and Functions', function () {
 				'InvalidSignature()'
 			)
 		})
+		// ! consider this
 		it.skip('Should forbid voting after period ends - skipped, no hard deadline, instead encourage deletion of old proposals', async function () {
 			await forum.init(
 				'FORUM',

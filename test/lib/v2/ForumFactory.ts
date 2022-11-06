@@ -33,7 +33,7 @@ const getGas = async (tx: ContractTransaction) => {
 	return receipt.gasUsed.toString()
 }
 
-describe.only('Forum Factory', function () {
+describe('Forum Factory', function () {
 	let owner: SignerWithAddress
 	let wallet: SignerWithAddress
 	let alice: SignerWithAddress

@@ -443,26 +443,27 @@ contract ForumGroupV2 is
                         ] = 1;
                     }
                 }
-                // Delete proposal now that it has been processed
-                delete proposals[proposal];
 
                 emit ProposalProcessed(
                     prop.proposalType,
                     proposal,
                     didProposalPass
                 );
+
+                // Delete proposal now that it has been processed
+                delete proposals[proposal];
             }
         } else {
             // Only delete and update the proposal settings if there are not enough votes AND the time limit has passed
             // This prevents deleting proposals unfairly
             if (block.timestamp > prop.creationTime + votingPeriod) {
-                delete proposals[proposal];
-
                 emit ProposalProcessed(
                     prop.proposalType,
                     proposal,
                     didProposalPass
                 );
+
+                delete proposals[proposal];
             }
         }
     }
