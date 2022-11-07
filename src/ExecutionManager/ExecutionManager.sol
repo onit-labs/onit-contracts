@@ -133,14 +133,15 @@ contract ExecutionManager is IExecutionManager, Owned {
 		uint256 value,
 		bytes memory payload
 	) external view returns (uint256) {
-		// If the target does not already have a handler set
-		// If baseCommission is off or the target is nonCommission return 0, else revert
-		if (proposalHandlers[target] == address(0)) {
-			if (baseCommission == 0 || nonCommissionContracts[target]) return 0;
-			if (baseCommission == 1) return gasleft();
-		}
+		// If the target has a handler, use it
+		if (proposalHandlers[target] != address(0))
+			return IProposalHandler(proposalHandlers[target]).handleProposal(value, payload);
 
-		return IProposalHandler(proposalHandlers[target]).handleProposal(value, payload);
+		// If baseCommission is off or the target is nonCommission return 0,
+		if (baseCommission == 0 || nonCommissionContracts[target]) return 0;
+
+		// else revert
+		if (baseCommission == 1) return gasleft();
 	}
 
 	receive() external payable virtual {}
