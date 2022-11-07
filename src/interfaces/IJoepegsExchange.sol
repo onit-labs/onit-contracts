@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import {OrderTypes} from '../libraries/OrderTypes.sol';
 
 interface IJoepegsExchange {
-	function matchAskWithTakerBidUsingETHAndWETH(
+	function matchAskWithTakerBidUsingAVAXAndWAVAX(
 		OrderTypes.TakerOrder calldata takerBid,
 		OrderTypes.MakerOrder calldata makerAsk
 	) external payable;

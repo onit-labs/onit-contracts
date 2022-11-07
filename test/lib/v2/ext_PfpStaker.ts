@@ -16,7 +16,7 @@ import { deployments, ethers, ethers as hardhatEthers } from 'hardhat'
 import { beforeEach, describe, it } from 'mocha'
 
 // TODO create a delegator util to tidy code
-describe.only('PFP_Staking Module', () => {
+describe('PFP_Staking Module', () => {
 	let forum: ForumGroupV2
 	let pfpStaker: PfpStakerV2
 	let test721: ERC721Test

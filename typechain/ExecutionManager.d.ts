@@ -22,15 +22,15 @@ import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 interface ExecutionManagerInterface extends ethers.utils.Interface {
   functions: {
     "addProposalHandler(address,address)": FunctionFragment;
+    "baseCommission()": FunctionFragment;
     "collectERC20(address)": FunctionFragment;
     "collectFees()": FunctionFragment;
     "manageExecution(address,uint256,bytes)": FunctionFragment;
     "nonCommissionContracts(address)": FunctionFragment;
     "owner()": FunctionFragment;
     "proposalHandlers(address)": FunctionFragment;
-    "restrictedExecution()": FunctionFragment;
+    "setBaseCommission(uint256)": FunctionFragment;
     "setOwner(address)": FunctionFragment;
-    "setRestrictedExecution(uint256)": FunctionFragment;
     "toggleNonCommissionContract(address)": FunctionFragment;
     "updateProposalHandler(address,address)": FunctionFragment;
   };
@@ -38,6 +38,10 @@ interface ExecutionManagerInterface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: "addProposalHandler",
     values: [string, string]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "baseCommission",
+    values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "collectERC20",
@@ -61,14 +65,10 @@ interface ExecutionManagerInterface extends ethers.utils.Interface {
     values: [string]
   ): string;
   encodeFunctionData(
-    functionFragment: "restrictedExecution",
-    values?: undefined
-  ): string;
-  encodeFunctionData(functionFragment: "setOwner", values: [string]): string;
-  encodeFunctionData(
-    functionFragment: "setRestrictedExecution",
+    functionFragment: "setBaseCommission",
     values: [BigNumberish]
   ): string;
+  encodeFunctionData(functionFragment: "setOwner", values: [string]): string;
   encodeFunctionData(
     functionFragment: "toggleNonCommissionContract",
     values: [string]
@@ -80,6 +80,10 @@ interface ExecutionManagerInterface extends ethers.utils.Interface {
 
   decodeFunctionResult(
     functionFragment: "addProposalHandler",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "baseCommission",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -104,14 +108,10 @@ interface ExecutionManagerInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "restrictedExecution",
+    functionFragment: "setBaseCommission",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "setOwner", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "setRestrictedExecution",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(
     functionFragment: "toggleNonCommissionContract",
     data: BytesLike
@@ -122,19 +122,23 @@ interface ExecutionManagerInterface extends ethers.utils.Interface {
   ): Result;
 
   events: {
+    "BaseCommissionToggled(uint256)": EventFragment;
     "NonCommissionContracts(address,bool)": EventFragment;
     "OwnerUpdated(address,address)": EventFragment;
     "ProposalHandlerAdded(address,address)": EventFragment;
     "ProposalHandlerUpdated(address,address)": EventFragment;
-    "RestrictedExecutionToggled(uint256)": EventFragment;
   };
 
+  getEvent(nameOrSignatureOrTopic: "BaseCommissionToggled"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "NonCommissionContracts"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "OwnerUpdated"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "ProposalHandlerAdded"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "ProposalHandlerUpdated"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "RestrictedExecutionToggled"): EventFragment;
 }
+
+export type BaseCommissionToggledEvent = TypedEvent<
+  [BigNumber] & { newBaseCommission: BigNumber }
+>;
 
 export type NonCommissionContractsEvent = TypedEvent<
   [string, boolean] & { contractAddress: string; newCommissionSetting: boolean }
@@ -150,10 +154,6 @@ export type ProposalHandlerAddedEvent = TypedEvent<
 
 export type ProposalHandlerUpdatedEvent = TypedEvent<
   [string, string] & { handledAddress: string; newProposalHandler: string }
->;
-
-export type RestrictedExecutionToggledEvent = TypedEvent<
-  [BigNumber] & { newRestrictionSetting: BigNumber }
 >;
 
 export class ExecutionManager extends BaseContract {
@@ -206,6 +206,8 @@ export class ExecutionManager extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
+    baseCommission(overrides?: CallOverrides): Promise<[BigNumber]>;
+
     collectERC20(
       erc20: string,
       overrides?: Overrides & { from?: string | Promise<string> }
@@ -234,15 +236,13 @@ export class ExecutionManager extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[string]>;
 
-    restrictedExecution(overrides?: CallOverrides): Promise<[BigNumber]>;
-
-    setOwner(
-      newOwner: string,
+    setBaseCommission(
+      _baseCommission: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
-    setRestrictedExecution(
-      _restrictedExecution: BigNumberish,
+    setOwner(
+      newOwner: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
@@ -263,6 +263,8 @@ export class ExecutionManager extends BaseContract {
     proposalHandler: string,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
+
+  baseCommission(overrides?: CallOverrides): Promise<BigNumber>;
 
   collectERC20(
     erc20: string,
@@ -289,15 +291,13 @@ export class ExecutionManager extends BaseContract {
 
   proposalHandlers(arg0: string, overrides?: CallOverrides): Promise<string>;
 
-  restrictedExecution(overrides?: CallOverrides): Promise<BigNumber>;
-
-  setOwner(
-    newOwner: string,
+  setBaseCommission(
+    _baseCommission: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
-  setRestrictedExecution(
-    _restrictedExecution: BigNumberish,
+  setOwner(
+    newOwner: string,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
@@ -319,6 +319,8 @@ export class ExecutionManager extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>;
 
+    baseCommission(overrides?: CallOverrides): Promise<BigNumber>;
+
     collectERC20(erc20: string, overrides?: CallOverrides): Promise<void>;
 
     collectFees(overrides?: CallOverrides): Promise<void>;
@@ -339,14 +341,12 @@ export class ExecutionManager extends BaseContract {
 
     proposalHandlers(arg0: string, overrides?: CallOverrides): Promise<string>;
 
-    restrictedExecution(overrides?: CallOverrides): Promise<BigNumber>;
-
-    setOwner(newOwner: string, overrides?: CallOverrides): Promise<void>;
-
-    setRestrictedExecution(
-      _restrictedExecution: BigNumberish,
+    setBaseCommission(
+      _baseCommission: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>;
+
+    setOwner(newOwner: string, overrides?: CallOverrides): Promise<void>;
 
     toggleNonCommissionContract(
       nonCommissionContract: string,
@@ -361,6 +361,14 @@ export class ExecutionManager extends BaseContract {
   };
 
   filters: {
+    "BaseCommissionToggled(uint256)"(
+      newBaseCommission?: BigNumberish | null
+    ): TypedEventFilter<[BigNumber], { newBaseCommission: BigNumber }>;
+
+    BaseCommissionToggled(
+      newBaseCommission?: BigNumberish | null
+    ): TypedEventFilter<[BigNumber], { newBaseCommission: BigNumber }>;
+
     "NonCommissionContracts(address,bool)"(
       contractAddress?: null,
       newCommissionSetting?: null
@@ -418,14 +426,6 @@ export class ExecutionManager extends BaseContract {
       [string, string],
       { handledAddress: string; newProposalHandler: string }
     >;
-
-    "RestrictedExecutionToggled(uint256)"(
-      newRestrictionSetting?: BigNumberish | null
-    ): TypedEventFilter<[BigNumber], { newRestrictionSetting: BigNumber }>;
-
-    RestrictedExecutionToggled(
-      newRestrictionSetting?: BigNumberish | null
-    ): TypedEventFilter<[BigNumber], { newRestrictionSetting: BigNumber }>;
   };
 
   estimateGas: {
@@ -434,6 +434,8 @@ export class ExecutionManager extends BaseContract {
       proposalHandler: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
+
+    baseCommission(overrides?: CallOverrides): Promise<BigNumber>;
 
     collectERC20(
       erc20: string,
@@ -463,15 +465,13 @@ export class ExecutionManager extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    restrictedExecution(overrides?: CallOverrides): Promise<BigNumber>;
-
-    setOwner(
-      newOwner: string,
+    setBaseCommission(
+      _baseCommission: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
-    setRestrictedExecution(
-      _restrictedExecution: BigNumberish,
+    setOwner(
+      newOwner: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
@@ -493,6 +493,8 @@ export class ExecutionManager extends BaseContract {
       proposalHandler: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
+
+    baseCommission(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     collectERC20(
       erc20: string,
@@ -522,17 +524,13 @@ export class ExecutionManager extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    restrictedExecution(
-      overrides?: CallOverrides
+    setBaseCommission(
+      _baseCommission: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
     setOwner(
       newOwner: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>;
-
-    setRestrictedExecution(
-      _restrictedExecution: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 

@@ -8,7 +8,7 @@ import {
 	AccessManager,
 	ExecutionManager,
 	ForumFactory,
-	ForumGroup,
+	ForumGroupV2,
 	JoepegsProposalHandler,
 	PfpStaker,
 	ShieldManager
@@ -20,7 +20,7 @@ import { expect } from 'chai'
 import { deployments, ethers as hardhatEthers } from 'hardhat'
 import { beforeEach, describe, it } from 'mocha'
 
-describe('Extension Manager', function () {
+describe.only('Extension Manager', function () {
 	let owner: SignerWithAddress
 	let wallet: SignerWithAddress
 	let alice: SignerWithAddress
@@ -30,7 +30,7 @@ describe('Extension Manager', function () {
 	let shieldManager: ShieldManager
 	let accessManager: AccessManager
 	let pfpStaker: PfpStaker
-	let forum: ForumGroup
+	let forum: ForumGroupV2
 	let executionManager: ExecutionManager
 	let joepegsHandler: JoepegsProposalHandler
 
@@ -38,38 +38,39 @@ describe('Extension Manager', function () {
 		;[owner, wallet, alice, bob, testAddress1, testAddress2] = await hardhatEthers.getSigners()
 
 		await deployments.fixture(['Forum', 'Shields'])
-		forum = await hardhatEthers.getContract('ForumGroup')
+		forum = await hardhatEthers.getContract('ForumGroupV2')
 		executionManager = await hardhatEthers.getContract('ExecutionManager')
 		joepegsHandler = await hardhatEthers.getContract('JoepegsProposalHandler')
 		shieldManager = await hardhatEthers.getContract('ShieldManager')
 	})
 
 	describe('general execution manager functions', function () {
-		it('should revert if non owner attempts to add a proposalHandler, or unset restrcted mode', async function () {
+		it('should revert if non owner attempts to add a proposalHandler, or unset baseCommission', async function () {
 			await expect(
 				executionManager.connect(bob).addProposalHandler(testAddress1.address, testAddress2.address)
 			).revertedWith('UNAUTHORIZED')
 
-			await expect(executionManager.connect(bob).setRestrictedExecution(0)).revertedWith(
-				'UNAUTHORIZED'
-			)
+			await expect(executionManager.connect(bob).setBaseCommission(0)).revertedWith('UNAUTHORIZED')
 		})
-		it('should allow owner to add a proposalHandler, then unset restrcted mode', async function () {
+		it('should allow owner to add a proposalHandler, then unset baseCommission', async function () {
 			await executionManager.addProposalHandler(testAddress1.address, testAddress2.address)
 			expect(await executionManager.proposalHandlers(testAddress1.address)).equal(
 				testAddress2.address
 			)
 
-			await executionManager.setRestrictedExecution(0)
-			expect(await executionManager.restrictedExecution()).equal(0)
+			await executionManager.setBaseCommission(0)
+			expect(await executionManager.baseCommission()).equal(0)
 		})
-		it('should revert if restricedExecution enabled and unknown contract called', async function () {
-			//reset restricted mode from last test
-			await executionManager.setRestrictedExecution(1)
+		it('should take base commission if set, and not if unset', async function () {
+			//reset restricted mode from last test, expect commission to be >0
+			await executionManager.setBaseCommission(1)
+			console.log(await executionManager.manageExecution(testAddress2.address, 1, '0x00'))
 
-			await expect(executionManager.manageExecution(testAddress2.address, 1, '0x00')).revertedWith(
-				'UnapprovedContract()'
-			)
+			expect(await executionManager.manageExecution(testAddress2.address, 1, '0x00')).gt(0)
+
+			//unset restricted mode, expect 0 commission
+			await executionManager.setBaseCommission(0)
+			expect(await executionManager.manageExecution(testAddress2.address, 1, '0x00')).eq(0)
 		})
 	})
 	describe('joepegs handler', function () {
@@ -91,9 +92,9 @@ describe('Extension Manager', function () {
 			await forum.init(
 				'FORUM',
 				'FORUM',
-				[sender.address, receiver.address],
+				[sender.address],
 				[ZERO_ADDRESS, executionManager.address, ZERO_ADDRESS],
-				[30, 0, 50, 60]
+				[30, 12, 50, 60]
 			)
 
 			// Send some avax to the address to cover commission payment
@@ -104,20 +105,16 @@ describe('Extension Manager', function () {
 			await sender.sendTransaction(tx)
 
 			// Create a taker order
-			const payload = hardhatEthers.utils.defaultAbiCoder.encode(takerOrderTypes, [
-				false,
-				sender.address,
-				getBigNumber(1),
-				getBigNumber(1),
-				getBigNumber(9000),
-				'0x00'
-			])
+			const payload = hardhatEthers.utils.defaultAbiCoder.encode(
+				[
+					'(bool,address,uint256,uint256,uint256,bytes)',
+					'(bool,address,address,uint256,uint256,uint256,address,address,uint256,uint256,uint256,uint256,bytes,uint8,bytes32,bytes32)'
+				],
+				[testTakerOrder, testMakerOrder]
+			)
 
 			const payloadWithNoCommissionFunctionSelector =
 				COMMISSION_FREE_FUNCTIONS[0] + payload.substring(2)
-			console.log({
-				a: await joepegsHandler.commissionBasedFunctions(COMMISSION_BASED_FUNCTIONS[0])
-			})
 			console.log({ payloadWithNoCommissionFunctionSelector })
 
 			expect(await hardhatEthers.provider.getBalance(executionManager.address)).equal(0)
@@ -149,3 +146,31 @@ describe('Extension Manager', function () {
 		})
 	})
 })
+
+const testTakerOrder = [
+	false,
+	ZERO_ADDRESS,
+	getBigNumber(1),
+	getBigNumber(1),
+	getBigNumber(9000),
+	'0x00'
+]
+
+const testMakerOrder = [
+	false,
+	ZERO_ADDRESS,
+	ZERO_ADDRESS,
+	getBigNumber(1),
+	getBigNumber(1),
+	getBigNumber(1),
+	ZERO_ADDRESS,
+	ZERO_ADDRESS,
+	getBigNumber(1),
+	getBigNumber(1),
+	getBigNumber(1),
+	getBigNumber(1),
+	'0x0000000000000000000000000000000000000000000000000000000000000000',
+	27,
+	'0x0000000000000000000000000000000000000000000000000000000000000000',
+	'0x0000000000000000000000000000000000000000000000000000000000000000'
+]
