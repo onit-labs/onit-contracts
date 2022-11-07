@@ -8,7 +8,7 @@ import {OrderTypes} from '../libraries/OrderTypes.sol';
 import {IJoepegsExchange} from '../interfaces/IJoepegsExchange.sol';
 
 contract MockJoepegsExchange is IJoepegsExchange {
-	function matchAskWithTakerBidUsingETHAndWETH(
+	function matchAskWithTakerBidUsingAVAXAndWAVAX(
 		OrderTypes.TakerOrder calldata takerBid,
 		OrderTypes.MakerOrder calldata makerAsk
 	) external payable {

@@ -25,7 +25,7 @@ contract ExecutionManager is IExecutionManager, Owned {
 
 	event ProposalHandlerAdded(address indexed newHandledAddress, address indexed proposalHandler);
 
-	event RestrictedExecutionToggled(uint256 indexed newRestrictionSetting);
+	event BaseCommissionToggled(uint256 indexed newBaseCommission);
 
 	event NonCommissionContracts(address contractAddress, bool newCommissionSetting);
 
@@ -34,7 +34,7 @@ contract ExecutionManager is IExecutionManager, Owned {
 	/// ----------------------------------------------------------------------------------------
 
 	/// @notice If equal to 1 then only certain contracts can be called
-	uint256 public restrictedExecution = 1;
+	uint256 public baseCommission = 1;
 
 	/// @notice Each proposalHandler is an address with logic to extract the details of the proposal to take commission fees from.
 	mapping(address => address) public proposalHandlers;
@@ -80,13 +80,13 @@ contract ExecutionManager is IExecutionManager, Owned {
 	}
 
 	/**
-	 * @notice Change the restrictedExecution setting
-	 * @param _restrictedExecution new restricted execution setting (1 = restricted, 0 = not restricted)
+	 * @notice Change the baseCommission setting
+	 * @param _baseCommission new base commission setting, used for non configured contracts (1 = on, 0 = off)
 	 */
-	function setRestrictedExecution(uint256 _restrictedExecution) external onlyOwner {
-		restrictedExecution = _restrictedExecution;
+	function setBaseCommission(uint256 _baseCommission) external onlyOwner {
+		baseCommission = _baseCommission;
 
-		emit RestrictedExecutionToggled(_restrictedExecution);
+		emit BaseCommissionToggled(_baseCommission);
 	}
 
 	/**
@@ -133,13 +133,15 @@ contract ExecutionManager is IExecutionManager, Owned {
 		uint256 value,
 		bytes memory payload
 	) external view returns (uint256) {
-		// If the target does not already have a handler set
-		// If restriction is off or the target is nonCommission return 0, else revert
-		if (proposalHandlers[target] == address(0))
-			if (nonCommissionContracts[target] || restrictedExecution == 0) return 0;
-			else revert UnapprovedContract();
+		// If the target has a handler, use it
+		if (proposalHandlers[target] != address(0))
+			return IProposalHandler(proposalHandlers[target]).handleProposal(value, payload);
 
-		return IProposalHandler(proposalHandlers[target]).handleProposal(value, payload);
+		// If baseCommission is off or the target is nonCommission return 0,
+		if (baseCommission == 0 || nonCommissionContracts[target]) return 0;
+
+		// else revert
+		if (baseCommission == 1) return gasleft();
 	}
 
 	receive() external payable virtual {}
