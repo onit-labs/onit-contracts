@@ -3,16 +3,16 @@ pragma solidity ^0.8.13;
 
 import {Owned} from '../utils/Owned.sol';
 
-import {IExecutionManager} from '../interfaces/IExecutionManager.sol';
+import {ICommissionManager} from '../interfaces/ICommissionManager.sol';
 import {IProposalHandler} from '../interfaces/IProposalHandler.sol';
 import {IERC20} from '../interfaces/IERC20.sol';
 
 /**
- * @title ExecutionManager
- * @notice It allows adding/removing proposalHandlers to collect fees from proposals.
+ * @title CommissionManager
+ * @notice It allows adding/removing proposalHandlers to collect commissions from proposals.
  * @author Modified from Looksrare (https://github.com/LooksRare/contracts-exchange-v1/blob/master/contracts/ExecutionManager.sol)
  */
-contract ExecutionManager is IExecutionManager, Owned {
+contract CommissionManager is ICommissionManager, Owned {
 	/// ----------------------------------------------------------------------------------------
 	///							ERRORS & EVENTS
 	/// ----------------------------------------------------------------------------------------
@@ -30,7 +30,7 @@ contract ExecutionManager is IExecutionManager, Owned {
 	event NonCommissionContracts(address contractAddress, bool newCommissionSetting);
 
 	/// ----------------------------------------------------------------------------------------
-	///							ExecutionManager Storage
+	///							CommissionManager Storage
 	/// ----------------------------------------------------------------------------------------
 
 	/// @notice If equal to 1 then only certain contracts can be called
@@ -128,7 +128,7 @@ contract ExecutionManager is IExecutionManager, Owned {
 	 * @param value value of tx
 	 * @param payload payload sent to contract which will be decoded
 	 */
-	function manageExecution(
+	function manageCommission(
 		address target,
 		uint256 value,
 		bytes memory payload
