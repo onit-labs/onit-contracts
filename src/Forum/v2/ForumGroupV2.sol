@@ -16,6 +16,8 @@ import {IExecutionManager} from '../../interfaces/IExecutionManager.sol';
 
 import {EnumerableSet} from '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
+import 'hardhat/console.sol';
+
 /**
  * @title ForumGroupV2
  * @notice Forum investment group multisig wallet
@@ -215,7 +217,7 @@ contract ForumGroupV2 is
 			if (amounts[0] == 0 || amounts[0] > 365 days) revert PeriodBounds();
 
 		if (proposalType == ProposalType.MEMBER_LIMIT)
-			if (amounts[0] > 100 || amounts[0] < memberLimit) revert MemberLimitExceeded();
+			if (amounts[0] > 100 || amounts[0] < memberCount) revert MemberLimitExceeded();
 
 		if (
 			proposalType == ProposalType.MEMBER_THRESHOLD || proposalType == ProposalType.TOKEN_THRESHOLD

@@ -1,6 +1,7 @@
 import { expect } from '../utils/expect'
 
 import { TOKEN, ZERO_ADDRESS } from '../config'
+import { ForumGroupV2, ForumFactoryV2, ForumCrowdfund } from '../../typechain'
 
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { BigNumber, Contract, ContractFactory, ethers, Signer } from 'ethers'
@@ -14,10 +15,9 @@ function getBigNumber(amount: number, decimals = 18) {
 }
 
 describe.only('Crowdfund', function () {
-	let forum: Contract // ForumGroup contract instance
-	let forumFactory: Contract // ForumFactory contract instance
-	let crowdfund: Contract // Crowdfund contract instance
-	let shieldManager: Contract // shieldManager contract instance
+	let forum: ForumGroupV2 // ForumGroup contract instance
+	let forumFactory: ForumFactoryV2 // ForumFactory contract instance
+	let crowdfund: ForumCrowdfund // Crowdfund contract instance
 	let pfpStaker: Contract // pfpStaker contract instance
 	let proposer: SignerWithAddress // signerA
 	let alice: SignerWithAddress // signerB
@@ -30,33 +30,35 @@ describe.only('Crowdfund', function () {
 
 		// Similar to deploying the master forum multisig
 		await deployments.fixture(['Forum', 'Shields'])
-		forum = await hardhatEthers.getContract('ForumGroup')
-		forumFactory = await hardhatEthers.getContract('ForumFactory')
+		forum = await hardhatEthers.getContract('ForumGroupV2')
+		forumFactory = await hardhatEthers.getContract('ForumFactoryV2')
 		crowdfund = await hardhatEthers.getContract('ForumCrowdfund')
-		shieldManager = await hardhatEthers.getContract('ShieldManager')
 		pfpStaker = await hardhatEthers.getContract('PfpStaker')
 
-		await forumFactory.setLaunched(true)
+		// Setp deployments with correct addresses
 		await forumFactory.setPfpStaker(pfpStaker.address)
-		await shieldManager.setShieldPassPrice(0)
+		await forumFactory.setFundraiseExtension(ZERO_ADDRESS)
 
 		crowdsaleInput = {
-			targetContract: ZERO_ADDRESS,
+			targetContract: forumFactory.address,
 			targetPrice: getBigNumber(2),
 			deadline: 1730817411, // 05-11-2030
 			groupName: 'TEST',
 			symbol: 'T',
-			payload: ethers.utils.toUtf8Bytes('0X123')
+			payload: ethers.utils.toUtf8Bytes(
+				'0x5d150a9500000000000000000000000000000000000000000000000000000000000000e000000000000000000000000000000000000000000000000000000000000001200000000000000000000000000000000000000000000000000000000000000160000000000000000000000000000000000000000000000000000000000003f48000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000033000000000000000000000000000000000000000000000000000000000000003400000000000000000000000000000000000000000000000000000000000000066c6567656e64000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000064c4547454e4400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000adcc9add0b124cd933bfed9c7e53f520933d0fb4'
+			)
 		}
 
+		// Generate hash of groupname used to locate crowdfund on contract
 		testGroupNameHash = ethers.utils.keccak256(
 			ethers.utils.defaultAbiCoder.encode(['string'], [crowdsaleInput.groupName])
 		)
-		console.log('testGroupNameHash', testGroupNameHash)
+
+		// Initiate a fund used in tests below
+		await crowdfund.initiateCrowdfund(crowdsaleInput, { value: getBigNumber(1) })
 	})
 	it('Should initiate crowdsale and submit contribution', async function () {
-		await crowdfund.initiateCrowdfund(crowdsaleInput, { value: getBigNumber(1) })
-
 		const crowdfundDetails = await crowdfund.getCrowdfund(testGroupNameHash)
 		console.log({ crowdfundDetails })
 
@@ -86,15 +88,15 @@ describe.only('Crowdfund', function () {
 	})
 	// TODO need a check for previously deployed group with same name - create2 will fail, we should catch this
 	it.skip('Should revert if crowdsale for duplicate name exists', async function () {
-		await crowdfund.initiateCrowdfund(crowdsaleInput, { value: getBigNumber(1) })
-
 		await expect(crowdfund.initiateCrowdfund(crowdsaleInput)).to.be.revertedWith('OpenFund()')
 	})
 	it('Should revert submitting a contribution if no fund exists, over 12 people, or incorrect value', async function () {
-		await crowdfund.initiateCrowdfund(crowdsaleInput)
-
 		// Check if fund already exists
-		await expect(crowdfund.submitContribution('WRONG')).to.be.revertedWith('OpenFund()')
+		await expect(
+			crowdfund.submitContribution(
+				ethers.utils.keccak256(ethers.utils.defaultAbiCoder.encode(['string'], ['WRONG']))
+			)
+		).to.be.revertedWith('MissingCrowdfund()')
 
 		// Check max contributors limit
 		const [a, b, c, d, e, f, g, h, i, j, k, l, m] = await hardhatEthers.getSigners()
@@ -114,8 +116,6 @@ describe.only('Crowdfund', function () {
 		}
 	})
 	it('Should cancel a crowdfund and revert if not cancellable', async function () {
-		await crowdfund.initiateCrowdfund(crowdsaleInput, { value: getBigNumber(1) })
-
 		// Can not cancel before deadline
 		await expect(crowdfund.cancelCrowdfund(testGroupNameHash)).to.be.revertedWith('OpenFund()')
 
@@ -128,9 +128,13 @@ describe.only('Crowdfund', function () {
 		expect(bal2).to.be.gt(bal1)
 	})
 	it.only('Should process a crowdfund', async function () {
-		await crowdfund.initiateCrowdfund(crowdsaleInput, { value: getBigNumber(1) })
+		// Process crowdfund
+		const tx = await (await crowdfund.processCrowdfund(testGroupNameHash)).wait()
 
-		await crowdfund.processCrowdfund(testGroupNameHash)
+		// Get group deployed by crowdfund and check balance of member
+		const group = `0x${tx.events[1].topics[1].substring(26)}`
+		const groupContract = await hardhatEthers.getContractAt('ForumGroupV2', group)
+		expect(await groupContract.balanceOf(proposer.address, 0)).to.equal(1)
 	})
 
 	// it('Should process native `value` crowdfund with unitValue multiplier', async function () {

@@ -7,7 +7,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deployer } = await hre.getNamedAccounts()
 	const { deterministic } = hre.deployments
 
-	const ForumFactory = await hre.ethers.getContract('ForumFactory')
+	const ForumFactory = await hre.ethers.getContract('ForumFactoryV2')
 
 	const deterministicDeployment = await deterministic('ForumCrowdfund', {
 		contract: 'ForumCrowdfund',
