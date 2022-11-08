@@ -92,7 +92,7 @@ describe('Forum Factory', function () {
 		await expect(
 			forumFactory
 				.connect(wallet)
-				.deployGroup('testTable', 'T', beyondMemberLimit101, [30, 0, 50, 60], [], { value: 0 })
+				.deployGroup('testTable', 'T', beyondMemberLimit101, [60, 100, 50, 60], [], { value: 0 })
 		).revertedWith('MemberLimitExceeded()')
 	})
 	it('Minimal Proxy deployment should cost 10x less than a standard deployment', async function () {

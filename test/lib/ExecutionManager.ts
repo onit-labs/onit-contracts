@@ -20,7 +20,7 @@ import { expect } from 'chai'
 import { deployments, ethers as hardhatEthers } from 'hardhat'
 import { beforeEach, describe, it } from 'mocha'
 
-describe.only('Extension Manager', function () {
+describe('Extension Manager', function () {
 	let owner: SignerWithAddress
 	let wallet: SignerWithAddress
 	let alice: SignerWithAddress

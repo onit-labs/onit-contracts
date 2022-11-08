@@ -83,8 +83,7 @@ contract ForumFactoryV2 is Multicall, Owned {
 		forumGroup = ForumGroupV2(_cloneAsMinimalProxy(forumMaster, name_));
 
 		// Create initialExtensions array of correct length. 3 Forum set extensions + customExtensions
-		uint256 initialExtensionsLength = 3 + customExtensions_.length;
-		address[] memory initialExtensions = new address[](initialExtensionsLength);
+		address[] memory initialExtensions = new address[](3 + customExtensions_.length);
 
 		// Set the base Forum extensions
 		(initialExtensions[0], initialExtensions[1], initialExtensions[2]) = (
@@ -95,10 +94,10 @@ contract ForumFactoryV2 is Multicall, Owned {
 
 		// Set the custom extensions
 		if (customExtensions_.length != 0) {
-			// cannot realistically overflow on human timescales
+			// Cannot realistically overflow on human timescales
 			unchecked {
 				for (uint256 i = 0; i < customExtensions_.length; i++) {
-					// +3 is to offset the base Forum extensions
+					// +3 offsets the base Forum extensions
 					initialExtensions[i + 3] = customExtensions_[i];
 				}
 			}
