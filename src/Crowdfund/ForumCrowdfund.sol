@@ -44,7 +44,7 @@ contract ForumCrowdfund is ReentrancyGuard {
 
 	error MemberLimitReached();
 
-	error IncorrectContribution();
+	error InsufficientFunds();
 
 	error OpenFund();
 
@@ -143,9 +143,10 @@ contract ForumCrowdfund is ReentrancyGuard {
 
 		// Return funds from escrow
 		for (uint256 i; i < fund.contributors.length; ) {
-			console.logAddress(fund.contributors[i]);
-			console.logUint(fund.contributions[msg.sender]);
-			payable(fund.contributors[i]).transfer(fund.contributions[msg.sender]);
+			payable(fund.contributors[i]).call{value: fund.contributions[msg.sender]}('');
+
+			// Delete the contribution in the mapping
+			delete fund.contributions[fund.contributors[i]];
 
 			// Members can only be 12
 			unchecked {
@@ -153,7 +154,6 @@ contract ForumCrowdfund is ReentrancyGuard {
 			}
 		}
 
-		// ! better clearing of this is needed now we have  a mapping
 		delete crowdfunds[groupNameHash];
 
 		emit Cancelled(fund.parameters.groupName);
@@ -166,10 +166,16 @@ contract ForumCrowdfund is ReentrancyGuard {
 	function processCrowdfund(bytes32 groupNameHash) public virtual nonReentrant {
 		Crowdfund storage fund = crowdfunds[groupNameHash];
 
-		// todo consider block on deadline
-		// if (fund.parameters.deadline > block.timestamp) revert OpenFund();
-
-		// todo check targetValue is raised
+		// Price will not exceed max int
+		unchecked {
+			// Check correct value has been raised
+			uint256 raised;
+			for (uint256 i; i < fund.contributors.length; ) {
+				raised += fund.contributions[fund.contributors[i]];
+				++i;
+			}
+			if (raised < fund.parameters.targetPrice) revert InsufficientFunds();
+		}
 
 		// customExtension of this address allows this contract to mint each member shares
 		address[] memory customExtensions = new address[](1);
@@ -185,15 +191,14 @@ contract ForumCrowdfund is ReentrancyGuard {
 			customExtensions
 		);
 
-		// ! consider execution / target value check
+		// ! consider execution
 		// ! consider commission
-		// !!! prevent same user being added twice
-		// execute the tx with payload
+		// Execute the tx with payload
 		(, bytes memory result) = (fund.parameters.targetContract).call{
 			value: fund.parameters.targetPrice
 		}(fund.parameters.payload);
 
-		// distribute the group funds
+		// Distribute the group funds
 		for (uint256 i; i < fund.contributors.length; ) {
 			forumGroup.mintShares(fund.contributors[i], 0, 1);
 			forumGroup.mintShares(fund.contributors[i], 1, fund.contributions[msg.sender]);

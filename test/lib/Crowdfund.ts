@@ -39,6 +39,7 @@ describe.only('Crowdfund', function () {
 		await forumFactory.setPfpStaker(pfpStaker.address)
 		await forumFactory.setFundraiseExtension(ZERO_ADDRESS)
 
+		// Generic input call to some address
 		crowdsaleInput = {
 			targetContract: forumFactory.address,
 			targetPrice: getBigNumber(2),
@@ -86,7 +87,7 @@ describe.only('Crowdfund', function () {
 			crowdsaleInput.targetContract
 		)
 	})
-	it('Should submit second contribution', async function () {
+	it.only('Should submit second contribution', async function () {
 		const crowdfundDetails = await crowdfund.getCrowdfund(testGroupNameHash)
 
 		// Check initial state
@@ -106,7 +107,7 @@ describe.only('Crowdfund', function () {
 		expect(crowdfundDetailsAfterSubmission.contributions[0]).to.equal(getBigNumber(2))
 	})
 	// TODO need a check for previously deployed group with same name - create2 will fail, we should catch this
-	it('Should revert if crowdsale for duplicate name exists', async function () {
+	it('Should revert creating a crowdsale if a duplicate name exists', async function () {
 		await expect(crowdfund.initiateCrowdfund(crowdsaleInput)).to.be.revertedWith('OpenFund()')
 	})
 	it.skip('Should revert submitting a contribution if no fund exists, over 12 people, or incorrect value', async function () {
@@ -150,8 +151,25 @@ describe.only('Crowdfund', function () {
 		await crowdfund.cancelCrowdfund(testGroupNameHash)
 		const bal2 = await hardhatEthers.provider.getBalance(proposer.address)
 		expect(bal2).to.be.gt(bal1)
+
+		// Check the contributions mapping has been cleared
+		const crowdfundDetails = await crowdfund.getCrowdfund(testGroupNameHash)
+
+		expect(crowdfundDetails.contributors).to.have.lengthOf(0)
+		expect(crowdfundDetails.contributions).to.have.lengthOf(0)
 	})
-	it('Should process a crowdfund', async function () {
+	it('Should revert if trying to process a fund which hasnt hit its target', async function () {
+		await expect(crowdfund.processCrowdfund(testGroupNameHash)).to.be.revertedWith(
+			'InsufficientFunds()'
+		)
+	})
+
+	it.only('Should process a crowdfund, and not process it twice', async function () {
+		// Contribute so target alue is reached
+		await crowdfund.submitContribution(testGroupNameHash, {
+			value: getBigNumber(1)
+		})
+
 		// Process crowdfund
 		const tx = await (await crowdfund.processCrowdfund(testGroupNameHash)).wait()
 
@@ -161,139 +179,10 @@ describe.only('Crowdfund', function () {
 		expect(await groupContract.balanceOf(proposer.address, 0)).to.equal(1)
 
 		// ! check commission
+
+		// Will fail to process a second time as the balances will be cleared
+		await expect(crowdfund.processCrowdfund(testGroupNameHash)).to.be.revertedWith(
+			'InsufficientFunds()'
+		)
 	})
-
-	// it('Should process native `value` crowdfund with unitValue multiplier', async function () {
-	// 	// Delete existing crowdfund for test
-	// 	await crowdfund.cancelFundRound(forum.address);
-
-	// 	// unitValue = 2/1 so the contributors should get 1/2 of their contribution in group tokens
-	// 	await crowdfund
-	// 		.connect(proposer)
-	// 		.initiateFundRound(
-	// 			forum.address,
-	// 			hardhatEthers.utils.parseEther('2'),
-	// 			hardhatEthers.utils.parseEther('1'),
-	// 			{ value: getBigNumber(50) }
-	// 		);
-
-	// 	await crowdfund
-	// 		.connect(alice)
-	// 		.submitFundContribution(forum.address, { value: getBigNumber(50) });
-
-	// 	await crowdfund.processFundRound(forum.address);
-
-	// 	// After processing, the accounts should be given tokens, and dao balance should be updated
-	// 	expect(await hardhatEthers.provider.getBalance(forum.address)).to.equal(
-	// 		getBigNumber(100)
-	// 	);
-	// 	expect(await hardhatEthers.provider.getBalance(crowdfund.address)).to.equal(
-	// 		getBigNumber(0)
-	// 	);
-	// 	// Token balaces are 25 -> 1/2 of 50 as we have applied the unitValue multiplier
-	// 	expect(await forum.balanceOf(proposer.address, TOKEN)).to.equal(
-	// 		getBigNumber(25)
-	// 	);
-	// 	expect(await forum.balanceOf(alice.address, TOKEN)).to.equal(
-	// 		getBigNumber(25)
-	// 	);
-
-	// 	// unitValue = 1/2 so the contributors should get 2 times their contribution in group tokens
-	// 	await crowdfund
-	// 		.connect(proposer)
-	// 		.initiateFundRound(
-	// 			forum.address,
-	// 			hardhatEthers.utils.parseEther('1'),
-	// 			hardhatEthers.utils.parseEther('2'),
-	// 			{ value: getBigNumber(50) }
-	// 		);
-
-	// 	await crowdfund
-	// 		.connect(alice)
-	// 		.submitFundContribution(forum.address, { value: getBigNumber(50) });
-
-	// 	await crowdfund.processFundRound(forum.address);
-
-	// 	// After processing, the accounts should be given tokens, and dao balance should be updated (200 since second crowdfund)
-	// 	expect(await hardhatEthers.provider.getBalance(forum.address)).to.equal(
-	// 		getBigNumber(200)
-	// 	);
-	// 	expect(await hardhatEthers.provider.getBalance(crowdfund.address)).to.equal(
-	// 		getBigNumber(0)
-	// 	);
-	// 	// Token balaces are 125 -> 1/2 of 50 from prev fun + 100 from current
-	// 	expect(await forum.balanceOf(proposer.address, TOKEN)).to.equal(
-	// 		getBigNumber(125)
-	// 	);
-	// 	expect(await forum.balanceOf(alice.address, TOKEN)).to.equal(
-	// 		getBigNumber(125)
-	// 	);
-	// });
-	// it('Should revert if non member initiates funraise', async function () {
-	// 	// Delete existing crowdfund for test
-	// 	await crowdfund.cancelFundRound(forum.address);
-
-	// 	await expect(
-	// 		crowdfund
-	// 			.connect(bob)
-	// 			.initiateFundRound(forum.address, 1, 1, { value: getBigNumber(50) })
-	// 	).revertedWith('NotMember()');
-	// });
-	// it('Should revert if a fund is already open', async function () {
-	// 	await expect(
-	// 		crowdfund
-	// 			.connect(proposer)
-	// 			.initiateFundRound(forum.address, 1, 1, { value: getBigNumber(50) })
-	// 	).revertedWith('OpenFund()');
-	// });
-	// it('Should revert if incorrect value sent', async function () {
-	// 	await expect(
-	// 		crowdfund
-	// 			.connect(alice)
-	// 			.submitFundContribution(forum.address, { value: getBigNumber(5000) })
-	// 	).revertedWith('IncorrectContribution()');
-	// });
-	// it('Should revert if no fund is open', async function () {
-	// 	// Delete other crowdfund
-	// 	await crowdfund.cancelFundRound(forum.address);
-
-	// 	// Need to set value to 0 as there is no individualContribution set yet
-	// 	await expect(
-	// 		crowdfund
-	// 			.connect(alice)
-	// 			.submitFundContribution(forum.address, { value: 0 })
-	// 	).revertedWith('FundraiseMissing()');
-	// });
-	// it('Should revert if not all members have contributed', async function () {
-	// 	await expect(crowdfund.processFundRound(forum.address)).revertedWith(
-	// 		'MembersMissing()'
-	// 	);
-	// });
-
-	// it('Should revert if non group member taking part', async function () {
-	// 	await expect(
-	// 		crowdfund
-	// 			.connect(bob)
-	// 			.submitFundContribution(forum.address, { value: getBigNumber(50) })
-	// 	).revertedWith('NotMember()');
-	// });
-	// it('Should revert if user is depositing twice', async function () {
-	// 	await expect(
-	// 		crowdfund
-	// 			.connect(proposer)
-	// 			.submitFundContribution(forum.address, { value: getBigNumber(50) })
-	// 	).revertedWith('IncorrectContribution()');
-	// });
-	// it('Should cancel round only if cancelled by proposer or dao, and return funds', async function () {
-	// 	await expect(
-	// 		crowdfund.connect(alice).cancelFundRound(forum.address)
-	// 	).revertedWith('NotProposer()');
-
-	// 	await crowdfund.connect(proposer).cancelFundRound(forum.address);
-
-	// 	const deletedFund = await crowdfund.getFund(forum.address);
-	// 	expect(deletedFund.individualContribution).to.equal(getBigNumber(0));
-	// 	expect(deletedFund.valueNumerator).to.equal(getBigNumber(0));
-	// 	expect(deletedFund.valueDenominator).to.equal(getBigNumber(0));
-	// });
 })
