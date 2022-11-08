@@ -189,53 +189,27 @@ export class ForumCrowdfund extends BaseContract {
       overrides?: CallOverrides
     ): Promise<
       [
-        [
-          string[],
-          BigNumber[],
-          [string, BigNumber, number, string, string, string] & {
-            targetContract: string;
-            targetPrice: BigNumber;
-            deadline: number;
-            groupName: string;
-            symbol: string;
-            payload: string;
-          }
-        ] & {
-          contributors: string[];
-          contributions: BigNumber[];
-          parameters: [string, BigNumber, number, string, string, string] & {
-            targetContract: string;
-            targetPrice: BigNumber;
-            deadline: number;
-            groupName: string;
-            symbol: string;
-            payload: string;
-          };
-        }
+        [string, BigNumber, number, string, string, string] & {
+          targetContract: string;
+          targetPrice: BigNumber;
+          deadline: number;
+          groupName: string;
+          symbol: string;
+          payload: string;
+        },
+        string[],
+        BigNumber[]
       ] & {
-        crowdfundDetails: [
-          string[],
-          BigNumber[],
-          [string, BigNumber, number, string, string, string] & {
-            targetContract: string;
-            targetPrice: BigNumber;
-            deadline: number;
-            groupName: string;
-            symbol: string;
-            payload: string;
-          }
-        ] & {
-          contributors: string[];
-          contributions: BigNumber[];
-          parameters: [string, BigNumber, number, string, string, string] & {
-            targetContract: string;
-            targetPrice: BigNumber;
-            deadline: number;
-            groupName: string;
-            symbol: string;
-            payload: string;
-          };
+        details: [string, BigNumber, number, string, string, string] & {
+          targetContract: string;
+          targetPrice: BigNumber;
+          deadline: number;
+          groupName: string;
+          symbol: string;
+          payload: string;
         };
+        contributors: string[];
+        contributions: BigNumber[];
       }
     >;
 
@@ -280,8 +254,6 @@ export class ForumCrowdfund extends BaseContract {
     overrides?: CallOverrides
   ): Promise<
     [
-      string[],
-      BigNumber[],
       [string, BigNumber, number, string, string, string] & {
         targetContract: string;
         targetPrice: BigNumber;
@@ -289,11 +261,11 @@ export class ForumCrowdfund extends BaseContract {
         groupName: string;
         symbol: string;
         payload: string;
-      }
+      },
+      string[],
+      BigNumber[]
     ] & {
-      contributors: string[];
-      contributions: BigNumber[];
-      parameters: [string, BigNumber, number, string, string, string] & {
+      details: [string, BigNumber, number, string, string, string] & {
         targetContract: string;
         targetPrice: BigNumber;
         deadline: number;
@@ -301,6 +273,8 @@ export class ForumCrowdfund extends BaseContract {
         symbol: string;
         payload: string;
       };
+      contributors: string[];
+      contributions: BigNumber[];
     }
   >;
 
@@ -345,8 +319,6 @@ export class ForumCrowdfund extends BaseContract {
       overrides?: CallOverrides
     ): Promise<
       [
-        string[],
-        BigNumber[],
         [string, BigNumber, number, string, string, string] & {
           targetContract: string;
           targetPrice: BigNumber;
@@ -354,11 +326,11 @@ export class ForumCrowdfund extends BaseContract {
           groupName: string;
           symbol: string;
           payload: string;
-        }
+        },
+        string[],
+        BigNumber[]
       ] & {
-        contributors: string[];
-        contributions: BigNumber[];
-        parameters: [string, BigNumber, number, string, string, string] & {
+        details: [string, BigNumber, number, string, string, string] & {
           targetContract: string;
           targetPrice: BigNumber;
           deadline: number;
@@ -366,6 +338,8 @@ export class ForumCrowdfund extends BaseContract {
           symbol: string;
           payload: string;
         };
+        contributors: string[];
+        contributions: BigNumber[];
       }
     >;
 

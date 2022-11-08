@@ -63,7 +63,7 @@ contract ForumCrowdfund is ReentrancyGuard {
 
 	struct Crowdfund {
 		address[] contributors;
-		uint256[] contributions;
+		mapping(address => uint256) contributions;
 		CrowdfundParameters parameters;
 	}
 
@@ -104,32 +104,32 @@ contract ForumCrowdfund is ReentrancyGuard {
 		if (crowdfunds[groupNameHash].parameters.deadline != 0) revert OpenFund();
 
 		// No gas saving to use crowdfund({}) format, and since we need to push to the arry, we assign each element individually.
-		crowdfunds[groupNameHash].contributors.push(msg.sender);
-		crowdfunds[groupNameHash].contributions.push(msg.value);
 		crowdfunds[groupNameHash].parameters = parameters;
+		crowdfunds[groupNameHash].contributors.push(msg.sender);
+		crowdfunds[groupNameHash].contributions[msg.sender] = msg.value;
 
 		emit NewCrowdfund(parameters.groupName);
 	}
 
-	// ! need to prevent same address from being added twice - sum their contribution somehow? or just limit to one contribution per address
 	/**
 	 * @notice Submit a crowdfund contribution
 	 * @param groupNameHash bytes32 hashed name of group (saves gas compared to string)
 	 */
 	function submitContribution(bytes32 groupNameHash) public payable virtual nonReentrant {
+		Crowdfund storage fund = crowdfunds[groupNameHash];
+
 		// ! consider a check on contributions and target price
-		// if (msg.value != funds[groupAddress].individualContribution)
-		//     revert IncorrectContribution();
 
-		// ! consider member limit
-		if (crowdfunds[groupNameHash].contributors.length == 12) revert MemberLimitReached();
+		if (fund.parameters.deadline == 0) revert MissingCrowdfund();
 
-		if (crowdfunds[groupNameHash].parameters.deadline == 0) revert MissingCrowdfund();
+		if (fund.contributors.length == 100) revert MemberLimitReached();
 
-		crowdfunds[groupNameHash].contributors.push(msg.sender);
-		crowdfunds[groupNameHash].contributions.push(msg.value);
+		if (fund.contributions[msg.sender] == 0) {
+			fund.contributors.push(msg.sender);
+			fund.contributions[msg.sender] = msg.value;
+		} else crowdfunds[groupNameHash].contributions[msg.sender] += msg.value;
 
-		emit FundsAdded(crowdfunds[groupNameHash].parameters.groupName, msg.sender, msg.value);
+		emit FundsAdded(fund.parameters.groupName, msg.sender, msg.value);
 	}
 
 	/**
@@ -137,15 +137,15 @@ contract ForumCrowdfund is ReentrancyGuard {
 	 * @param groupNameHash bytes32 hashed name of group (saves gas compared to string)
 	 */
 	function cancelCrowdfund(bytes32 groupNameHash) public virtual nonReentrant {
-		Crowdfund memory fund = crowdfunds[groupNameHash];
+		Crowdfund storage fund = crowdfunds[groupNameHash];
 
 		if (fund.parameters.deadline > block.timestamp) revert OpenFund();
 
 		// Return funds from escrow
 		for (uint256 i; i < fund.contributors.length; ) {
 			console.logAddress(fund.contributors[i]);
-			console.logUint(fund.contributions[i]);
-			payable(fund.contributors[i]).transfer(fund.contributions[i]);
+			console.logUint(fund.contributions[msg.sender]);
+			payable(fund.contributors[i]).transfer(fund.contributions[msg.sender]);
 
 			// Members can only be 12
 			unchecked {
@@ -153,6 +153,7 @@ contract ForumCrowdfund is ReentrancyGuard {
 			}
 		}
 
+		// ! better clearing of this is needed now we have  a mapping
 		delete crowdfunds[groupNameHash];
 
 		emit Cancelled(fund.parameters.groupName);
@@ -163,7 +164,7 @@ contract ForumCrowdfund is ReentrancyGuard {
 	 * @param groupNameHash bytes32 hashed name of group (saves gas compared to string)
 	 */
 	function processCrowdfund(bytes32 groupNameHash) public virtual nonReentrant {
-		Crowdfund memory fund = crowdfunds[groupNameHash];
+		Crowdfund storage fund = crowdfunds[groupNameHash];
 
 		// todo consider block on deadline
 		// if (fund.parameters.deadline > block.timestamp) revert OpenFund();
@@ -195,7 +196,7 @@ contract ForumCrowdfund is ReentrancyGuard {
 		// distribute the group funds
 		for (uint256 i; i < fund.contributors.length; ) {
 			forumGroup.mintShares(fund.contributors[i], 0, 1);
-			forumGroup.mintShares(fund.contributors[i], 1, fund.contributions[i]);
+			forumGroup.mintShares(fund.contributors[i], 1, fund.contributions[msg.sender]);
 
 			// Members can only be 12
 			unchecked {
@@ -215,8 +216,21 @@ contract ForumCrowdfund is ReentrancyGuard {
 	function getCrowdfund(bytes32 groupNameHash)
 		public
 		view
-		returns (Crowdfund memory crowdfundDetails)
+		returns (
+			CrowdfundParameters memory details,
+			address[] memory contributors,
+			uint256[] memory contributions
+		)
 	{
-		return crowdfunds[groupNameHash];
+		Crowdfund storage fund = crowdfunds[groupNameHash];
+
+		contributions = new uint256[](crowdfunds[groupNameHash].contributors.length);
+		for (uint256 i; i < fund.contributors.length; ) {
+			contributions[i] = fund.contributions[fund.contributors[i]];
+			unchecked {
+				++i;
+			}
+		}
+		(details, contributors, contributions) = (fund.parameters, fund.contributors, contributions);
 	}
 }

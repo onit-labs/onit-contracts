@@ -60,17 +60,17 @@ describe.only('Crowdfund', function () {
 	})
 	it('Should initiate crowdsale and submit contribution', async function () {
 		const crowdfundDetails = await crowdfund.getCrowdfund(testGroupNameHash)
-		console.log({ crowdfundDetails })
 
 		// Check initial state
-		expect(crowdfundDetails.parameters.targetContract).to.equal(crowdsaleInput.targetContract)
-		expect(crowdfundDetails.parameters.targetPrice).to.equal(crowdsaleInput.targetPrice)
-		expect(crowdfundDetails.parameters.deadline).to.equal(crowdsaleInput.deadline)
-		expect(crowdfundDetails.parameters.groupName).to.equal(crowdsaleInput.groupName)
-		expect(crowdfundDetails.parameters.symbol).to.equal(crowdsaleInput.symbol)
+		expect(crowdfundDetails.details.targetContract).to.equal(crowdsaleInput.targetContract)
+		expect(crowdfundDetails.details.targetPrice).to.equal(crowdsaleInput.targetPrice)
+		expect(crowdfundDetails.details.deadline).to.equal(crowdsaleInput.deadline)
+		expect(crowdfundDetails.details.groupName).to.equal(crowdsaleInput.groupName)
+		expect(crowdfundDetails.details.symbol).to.equal(crowdsaleInput.symbol)
+		expect(crowdfundDetails.contributors[0]).to.equal(proposer.address)
 		//expect(crowdfundDetails.payload).to.equal(crowdsaleInput.payload)
 
-		await crowdfund.submitContribution(testGroupNameHash),
+		await crowdfund.connect(alice).submitContribution(testGroupNameHash),
 			{
 				value: getBigNumber(1)
 			}
@@ -82,15 +82,34 @@ describe.only('Crowdfund', function () {
 		console.log(crowdfundDetailsAfterSubmission.contributions)
 		expect(crowdfundDetailsAfterSubmission.contributors).to.have.lengthOf(2)
 		expect(crowdfundDetailsAfterSubmission.contributions).to.have.lengthOf(2)
-		expect(crowdfundDetailsAfterSubmission.parameters.targetContract).to.equal(
+		expect(crowdfundDetailsAfterSubmission.details.targetContract).to.equal(
 			crowdsaleInput.targetContract
 		)
 	})
+	it('Should submit second contribution', async function () {
+		const crowdfundDetails = await crowdfund.getCrowdfund(testGroupNameHash)
+
+		// Check initial state
+		expect(crowdfundDetails.contributors).to.have.lengthOf(1)
+		expect(crowdfundDetails.contributors[0]).to.equal(proposer.address)
+		expect(crowdfundDetails.contributions[0]).to.equal(getBigNumber(1))
+
+		await crowdfund.submitContribution(testGroupNameHash, {
+			value: getBigNumber(1)
+		})
+
+		const crowdfundDetailsAfterSubmission = await crowdfund.getCrowdfund(testGroupNameHash)
+
+		// Check updated state
+		expect(crowdfundDetailsAfterSubmission.contributors).to.have.lengthOf(1)
+		expect(crowdfundDetailsAfterSubmission.contributors[0]).to.equal(proposer.address)
+		expect(crowdfundDetailsAfterSubmission.contributions[0]).to.equal(getBigNumber(2))
+	})
 	// TODO need a check for previously deployed group with same name - create2 will fail, we should catch this
-	it.skip('Should revert if crowdsale for duplicate name exists', async function () {
+	it('Should revert if crowdsale for duplicate name exists', async function () {
 		await expect(crowdfund.initiateCrowdfund(crowdsaleInput)).to.be.revertedWith('OpenFund()')
 	})
-	it('Should revert submitting a contribution if no fund exists, over 12 people, or incorrect value', async function () {
+	it.skip('Should revert submitting a contribution if no fund exists, over 12 people, or incorrect value', async function () {
 		// Check if fund already exists
 		await expect(
 			crowdfund.submitContribution(
@@ -98,20 +117,25 @@ describe.only('Crowdfund', function () {
 			)
 		).to.be.revertedWith('MissingCrowdfund()')
 
-		// Check max contributors limit
-		const [a, b, c, d, e, f, g, h, i, j, k, l, m] = await hardhatEthers.getSigners()
-		const sigs: SignerWithAddress[] = [a, b, c, d, e, f, g, h, i, j, k, l, m]
-
-		for (let i = 0; i < sigs.length; i++) {
-			if (i < 11) {
-				await crowdfund.connect(sigs[i]).submitContribution(testGroupNameHash),
-					{
-						value: getBigNumber(1)
-					}
+		// Test limit beyond 100
+		for (let i = 0; i < 102; i++) {
+			const wallet = ethers.Wallet.createRandom()
+			const w = wallet.connect(hardhatEthers.provider)
+			// Send eth
+			proposer.sendTransaction({
+				to: w.address,
+				value: ethers.utils.parseEther('1')
+			})
+			if (i < 99) {
+				await crowdfund.connect(w).submitContribution(testGroupNameHash, {
+					value: ethers.utils.parseEther('0.0000000000001')
+				})
 			} else {
-				await expect(crowdfund.connect(sigs[i]).submitContribution(testGroupNameHash), {
-					value: getBigNumber(1)
-				}).to.be.revertedWith('MemberLimitReached()')
+				await expect(
+					crowdfund.connect(w).submitContribution(testGroupNameHash, {
+						value: 1
+					})
+				).to.be.revertedWith('MemberLimitReached()')
 			}
 		}
 	})
@@ -127,7 +151,7 @@ describe.only('Crowdfund', function () {
 		const bal2 = await hardhatEthers.provider.getBalance(proposer.address)
 		expect(bal2).to.be.gt(bal1)
 	})
-	it.only('Should process a crowdfund', async function () {
+	it('Should process a crowdfund', async function () {
 		// Process crowdfund
 		const tx = await (await crowdfund.processCrowdfund(testGroupNameHash)).wait()
 
@@ -135,6 +159,8 @@ describe.only('Crowdfund', function () {
 		const group = `0x${tx.events[1].topics[1].substring(26)}`
 		const groupContract = await hardhatEthers.getContractAt('ForumGroupV2', group)
 		expect(await groupContract.balanceOf(proposer.address, 0)).to.equal(1)
+
+		// ! check commission
 	})
 
 	// it('Should process native `value` crowdfund with unitValue multiplier', async function () {
