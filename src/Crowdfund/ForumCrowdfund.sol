@@ -10,6 +10,7 @@ import {ReentrancyGuard} from '../utils/ReentrancyGuard.sol';
 import {IForumGroup} from '../interfaces/IForumGroup.sol';
 import {IForumGroupFactoryV2} from '../interfaces/IForumGroupFactoryV2.sol';
 import {IForumGroupFactory} from '../interfaces/IForumGroupFactory.sol';
+import {ICrowdfundExecutionManager} from '../interfaces/ICrowdfundExecutionManager.sol';
 
 /**
  * @title Forum Crowdfund
@@ -68,6 +69,7 @@ contract ForumCrowdfund is ReentrancyGuard {
 	}
 
 	address public forumFactory;
+	address public executionManager;
 
 	mapping(bytes32 => Crowdfund) private crowdfunds;
 
@@ -77,8 +79,10 @@ contract ForumCrowdfund is ReentrancyGuard {
 	/// Constructor
 	/// -----------------------------------------------------------------------
 
-	constructor(address forumFactory_) {
+	constructor(address forumFactory_, address executionManager_) {
 		forumFactory = forumFactory_;
+
+		executionManager = executionManager_;
 	}
 
 	/// -----------------------------------------------------------------------
@@ -166,9 +170,9 @@ contract ForumCrowdfund is ReentrancyGuard {
 	function processCrowdfund(bytes32 groupNameHash) public virtual nonReentrant {
 		Crowdfund storage fund = crowdfunds[groupNameHash];
 
-		// Price will not exceed max int
+		// Calculate if the target value has been raised
+		// Unchecked as price or raised amount will not exceed max int
 		unchecked {
-			// Check correct value has been raised
 			uint256 raised;
 			for (uint256 i; i < fund.contributors.length; ) {
 				raised += fund.contributions[fund.contributors[i]];
@@ -177,7 +181,9 @@ contract ForumCrowdfund is ReentrancyGuard {
 			if (raised < fund.parameters.targetPrice) revert InsufficientFunds();
 		}
 
-		// customExtension of this address allows this contract to mint each member shares
+		// ! consider check on raised to transfer any leftover funds to group
+
+		// CustomExtension of this address allows this contract to mint each member shares
 		address[] memory customExtensions = new address[](1);
 		customExtensions[0] = address(this);
 
@@ -191,12 +197,34 @@ contract ForumCrowdfund is ReentrancyGuard {
 			customExtensions
 		);
 
-		// ! consider execution
-		// ! consider commission
 		// Execute the tx with payload
-		(, bytes memory result) = (fund.parameters.targetContract).call{
+		(bool success, bytes memory result) = (fund.parameters.targetContract).call{
 			value: fund.parameters.targetPrice
 		}(fund.parameters.payload);
+
+		// // If the tx fails, revert
+		// if (!success) revert(string(result));
+
+		// // Decode the executed payload based on the target contract,
+		// // and generate a transferPayload to send the asset to the Forum group
+		// (
+		// 	address assetContract,
+		// 	uint256 assetPrice,
+		// 	bytes memory transferPayload
+		// ) = ICrowdfundExecutionManager(executionManager).manageExecution(
+		// 		address(forumGroup),
+		// 		fund.parameters.targetContract,
+		// 		fund.parameters.payload
+		// 	);
+
+		// // Send the asset to the Forum group
+		// (bool success2, bytes memory result2) = (assetContract).call(transferPayload);
+
+		// // ! set commission contract
+		// // Send commission to Forum
+		// if (fund.parameters.targetPrice - assetPrice != (assetPrice * 250) / 10000)
+		// 	revert InsufficientFunds();
+		// address(0).call{value: fund.parameters.targetPrice - assetPrice}('');
 
 		// Distribute the group funds
 		for (uint256 i; i < fund.contributors.length; ) {
@@ -236,6 +264,10 @@ contract ForumCrowdfund is ReentrancyGuard {
 				++i;
 			}
 		}
-		(details, contributors, contributions) = (fund.parameters, fund.contributors, contributions);
+		(details, contributors, contributions) = (
+			fund.parameters,
+			fund.contributors,
+			contributions
+		);
 	}
 }

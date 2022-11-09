@@ -21,7 +21,10 @@ contract CommissionManager is ICommissionManager, Owned {
 
 	error UnapprovedContract();
 
-	event ProposalHandlerUpdated(address indexed handledAddress, address indexed newProposalHandler);
+	event ProposalHandlerUpdated(
+		address indexed handledAddress,
+		address indexed newProposalHandler
+	);
 
 	event ProposalHandlerAdded(address indexed newHandledAddress, address indexed proposalHandler);
 
@@ -94,7 +97,9 @@ contract CommissionManager is ICommissionManager, Owned {
 	 * @param nonCommissionContract address of contract to not charge commission on
 	 */
 	function toggleNonCommissionContract(address nonCommissionContract) external onlyOwner {
-		nonCommissionContracts[nonCommissionContract] = !nonCommissionContracts[nonCommissionContract];
+		nonCommissionContracts[nonCommissionContract] = !nonCommissionContracts[
+			nonCommissionContract
+		];
 		emit NonCommissionContracts(
 			nonCommissionContract,
 			nonCommissionContracts[nonCommissionContract]

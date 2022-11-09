@@ -66,7 +66,10 @@ contract JoepegsProposalHandler {
 
 		// If commission based, calculate the commission
 		if (commissionBasedFunctions[functionSig] == 1) {
-			OrderTypes.TakerOrder memory TakerOrder = abi.decode(payload[4:], (OrderTypes.TakerOrder));
+			OrderTypes.TakerOrder memory TakerOrder = abi.decode(
+				payload[4:],
+				(OrderTypes.TakerOrder)
+			);
 
 			// Return commission fee based of PROTOCOL_FEE and 10000 basis points
 			return (TakerOrder.price * PROTOCOL_FEE) / 10000;
