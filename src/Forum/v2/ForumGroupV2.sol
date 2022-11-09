@@ -12,7 +12,7 @@ import {IForumGroupTypes} from '../../interfaces/IForumGroupTypes_v2.sol';
 import {IForumGroupExtension} from '../../interfaces/IForumGroupExtension.sol';
 import {IPfpStakerV2} from '../../interfaces/IPfpStakerV2.sol';
 import {IERC1271} from '../../interfaces/IERC1271.sol';
-import {IExecutionManager} from '../../interfaces/IExecutionManager.sol';
+import {ICommissionManager} from '../../interfaces/ICommissionManager.sol';
 
 import {EnumerableSet} from '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
@@ -220,7 +220,8 @@ contract ForumGroupV2 is
 			if (amounts[0] > 100 || amounts[0] < memberCount) revert MemberLimitExceeded();
 
 		if (
-			proposalType == ProposalType.MEMBER_THRESHOLD || proposalType == ProposalType.TOKEN_THRESHOLD
+			proposalType == ProposalType.MEMBER_THRESHOLD ||
+			proposalType == ProposalType.TOKEN_THRESHOLD
 		)
 			if (amounts[0] == 0 || amounts[0] > 100) revert VoteThresholdBounds();
 
@@ -308,7 +309,9 @@ contract ForumGroupV2 is
 				// If the signer has been delegated too,check the balances of anyone who has delegated to the current signer
 				if (len != 0)
 					for (uint256 j; j < len; ) {
-						votes += balanceOf[EnumerableSet.at(memberDelegators[recoveredSigner], j)][TOKEN];
+						votes += balanceOf[EnumerableSet.at(memberDelegators[recoveredSigner], j)][
+							TOKEN
+						];
 						++j;
 					}
 			}
@@ -341,16 +344,17 @@ contract ForumGroupV2 is
 					for (uint256 i; i < prop.accounts.length; i++) {
 						results = new bytes[](prop.accounts.length);
 
-						(bool success, bytes memory result) = prop.accounts[i].call{value: prop.amounts[i]}(
-							prop.payloads[i]
-						);
+						(bool success, bytes memory result) = prop.accounts[i].call{
+							value: prop.amounts[i]
+						}(prop.payloads[i]);
 
 						if (success)
-							commissionValue += IExecutionManager(executionManager).manageExecution(
-								prop.accounts[i],
-								prop.amounts[i],
-								prop.payloads[i]
-							);
+							commissionValue += ICommissionManager(executionManager)
+								.manageCommission(
+									prop.accounts[i],
+									prop.amounts[i],
+									prop.payloads[i]
+								);
 
 						results[i] = result;
 					}
@@ -360,9 +364,11 @@ contract ForumGroupV2 is
 				}
 
 				// Governance settings
-				if (prop.proposalType == ProposalType.VPERIOD) votingPeriod = uint32(prop.amounts[0]);
+				if (prop.proposalType == ProposalType.VPERIOD)
+					votingPeriod = uint32(prop.amounts[0]);
 
-				if (prop.proposalType == ProposalType.MEMBER_LIMIT) memberLimit = uint32(prop.amounts[0]);
+				if (prop.proposalType == ProposalType.MEMBER_LIMIT)
+					memberLimit = uint32(prop.amounts[0]);
 
 				if (prop.proposalType == ProposalType.MEMBER_THRESHOLD)
 					memberVoteThreshold = uint32(prop.amounts[0]);
@@ -377,7 +383,8 @@ contract ForumGroupV2 is
 
 				if (prop.proposalType == ProposalType.EXTENSION)
 					for (uint256 i; i < prop.accounts.length; i++) {
-						if (prop.amounts[i] != 0) extensions[prop.accounts[i]] = !extensions[prop.accounts[i]];
+						if (prop.amounts[i] != 0)
+							extensions[prop.accounts[i]] = !extensions[prop.accounts[i]];
 
 						if (prop.payloads[i].length > 3) {
 							IForumGroupExtension(prop.accounts[i]).setExtension(prop.payloads[i]);
@@ -393,7 +400,11 @@ contract ForumGroupV2 is
 					(bool success, ) = prop.accounts[0].call(prop.payloads[0]);
 					if (!success) revert PFPFailed();
 
-					IPfpStakerV2(pfpExtension).stakeNFT(address(this), prop.accounts[0], prop.amounts[0]);
+					IPfpStakerV2(pfpExtension).stakeNFT(
+						address(this),
+						prop.accounts[0],
+						prop.amounts[0]
+					);
 				}
 
 				if (prop.proposalType == ProposalType.ALLOW_CONTRACT_SIG) {
@@ -534,7 +545,9 @@ contract ForumGroupV2 is
 		 * Signer must also be a member
 		 */
 		//
-		if (balanceOf[signer][MEMBERSHIP] != 0 && contractSignatureAllowance[msg.sender][hash] != 0) {
+		if (
+			balanceOf[signer][MEMBERSHIP] != 0 && contractSignatureAllowance[msg.sender][hash] != 0
+		) {
 			return 0x1626ba7e;
 		} else {
 			return 0xffffffff;

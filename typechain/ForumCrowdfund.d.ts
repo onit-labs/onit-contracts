@@ -24,6 +24,7 @@ interface ForumCrowdfundInterface extends ethers.utils.Interface {
   functions: {
     "cancelCrowdfund(bytes32)": FunctionFragment;
     "contributionTracker(address,address)": FunctionFragment;
+    "executionManager()": FunctionFragment;
     "forumFactory()": FunctionFragment;
     "getCrowdfund(bytes32)": FunctionFragment;
     "initiateCrowdfund((address,uint256,uint32,string,string,bytes))": FunctionFragment;
@@ -38,6 +39,10 @@ interface ForumCrowdfundInterface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: "contributionTracker",
     values: [string, string]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "executionManager",
+    values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "forumFactory",
@@ -75,6 +80,10 @@ interface ForumCrowdfundInterface extends ethers.utils.Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "contributionTracker",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "executionManager",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -182,6 +191,8 @@ export class ForumCrowdfund extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[boolean]>;
 
+    executionManager(overrides?: CallOverrides): Promise<[string]>;
+
     forumFactory(overrides?: CallOverrides): Promise<[string]>;
 
     getCrowdfund(
@@ -247,6 +258,8 @@ export class ForumCrowdfund extends BaseContract {
     overrides?: CallOverrides
   ): Promise<boolean>;
 
+  executionManager(overrides?: CallOverrides): Promise<string>;
+
   forumFactory(overrides?: CallOverrides): Promise<string>;
 
   getCrowdfund(
@@ -311,6 +324,8 @@ export class ForumCrowdfund extends BaseContract {
       arg1: string,
       overrides?: CallOverrides
     ): Promise<boolean>;
+
+    executionManager(overrides?: CallOverrides): Promise<string>;
 
     forumFactory(overrides?: CallOverrides): Promise<string>;
 
@@ -430,6 +445,8 @@ export class ForumCrowdfund extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
+    executionManager(overrides?: CallOverrides): Promise<BigNumber>;
+
     forumFactory(overrides?: CallOverrides): Promise<BigNumber>;
 
     getCrowdfund(
@@ -471,6 +488,8 @@ export class ForumCrowdfund extends BaseContract {
       arg1: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
+
+    executionManager(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     forumFactory(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
