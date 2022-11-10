@@ -4,6 +4,7 @@ pragma solidity ^0.8.15;
 import {OrderTypes} from '../../libraries/OrderTypes.sol';
 
 import {IERC165} from '../../interfaces/IERC165.sol';
+import 'hardhat/console.sol';
 
 // ! WIP
 // Paused as collectionAddress is not in the TakerOrder struct
@@ -57,7 +58,7 @@ contract JoepegsCrowdfundHandler {
 	 * @param tokenId tokenId of the NFT
 	 * @return payload to decode and extract commission info from
 	 */
-	function handleCrowdfund(
+	function handleCrowdfundExecution(
 		address crowdfundContract,
 		address assetContract,
 		address forumGroup,
@@ -66,7 +67,7 @@ contract JoepegsCrowdfundHandler {
 	) external view returns (uint256, bytes memory) {
 		// Extract function sig from payload as the first 4 bytes
 		bytes4 functionSig = bytes4(payload[0:4]);
-
+		console.logBytes4(functionSig);
 		// If enabled method, decode the payload, extract price, and form transferPayload
 		if (enabledMethods[functionSig] == 1) {
 			OrderTypes.TakerOrder memory takerOrder = abi.decode(

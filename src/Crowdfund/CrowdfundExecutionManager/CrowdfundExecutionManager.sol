@@ -113,6 +113,7 @@ contract CrowdfundExecutionManager is ICrowdfundExecutionManager, Owned {
 		bytes calldata payload
 	) external view returns (uint256, bytes memory) {
 		console.logBytes4(type(IERC20).interfaceId);
+		console.logAddress(executionHandlers[targetContract]);
 
 		// If the target has a handler, use it
 		if (executionHandlers[targetContract] != address(0))

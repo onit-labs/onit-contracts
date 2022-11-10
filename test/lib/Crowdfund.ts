@@ -86,7 +86,6 @@ describe.only('Crowdfund', function () {
 		// Setp deployments with correct addresses
 		await forumFactory.setPfpStaker(pfpStaker.address)
 		await forumFactory.setFundraiseExtension(ZERO_ADDRESS)
-		await executionManager.addExecutionHandler(forumFactory.address, joepegsHandler.address)
 
 		// Generic input call to some address
 		crowdsaleInput = {
@@ -217,7 +216,8 @@ describe.only('Crowdfund', function () {
 		)
 	})
 	it.only('Should process a crowdfund, and not process it twice', async function () {
-		// Cancel the crowdfund and create a new one with joepegs order
+		// Add joepegs handler and cancel the crowdfund before creating a new one with joepegs order
+		await executionManager.addExecutionHandler(joepegsMarket.address, joepegsHandler.address)
 		advanceTime(1730817412)
 		await crowdfund.cancelCrowdfund(testGroupNameHash)
 
@@ -245,7 +245,7 @@ describe.only('Crowdfund', function () {
 		console.log({ payloadWithFunctionSelector })
 		// Build full crowdfund input for this order
 		crowdsaleInput = {
-			targetContract: ZERO_ADDRESS,
+			targetContract: joepegsMarket.address,
 			assetContract: test721.address,
 			deadline: 1730817411, // 05-11-2030
 			tokenId: 1,

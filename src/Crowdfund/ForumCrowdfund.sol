@@ -210,23 +210,23 @@ contract ForumCrowdfund is ReentrancyGuard {
 		// If the tx fails, revert
 		if (!success) revert(string(result));
 
-		// // Decode the executed payload based on the target contract,
-		// // and generate a transferPayload to send the asset to the Forum group
-		// (uint256 assetPrice, bytes memory transferPayload) = ICrowdfundExecutionManager(
-		// 	executionManager
-		// ).manageExecution(
-		// 		address(this),
-		// 		fund.parameters.targetContract,
-		// 		fund.parameters.assetContract,
-		// 		address(forumGroup),
-		// 		fund.parameters.tokenId,
-		// 		fund.parameters.payload
-		// 	);
+		// Decode the executed payload based on the target contract,
+		// and generate a transferPayload to send the asset to the Forum group
+		(uint256 assetPrice, bytes memory transferPayload) = ICrowdfundExecutionManager(
+			executionManager
+		).manageExecution(
+				address(this),
+				fund.parameters.targetContract,
+				fund.parameters.assetContract,
+				address(forumGroup),
+				fund.parameters.tokenId,
+				fund.parameters.payload
+			);
 
-		// // Send the asset to the Forum group
-		// (bool success2, bytes memory result2) = (fund.parameters.assetContract).call(
-		// 	transferPayload
-		// );
+		// Send the asset to the Forum group
+		(bool success2, bytes memory result2) = (fund.parameters.assetContract).call(
+			transferPayload
+		);
 
 		// // ! set commission contract
 		// // Send commission to Forum

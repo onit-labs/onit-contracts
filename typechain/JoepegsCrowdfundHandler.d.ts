@@ -23,7 +23,7 @@ interface JoepegsCrowdfundHandlerInterface extends ethers.utils.Interface {
     "INTERFACE_ID_ERC1155()": FunctionFragment;
     "INTERFACE_ID_ERC721()": FunctionFragment;
     "enabledMethods(bytes4)": FunctionFragment;
-    "handleCrowdfund(address,address,address,uint256,bytes)": FunctionFragment;
+    "handleCrowdfundExecution(address,address,address,uint256,bytes)": FunctionFragment;
   };
 
   encodeFunctionData(
@@ -39,7 +39,7 @@ interface JoepegsCrowdfundHandlerInterface extends ethers.utils.Interface {
     values: [BytesLike]
   ): string;
   encodeFunctionData(
-    functionFragment: "handleCrowdfund",
+    functionFragment: "handleCrowdfundExecution",
     values: [string, string, string, BigNumberish, BytesLike]
   ): string;
 
@@ -56,7 +56,7 @@ interface JoepegsCrowdfundHandlerInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "handleCrowdfund",
+    functionFragment: "handleCrowdfundExecution",
     data: BytesLike
   ): Result;
 
@@ -116,7 +116,7 @@ export class JoepegsCrowdfundHandler extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[BigNumber]>;
 
-    handleCrowdfund(
+    handleCrowdfundExecution(
       crowdfundContract: string,
       assetContract: string,
       forumGroup: string,
@@ -135,7 +135,7 @@ export class JoepegsCrowdfundHandler extends BaseContract {
     overrides?: CallOverrides
   ): Promise<BigNumber>;
 
-  handleCrowdfund(
+  handleCrowdfundExecution(
     crowdfundContract: string,
     assetContract: string,
     forumGroup: string,
@@ -154,7 +154,7 @@ export class JoepegsCrowdfundHandler extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    handleCrowdfund(
+    handleCrowdfundExecution(
       crowdfundContract: string,
       assetContract: string,
       forumGroup: string,
@@ -176,7 +176,7 @@ export class JoepegsCrowdfundHandler extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    handleCrowdfund(
+    handleCrowdfundExecution(
       crowdfundContract: string,
       assetContract: string,
       forumGroup: string,
@@ -200,7 +200,7 @@ export class JoepegsCrowdfundHandler extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    handleCrowdfund(
+    handleCrowdfundExecution(
       crowdfundContract: string,
       assetContract: string,
       forumGroup: string,
