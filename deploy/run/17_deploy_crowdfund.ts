@@ -13,7 +13,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const deterministicDeployment = await deterministic('ForumCrowdfund', {
 		contract: 'ForumCrowdfund',
 		from: deployer,
-		args: [ForumFactory.address, CrowdfundExecutionManager.address],
+		args: [deployer, ForumFactory.address, CrowdfundExecutionManager.address],
 		log: true,
 		autoMine: true, // speed up deployment on local network (ganache, hardhat), no effect on live networks
 		maxFeePerGas: hre.ethers.BigNumber.from('95000000000'),

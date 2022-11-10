@@ -41,4 +41,6 @@ contract MockJoepegsExchange is IJoepegsExchange {
 	) external {
 		console.logString('matchBidWithTakerAsk');
 	}
+
+	receive() external payable virtual {}
 }

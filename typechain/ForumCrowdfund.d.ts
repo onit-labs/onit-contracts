@@ -23,18 +23,26 @@ import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 interface ForumCrowdfundInterface extends ethers.utils.Interface {
   functions: {
     "cancelCrowdfund(bytes32)": FunctionFragment;
+    "commission()": FunctionFragment;
     "contributionTracker(address,address)": FunctionFragment;
     "executionManager()": FunctionFragment;
     "forumFactory()": FunctionFragment;
     "getCrowdfund(bytes32)": FunctionFragment;
     "initiateCrowdfund((address,address,uint32,uint256,uint256,string,string,bytes))": FunctionFragment;
+    "owner()": FunctionFragment;
     "processCrowdfund(bytes32)": FunctionFragment;
+    "setCommission(uint256)": FunctionFragment;
+    "setOwner(address)": FunctionFragment;
     "submitContribution(bytes32)": FunctionFragment;
   };
 
   encodeFunctionData(
     functionFragment: "cancelCrowdfund",
     values: [BytesLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "commission",
+    values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "contributionTracker",
@@ -67,10 +75,16 @@ interface ForumCrowdfundInterface extends ethers.utils.Interface {
       }
     ]
   ): string;
+  encodeFunctionData(functionFragment: "owner", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "processCrowdfund",
     values: [BytesLike]
   ): string;
+  encodeFunctionData(
+    functionFragment: "setCommission",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(functionFragment: "setOwner", values: [string]): string;
   encodeFunctionData(
     functionFragment: "submitContribution",
     values: [BytesLike]
@@ -80,6 +94,7 @@ interface ForumCrowdfundInterface extends ethers.utils.Interface {
     functionFragment: "cancelCrowdfund",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "commission", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "contributionTracker",
     data: BytesLike
@@ -100,10 +115,16 @@ interface ForumCrowdfundInterface extends ethers.utils.Interface {
     functionFragment: "initiateCrowdfund",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "processCrowdfund",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(
+    functionFragment: "setCommission",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "setOwner", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "submitContribution",
     data: BytesLike
@@ -111,18 +132,26 @@ interface ForumCrowdfundInterface extends ethers.utils.Interface {
 
   events: {
     "Cancelled(string)": EventFragment;
+    "CommissionSet(uint256)": EventFragment;
     "FundsAdded(string,address,uint256)": EventFragment;
     "NewCrowdfund(string)": EventFragment;
+    "OwnerUpdated(address,address)": EventFragment;
     "Processed(string,address)": EventFragment;
   };
 
   getEvent(nameOrSignatureOrTopic: "Cancelled"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "CommissionSet"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "FundsAdded"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "NewCrowdfund"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "OwnerUpdated"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "Processed"): EventFragment;
 }
 
 export type CancelledEvent = TypedEvent<[string] & { groupName: string }>;
+
+export type CommissionSetEvent = TypedEvent<
+  [BigNumber] & { commission: BigNumber }
+>;
 
 export type FundsAddedEvent = TypedEvent<
   [string, string, BigNumber] & {
@@ -133,6 +162,10 @@ export type FundsAddedEvent = TypedEvent<
 >;
 
 export type NewCrowdfundEvent = TypedEvent<[string] & { groupName: string }>;
+
+export type OwnerUpdatedEvent = TypedEvent<
+  [string, string] & { user: string; newOwner: string }
+>;
 
 export type ProcessedEvent = TypedEvent<
   [string, string] & { groupName: string; groupAddress: string }
@@ -186,6 +219,8 @@ export class ForumCrowdfund extends BaseContract {
       groupNameHash: BytesLike,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
+
+    commission(overrides?: CallOverrides): Promise<[BigNumber]>;
 
     contributionTracker(
       arg0: string,
@@ -262,8 +297,20 @@ export class ForumCrowdfund extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
+    owner(overrides?: CallOverrides): Promise<[string]>;
+
     processCrowdfund(
       groupNameHash: BytesLike,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
+    setCommission(
+      _commission: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
+    setOwner(
+      newOwner: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
@@ -277,6 +324,8 @@ export class ForumCrowdfund extends BaseContract {
     groupNameHash: BytesLike,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
+
+  commission(overrides?: CallOverrides): Promise<BigNumber>;
 
   contributionTracker(
     arg0: string,
@@ -344,8 +393,20 @@ export class ForumCrowdfund extends BaseContract {
     overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
+  owner(overrides?: CallOverrides): Promise<string>;
+
   processCrowdfund(
     groupNameHash: BytesLike,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
+  setCommission(
+    _commission: BigNumberish,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
+  setOwner(
+    newOwner: string,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
@@ -359,6 +420,8 @@ export class ForumCrowdfund extends BaseContract {
       groupNameHash: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>;
+
+    commission(overrides?: CallOverrides): Promise<BigNumber>;
 
     contributionTracker(
       arg0: string,
@@ -435,10 +498,19 @@ export class ForumCrowdfund extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>;
 
+    owner(overrides?: CallOverrides): Promise<string>;
+
     processCrowdfund(
       groupNameHash: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>;
+
+    setCommission(
+      _commission: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    setOwner(newOwner: string, overrides?: CallOverrides): Promise<void>;
 
     submitContribution(
       groupNameHash: BytesLike,
@@ -454,6 +526,14 @@ export class ForumCrowdfund extends BaseContract {
     Cancelled(
       groupName?: string | null
     ): TypedEventFilter<[string], { groupName: string }>;
+
+    "CommissionSet(uint256)"(
+      commission?: null
+    ): TypedEventFilter<[BigNumber], { commission: BigNumber }>;
+
+    CommissionSet(
+      commission?: null
+    ): TypedEventFilter<[BigNumber], { commission: BigNumber }>;
 
     "FundsAdded(string,address,uint256)"(
       groupName?: string | null,
@@ -481,6 +561,16 @@ export class ForumCrowdfund extends BaseContract {
       groupName?: string | null
     ): TypedEventFilter<[string], { groupName: string }>;
 
+    "OwnerUpdated(address,address)"(
+      user?: string | null,
+      newOwner?: string | null
+    ): TypedEventFilter<[string, string], { user: string; newOwner: string }>;
+
+    OwnerUpdated(
+      user?: string | null,
+      newOwner?: string | null
+    ): TypedEventFilter<[string, string], { user: string; newOwner: string }>;
+
     "Processed(string,address)"(
       groupName?: string | null,
       groupAddress?: string | null
@@ -503,6 +593,8 @@ export class ForumCrowdfund extends BaseContract {
       groupNameHash: BytesLike,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
+
+    commission(overrides?: CallOverrides): Promise<BigNumber>;
 
     contributionTracker(
       arg0: string,
@@ -533,8 +625,20 @@ export class ForumCrowdfund extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
+    owner(overrides?: CallOverrides): Promise<BigNumber>;
+
     processCrowdfund(
       groupNameHash: BytesLike,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
+    setCommission(
+      _commission: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
+    setOwner(
+      newOwner: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
@@ -549,6 +653,8 @@ export class ForumCrowdfund extends BaseContract {
       groupNameHash: BytesLike,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
+
+    commission(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     contributionTracker(
       arg0: string,
@@ -579,8 +685,20 @@ export class ForumCrowdfund extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
+    owner(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
     processCrowdfund(
       groupNameHash: BytesLike,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    setCommission(
+      _commission: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    setOwner(
+      newOwner: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
