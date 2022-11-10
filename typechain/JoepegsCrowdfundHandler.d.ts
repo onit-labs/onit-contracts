@@ -23,7 +23,7 @@ interface JoepegsCrowdfundHandlerInterface extends ethers.utils.Interface {
     "INTERFACE_ID_ERC1155()": FunctionFragment;
     "INTERFACE_ID_ERC721()": FunctionFragment;
     "enabledMethods(bytes4)": FunctionFragment;
-    "handleCrowdfund(uint256,bytes)": FunctionFragment;
+    "handleCrowdfund(address,address,address,uint256,bytes)": FunctionFragment;
   };
 
   encodeFunctionData(
@@ -40,7 +40,7 @@ interface JoepegsCrowdfundHandlerInterface extends ethers.utils.Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "handleCrowdfund",
-    values: [BigNumberish, BytesLike]
+    values: [string, string, string, BigNumberish, BytesLike]
   ): string;
 
   decodeFunctionResult(
@@ -117,10 +117,13 @@ export class JoepegsCrowdfundHandler extends BaseContract {
     ): Promise<[BigNumber]>;
 
     handleCrowdfund(
-      value: BigNumberish,
+      crowdfundContract: string,
+      assetContract: string,
+      forumGroup: string,
+      tokenId: BigNumberish,
       payload: BytesLike,
       overrides?: CallOverrides
-    ): Promise<[BigNumber]>;
+    ): Promise<[BigNumber, string]>;
   };
 
   INTERFACE_ID_ERC1155(overrides?: CallOverrides): Promise<string>;
@@ -133,10 +136,13 @@ export class JoepegsCrowdfundHandler extends BaseContract {
   ): Promise<BigNumber>;
 
   handleCrowdfund(
-    value: BigNumberish,
+    crowdfundContract: string,
+    assetContract: string,
+    forumGroup: string,
+    tokenId: BigNumberish,
     payload: BytesLike,
     overrides?: CallOverrides
-  ): Promise<BigNumber>;
+  ): Promise<[BigNumber, string]>;
 
   callStatic: {
     INTERFACE_ID_ERC1155(overrides?: CallOverrides): Promise<string>;
@@ -149,10 +155,13 @@ export class JoepegsCrowdfundHandler extends BaseContract {
     ): Promise<BigNumber>;
 
     handleCrowdfund(
-      value: BigNumberish,
+      crowdfundContract: string,
+      assetContract: string,
+      forumGroup: string,
+      tokenId: BigNumberish,
       payload: BytesLike,
       overrides?: CallOverrides
-    ): Promise<BigNumber>;
+    ): Promise<[BigNumber, string]>;
   };
 
   filters: {};
@@ -168,7 +177,10 @@ export class JoepegsCrowdfundHandler extends BaseContract {
     ): Promise<BigNumber>;
 
     handleCrowdfund(
-      value: BigNumberish,
+      crowdfundContract: string,
+      assetContract: string,
+      forumGroup: string,
+      tokenId: BigNumberish,
       payload: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
@@ -189,7 +201,10 @@ export class JoepegsCrowdfundHandler extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     handleCrowdfund(
-      value: BigNumberish,
+      crowdfundContract: string,
+      assetContract: string,
+      forumGroup: string,
+      tokenId: BigNumberish,
       payload: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;

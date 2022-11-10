@@ -22,7 +22,7 @@ import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 interface ICrowdfundExecutionManagerInterface extends ethers.utils.Interface {
   functions: {
     "addExecutionHandler(address,address)": FunctionFragment;
-    "manageExecution(address,address,bytes)": FunctionFragment;
+    "manageExecution(address,address,address,address,uint256,bytes)": FunctionFragment;
     "updateExecutionHandler(address,address)": FunctionFragment;
   };
 
@@ -32,7 +32,7 @@ interface ICrowdfundExecutionManagerInterface extends ethers.utils.Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "manageExecution",
-    values: [string, string, BytesLike]
+    values: [string, string, string, string, BigNumberish, BytesLike]
   ): string;
   encodeFunctionData(
     functionFragment: "updateExecutionHandler",
@@ -106,8 +106,11 @@ export class ICrowdfundExecutionManager extends BaseContract {
     ): Promise<ContractTransaction>;
 
     manageExecution(
+      crowdfundContract: string,
+      targetContract: string,
+      assetContract: string,
       forumGroup: string,
-      target: string,
+      tokenId: BigNumberish,
       payload: BytesLike,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
@@ -126,8 +129,11 @@ export class ICrowdfundExecutionManager extends BaseContract {
   ): Promise<ContractTransaction>;
 
   manageExecution(
+    crowdfundContract: string,
+    targetContract: string,
+    assetContract: string,
     forumGroup: string,
-    target: string,
+    tokenId: BigNumberish,
     payload: BytesLike,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
@@ -146,11 +152,14 @@ export class ICrowdfundExecutionManager extends BaseContract {
     ): Promise<void>;
 
     manageExecution(
+      crowdfundContract: string,
+      targetContract: string,
+      assetContract: string,
       forumGroup: string,
-      target: string,
+      tokenId: BigNumberish,
       payload: BytesLike,
       overrides?: CallOverrides
-    ): Promise<[string, BigNumber, string]>;
+    ): Promise<[BigNumber, string]>;
 
     updateExecutionHandler(
       proposalHandler: string,
@@ -169,8 +178,11 @@ export class ICrowdfundExecutionManager extends BaseContract {
     ): Promise<BigNumber>;
 
     manageExecution(
+      crowdfundContract: string,
+      targetContract: string,
+      assetContract: string,
       forumGroup: string,
-      target: string,
+      tokenId: BigNumberish,
       payload: BytesLike,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
@@ -190,8 +202,11 @@ export class ICrowdfundExecutionManager extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     manageExecution(
+      crowdfundContract: string,
+      targetContract: string,
+      assetContract: string,
       forumGroup: string,
-      target: string,
+      tokenId: BigNumberish,
       payload: BytesLike,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;

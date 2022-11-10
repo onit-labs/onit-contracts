@@ -4,14 +4,17 @@ pragma solidity ^0.8.15;
 import {Owned} from '../../utils/Owned.sol';
 
 import {ICrowdfundExecutionHandler} from '../../interfaces/ICrowdfundExecutionHandler.sol';
+import {ICrowdfundExecutionManager} from '../../interfaces/ICrowdfundExecutionManager.sol';
 import {IERC20} from '../../interfaces/IERC20.sol';
 
+import 'hardhat/console.sol';
+
 /**
- * @title ExecutionManager
+ * @title CrowdfundExecutionManager
  * @notice It allows adding/removing executionHandlers to manage crowdfund executions.
  * @author Modified from Looksrare (https://github.com/LooksRare/contracts-exchange-v1/blob/master/contracts/ExecutionManager.sol)
  */
-contract CrowdfundExecutionManager is Owned {
+contract CrowdfundExecutionManager is ICrowdfundExecutionManager, Owned {
 	/// ----------------------------------------------------------------------------------------
 	///							ERRORS & EVENTS
 	/// ----------------------------------------------------------------------------------------
@@ -95,31 +98,33 @@ contract CrowdfundExecutionManager is Owned {
 	///							Public Interface
 	/// ----------------------------------------------------------------------------------------
 
+	// ! consider more tidy way to get props into executionHandler
 	/**
 	 * @notice Manage the routing to an executionHandler based on the contract
-	 * @param target target contract for execution
 	 * @param payload payload sent to contract which will be decoded
+	 * @param forumGroup contract address
 	 */
 	function manageExecution(
+		address crowdfundContract,
+		address targetContract,
+		address assetContract,
 		address forumGroup,
-		address target,
-		bytes memory payload
-	)
-		external
-		view
-		returns (
-			address,
-			uint256,
-			bytes memory
-		)
-	{
+		uint256 tokenId,
+		bytes calldata payload
+	) external view returns (uint256, bytes memory) {
+		console.logBytes4(type(IERC20).interfaceId);
+
 		// If the target has a handler, use it
-		if (executionHandlers[target] != address(0))
+		if (executionHandlers[targetContract] != address(0))
 			return
-				ICrowdfundExecutionHandler(executionHandlers[target]).handleCrowdfundExecution(
-					forumGroup,
-					payload
-				);
+				ICrowdfundExecutionHandler(executionHandlers[targetContract])
+					.handleCrowdfundExecution(
+						crowdfundContract,
+						assetContract,
+						forumGroup,
+						tokenId,
+						payload
+					);
 
 		revert UnsupportedTarget();
 	}

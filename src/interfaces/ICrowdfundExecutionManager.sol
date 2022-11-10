@@ -10,14 +10,11 @@ interface ICrowdfundExecutionManager {
 	function updateExecutionHandler(address proposalHandler, address newProposalHandler) external;
 
 	function manageExecution(
+		address crowdfundContract,
+		address targetContract,
+		address assetContract,
 		address forumGroup,
-		address target,
+		uint256 tokenId,
 		bytes memory payload
-	)
-		external
-		returns (
-			address,
-			uint256,
-			bytes memory
-		);
+	) external returns (uint256, bytes memory);
 }

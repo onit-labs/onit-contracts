@@ -20,12 +20,12 @@ import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 
 interface ICrowdfundExecutionHandlerInterface extends ethers.utils.Interface {
   functions: {
-    "handleCrowdfundExecution(address,bytes)": FunctionFragment;
+    "handleCrowdfundExecution(address,address,address,uint256,bytes)": FunctionFragment;
   };
 
   encodeFunctionData(
     functionFragment: "handleCrowdfundExecution",
-    values: [string, BytesLike]
+    values: [string, string, string, BigNumberish, BytesLike]
   ): string;
 
   decodeFunctionResult(
@@ -81,31 +81,43 @@ export class ICrowdfundExecutionHandler extends BaseContract {
 
   functions: {
     handleCrowdfundExecution(
+      crowdfundContract: string,
+      assetContract: string,
       forumGroup: string,
+      tokenId: BigNumberish,
       payload: BytesLike,
       overrides?: CallOverrides
-    ): Promise<[string, BigNumber, string]>;
+    ): Promise<[BigNumber, string]>;
   };
 
   handleCrowdfundExecution(
+    crowdfundContract: string,
+    assetContract: string,
     forumGroup: string,
+    tokenId: BigNumberish,
     payload: BytesLike,
     overrides?: CallOverrides
-  ): Promise<[string, BigNumber, string]>;
+  ): Promise<[BigNumber, string]>;
 
   callStatic: {
     handleCrowdfundExecution(
+      crowdfundContract: string,
+      assetContract: string,
       forumGroup: string,
+      tokenId: BigNumberish,
       payload: BytesLike,
       overrides?: CallOverrides
-    ): Promise<[string, BigNumber, string]>;
+    ): Promise<[BigNumber, string]>;
   };
 
   filters: {};
 
   estimateGas: {
     handleCrowdfundExecution(
+      crowdfundContract: string,
+      assetContract: string,
       forumGroup: string,
+      tokenId: BigNumberish,
       payload: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
@@ -113,7 +125,10 @@ export class ICrowdfundExecutionHandler extends BaseContract {
 
   populateTransaction: {
     handleCrowdfundExecution(
+      crowdfundContract: string,
+      assetContract: string,
       forumGroup: string,
+      tokenId: BigNumberish,
       payload: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;

@@ -34,9 +34,9 @@ contract JoepegsCrowdfundHandler {
 
 	/**
 	 * @notice Constructor
-	 * @param _protocolFee protocol fee (200 --> 2%, 400 --> 4%)
+	 * @param _enabledMethods Array of function signatures to enable
 	 */
-	constructor(uint256 _protocolFee, bytes4[] memory _enabledMethods) {
+	constructor(bytes4[] memory _enabledMethods) {
 		// Set the functions that are enabled -> 1 for enabled
 		for (uint256 i; i < _enabledMethods.length; i++) {
 			enabledMethods[_enabledMethods[i]] = 1;
@@ -51,25 +51,54 @@ contract JoepegsCrowdfundHandler {
 	 * @notice Decides commission to charge based on the function being called.
 	 *     		 Since all on-chain joe functions decode a TakerOrder, we can do
 	 *     		 everything in handleCrowdfund.
-	 * @param value not used in this contract, keeps interface consistent with other handlers
+	 * @param crowdfundContract address of the crowdfund contract
+	 * @param assetContract address of the asset contract
+	 * @param forumGroup address of the forum group
+	 * @param tokenId tokenId of the NFT
 	 * @return payload to decode and extract commission info from
 	 */
-	function handleCrowdfund(uint256 value, bytes calldata payload)
-		external
-		view
-		returns (uint256)
-	{
+	function handleCrowdfund(
+		address crowdfundContract,
+		address assetContract,
+		address forumGroup,
+		uint256 tokenId,
+		bytes calldata payload
+	) external view returns (uint256, bytes memory) {
 		// Extract function sig from payload as the first 4 bytes
 		bytes4 functionSig = bytes4(payload[0:4]);
 
-		// If enabled method, decode the payload to the order details
+		// If enabled method, decode the payload, extract price, and form transferPayload
 		if (enabledMethods[functionSig] == 1) {
-			OrderTypes.TakerOrder memory TakerOrder = abi.decode(
+			OrderTypes.TakerOrder memory takerOrder = abi.decode(
 				payload[4:],
 				(OrderTypes.TakerOrder)
 			);
 
-			// Check asset type in Transfer Selector
+			// Build a transfer payload depending on the asset type
+			if (IERC165(assetContract).supportsInterface(INTERFACE_ID_ERC721)) {
+				return (
+					takerOrder.price,
+					abi.encodeWithSignature(
+						'safeTransferFrom(address,address,uint256)',
+						crowdfundContract,
+						forumGroup,
+						tokenId
+					)
+				);
+			}
+			if (IERC165(assetContract).supportsInterface(INTERFACE_ID_ERC1155)) {
+				return (
+					takerOrder.price,
+					abi.encodeWithSignature(
+						'safeTransferFrom(address,address,uint256,uint256,bytes)',
+						crowdfundContract,
+						forumGroup,
+						tokenId,
+						1,
+						''
+					)
+				);
+			}
 		}
 
 		// If function is not listed, revert

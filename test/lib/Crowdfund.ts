@@ -1,24 +1,53 @@
 import { expect } from '../utils/expect'
 
 import { TOKEN, ZERO_ADDRESS } from '../config'
-import { ForumGroupV2, ForumFactoryV2, ForumCrowdfund } from '../../typechain'
+import {
+	ForumGroupV2,
+	ForumFactoryV2,
+	ForumCrowdfund,
+	CrowdfundExecutionManager,
+	JoepegsCrowdfundHandler,
+	ERC721,
+	ERC721Test
+} from '../../typechain'
 
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { BigNumber, Contract, ContractFactory, ethers, Signer } from 'ethers'
 import { deployments, ethers as hardhatEthers } from 'hardhat'
 import { beforeEach, describe, it } from 'mocha'
-import { advanceTime } from '../utils/helpers'
+import { advanceTime, getBigNumber } from '../utils/helpers'
+import { COMMISSION_BASED_FUNCTIONS, COMMISSION_FREE_FUNCTIONS } from '../../config'
+import { toUtf8 } from 'web3-utils'
 
-// Defaults to e18 using amount * 10^18
-function getBigNumber(amount: number, decimals = 18) {
-	return BigNumber.from(amount).mul(BigNumber.from(10).pow(decimals))
-}
+// Dummy maker order to provide input to a test
+const testMakerOrder = [
+	false,
+	ZERO_ADDRESS,
+	ZERO_ADDRESS,
+	getBigNumber(1),
+	getBigNumber(1),
+	getBigNumber(1),
+	ZERO_ADDRESS,
+	ZERO_ADDRESS,
+	getBigNumber(1),
+	getBigNumber(1),
+	getBigNumber(1),
+	getBigNumber(1),
+	'0x0000000000000000000000000000000000000000000000000000000000000000',
+	27,
+	'0x0000000000000000000000000000000000000000000000000000000000000000',
+	'0x0000000000000000000000000000000000000000000000000000000000000000'
+]
 
 describe.only('Crowdfund', function () {
 	let forum: ForumGroupV2 // ForumGroup contract instance
 	let forumFactory: ForumFactoryV2 // ForumFactory contract instance
 	let crowdfund: ForumCrowdfund // Crowdfund contract instance
+	let executionManager: CrowdfundExecutionManager // CrowdfundExecutionManager contract instance
+	let joepegsHandler: JoepegsCrowdfundHandler // CrowdfundExecutionManager contract instance
+	let joepegsMarket: Contract // CrowdfundExecutionManager contract instance
 	let pfpStaker: Contract // pfpStaker contract instance
+	let test721: ERC721Test // test721 contract instance
 	let proposer: SignerWithAddress // signerA
 	let alice: SignerWithAddress // signerB
 	let bob: SignerWithAddress // signerC
@@ -28,22 +57,44 @@ describe.only('Crowdfund', function () {
 	beforeEach(async () => {
 		;[proposer, alice, bob] = await hardhatEthers.getSigners()
 
-		// Similar to deploying the master forum multisig
+		// Deploy contracts used in tests
 		await deployments.fixture(['Forum', 'Shields'])
 		forum = await hardhatEthers.getContract('ForumGroupV2')
 		forumFactory = await hardhatEthers.getContract('ForumFactoryV2')
 		crowdfund = await hardhatEthers.getContract('ForumCrowdfund')
+		executionManager = await hardhatEthers.getContract('CrowdfundExecutionManager')
+		joepegsHandler = await hardhatEthers.getContract('JoepegsCrowdfundHandler')
 		pfpStaker = await hardhatEthers.getContract('PfpStaker')
+
+		console.log('Forum address: ', forum.address)
+		console.log('ForumFactory address: ', forumFactory.address)
+		console.log('ForumCrowdfund address: ', crowdfund.address)
+		console.log('CrowdfundExecutionManager address: ', executionManager.address)
+		console.log('PfpStaker address: ', pfpStaker.address)
+
+		// Deploy a test ERC721 contract and MockJoepegs to test full flow
+		//
+		// Test erc721
+		test721 = (await (
+			await hardhatEthers.getContractFactory('ERC721Test')
+		).deploy('test', 'test')) as ERC721Test
+		//
+		// Mock joepegs
+		const JoepegsMarket = await hardhatEthers.getContractFactory('MockJoepegsExchange')
+		joepegsMarket = await JoepegsMarket.deploy(test721.address)
 
 		// Setp deployments with correct addresses
 		await forumFactory.setPfpStaker(pfpStaker.address)
 		await forumFactory.setFundraiseExtension(ZERO_ADDRESS)
+		await executionManager.addExecutionHandler(forumFactory.address, joepegsHandler.address)
 
 		// Generic input call to some address
 		crowdsaleInput = {
 			targetContract: forumFactory.address,
-			targetPrice: getBigNumber(2),
+			assetContract: forumFactory.address,
 			deadline: 1730817411, // 05-11-2030
+			tokenId: 1,
+			targetPrice: getBigNumber(2),
 			groupName: 'TEST',
 			symbol: 'T',
 			payload: ethers.utils.toUtf8Bytes(
@@ -55,9 +106,11 @@ describe.only('Crowdfund', function () {
 		testGroupNameHash = ethers.utils.keccak256(
 			ethers.utils.defaultAbiCoder.encode(['string'], [crowdsaleInput.groupName])
 		)
+		console.log('testGroupNameHash: ', testGroupNameHash)
 
 		// Initiate a fund used in tests below
 		await crowdfund.initiateCrowdfund(crowdsaleInput, { value: getBigNumber(1) })
+		console.log('after: ')
 	})
 	it('Should initiate crowdsale and submit contribution', async function () {
 		const crowdfundDetails = await crowdfund.getCrowdfund(testGroupNameHash)
@@ -87,7 +140,7 @@ describe.only('Crowdfund', function () {
 			crowdsaleInput.targetContract
 		)
 	})
-	it.only('Should submit second contribution', async function () {
+	it('Should submit second contribution', async function () {
 		const crowdfundDetails = await crowdfund.getCrowdfund(testGroupNameHash)
 
 		// Check initial state
@@ -163,12 +216,53 @@ describe.only('Crowdfund', function () {
 			'InsufficientFunds()'
 		)
 	})
-
 	it.only('Should process a crowdfund, and not process it twice', async function () {
-		// Contribute so target alue is reached
+		// Cancel the crowdfund and create a new one with joepegs order
+		advanceTime(1730817412)
+		await crowdfund.cancelCrowdfund(testGroupNameHash)
+
+		//	Setup taker order for joepegs to the corwdfund contract
+		const testTakerOrder = [
+			false,
+			crowdfund.address,
+			getBigNumber(2),
+			getBigNumber(1),
+			getBigNumber(9000),
+			'0x00'
+		]
+		// Create a taker order
+		const payload = hardhatEthers.utils.defaultAbiCoder.encode(
+			[
+				'(bool,address,uint256,uint256,uint256,bytes)',
+				'(bool,address,address,uint256,uint256,uint256,address,address,uint256,uint256,uint256,uint256,bytes,uint8,bytes32,bytes32)'
+			],
+			[testTakerOrder, testMakerOrder]
+		)
+		console.log({ payload })
+
+		// Build the payload for the taker order
+		const payloadWithFunctionSelector = COMMISSION_BASED_FUNCTIONS[0] + payload.substring(2)
+		console.log({ payloadWithFunctionSelector })
+		// Build full crowdfund input for this order
+		crowdsaleInput = {
+			targetContract: ZERO_ADDRESS,
+			assetContract: test721.address,
+			deadline: 1730817411, // 05-11-2030
+			tokenId: 1,
+			targetPrice: getBigNumber(2),
+			groupName: 'TEST',
+			symbol: 'T',
+			payload: payloadWithFunctionSelector
+		}
+
+		await crowdfund.initiateCrowdfund(crowdsaleInput, { value: getBigNumber(1) })
+
+		// Contribute so target value is reached
 		await crowdfund.submitContribution(testGroupNameHash, {
 			value: getBigNumber(1)
 		})
+		// get balance
+		console.log((await hardhatEthers.provider.getBalance(proposer.address)).toString())
 
 		// Process crowdfund
 		const tx = await (await crowdfund.processCrowdfund(testGroupNameHash)).wait()

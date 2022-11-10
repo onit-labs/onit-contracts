@@ -27,7 +27,7 @@ interface ForumCrowdfundInterface extends ethers.utils.Interface {
     "executionManager()": FunctionFragment;
     "forumFactory()": FunctionFragment;
     "getCrowdfund(bytes32)": FunctionFragment;
-    "initiateCrowdfund((address,uint256,uint32,string,string,bytes))": FunctionFragment;
+    "initiateCrowdfund((address,address,uint32,uint256,uint256,string,string,bytes))": FunctionFragment;
     "processCrowdfund(bytes32)": FunctionFragment;
     "submitContribution(bytes32)": FunctionFragment;
   };
@@ -57,8 +57,10 @@ interface ForumCrowdfundInterface extends ethers.utils.Interface {
     values: [
       {
         targetContract: string;
-        targetPrice: BigNumberish;
+        assetContract: string;
         deadline: BigNumberish;
+        tokenId: BigNumberish;
+        targetPrice: BigNumberish;
         groupName: string;
         symbol: string;
         payload: BytesLike;
@@ -200,10 +202,21 @@ export class ForumCrowdfund extends BaseContract {
       overrides?: CallOverrides
     ): Promise<
       [
-        [string, BigNumber, number, string, string, string] & {
+        [
+          string,
+          string,
+          number,
+          BigNumber,
+          BigNumber,
+          string,
+          string,
+          string
+        ] & {
           targetContract: string;
-          targetPrice: BigNumber;
+          assetContract: string;
           deadline: number;
+          tokenId: BigNumber;
+          targetPrice: BigNumber;
           groupName: string;
           symbol: string;
           payload: string;
@@ -211,10 +224,21 @@ export class ForumCrowdfund extends BaseContract {
         string[],
         BigNumber[]
       ] & {
-        details: [string, BigNumber, number, string, string, string] & {
+        details: [
+          string,
+          string,
+          number,
+          BigNumber,
+          BigNumber,
+          string,
+          string,
+          string
+        ] & {
           targetContract: string;
-          targetPrice: BigNumber;
+          assetContract: string;
           deadline: number;
+          tokenId: BigNumber;
+          targetPrice: BigNumber;
           groupName: string;
           symbol: string;
           payload: string;
@@ -227,8 +251,10 @@ export class ForumCrowdfund extends BaseContract {
     initiateCrowdfund(
       parameters: {
         targetContract: string;
-        targetPrice: BigNumberish;
+        assetContract: string;
         deadline: BigNumberish;
+        tokenId: BigNumberish;
+        targetPrice: BigNumberish;
         groupName: string;
         symbol: string;
         payload: BytesLike;
@@ -267,10 +293,12 @@ export class ForumCrowdfund extends BaseContract {
     overrides?: CallOverrides
   ): Promise<
     [
-      [string, BigNumber, number, string, string, string] & {
+      [string, string, number, BigNumber, BigNumber, string, string, string] & {
         targetContract: string;
-        targetPrice: BigNumber;
+        assetContract: string;
         deadline: number;
+        tokenId: BigNumber;
+        targetPrice: BigNumber;
         groupName: string;
         symbol: string;
         payload: string;
@@ -278,10 +306,21 @@ export class ForumCrowdfund extends BaseContract {
       string[],
       BigNumber[]
     ] & {
-      details: [string, BigNumber, number, string, string, string] & {
+      details: [
+        string,
+        string,
+        number,
+        BigNumber,
+        BigNumber,
+        string,
+        string,
+        string
+      ] & {
         targetContract: string;
-        targetPrice: BigNumber;
+        assetContract: string;
         deadline: number;
+        tokenId: BigNumber;
+        targetPrice: BigNumber;
         groupName: string;
         symbol: string;
         payload: string;
@@ -294,8 +333,10 @@ export class ForumCrowdfund extends BaseContract {
   initiateCrowdfund(
     parameters: {
       targetContract: string;
-      targetPrice: BigNumberish;
+      assetContract: string;
       deadline: BigNumberish;
+      tokenId: BigNumberish;
+      targetPrice: BigNumberish;
       groupName: string;
       symbol: string;
       payload: BytesLike;
@@ -334,10 +375,21 @@ export class ForumCrowdfund extends BaseContract {
       overrides?: CallOverrides
     ): Promise<
       [
-        [string, BigNumber, number, string, string, string] & {
+        [
+          string,
+          string,
+          number,
+          BigNumber,
+          BigNumber,
+          string,
+          string,
+          string
+        ] & {
           targetContract: string;
-          targetPrice: BigNumber;
+          assetContract: string;
           deadline: number;
+          tokenId: BigNumber;
+          targetPrice: BigNumber;
           groupName: string;
           symbol: string;
           payload: string;
@@ -345,10 +397,21 @@ export class ForumCrowdfund extends BaseContract {
         string[],
         BigNumber[]
       ] & {
-        details: [string, BigNumber, number, string, string, string] & {
+        details: [
+          string,
+          string,
+          number,
+          BigNumber,
+          BigNumber,
+          string,
+          string,
+          string
+        ] & {
           targetContract: string;
-          targetPrice: BigNumber;
+          assetContract: string;
           deadline: number;
+          tokenId: BigNumber;
+          targetPrice: BigNumber;
           groupName: string;
           symbol: string;
           payload: string;
@@ -361,8 +424,10 @@ export class ForumCrowdfund extends BaseContract {
     initiateCrowdfund(
       parameters: {
         targetContract: string;
-        targetPrice: BigNumberish;
+        assetContract: string;
         deadline: BigNumberish;
+        tokenId: BigNumberish;
+        targetPrice: BigNumberish;
         groupName: string;
         symbol: string;
         payload: BytesLike;
@@ -457,8 +522,10 @@ export class ForumCrowdfund extends BaseContract {
     initiateCrowdfund(
       parameters: {
         targetContract: string;
-        targetPrice: BigNumberish;
+        assetContract: string;
         deadline: BigNumberish;
+        tokenId: BigNumberish;
+        targetPrice: BigNumberish;
         groupName: string;
         symbol: string;
         payload: BytesLike;
@@ -501,8 +568,10 @@ export class ForumCrowdfund extends BaseContract {
     initiateCrowdfund(
       parameters: {
         targetContract: string;
-        targetPrice: BigNumberish;
+        assetContract: string;
         deadline: BigNumberish;
+        tokenId: BigNumberish;
+        targetPrice: BigNumberish;
         groupName: string;
         symbol: string;
         payload: BytesLike;
