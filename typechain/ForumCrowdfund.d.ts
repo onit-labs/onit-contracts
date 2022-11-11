@@ -68,7 +68,7 @@ interface ForumCrowdfundInterface extends ethers.utils.Interface {
         assetContract: string;
         deadline: BigNumberish;
         tokenId: BigNumberish;
-        targetPrice: BigNumberish;
+        founderBonus: BigNumberish;
         groupName: string;
         symbol: string;
         payload: BytesLike;
@@ -251,7 +251,7 @@ export class ForumCrowdfund extends BaseContract {
           assetContract: string;
           deadline: number;
           tokenId: BigNumber;
-          targetPrice: BigNumber;
+          founderBonus: BigNumber;
           groupName: string;
           symbol: string;
           payload: string;
@@ -273,7 +273,7 @@ export class ForumCrowdfund extends BaseContract {
           assetContract: string;
           deadline: number;
           tokenId: BigNumber;
-          targetPrice: BigNumber;
+          founderBonus: BigNumber;
           groupName: string;
           symbol: string;
           payload: string;
@@ -289,7 +289,7 @@ export class ForumCrowdfund extends BaseContract {
         assetContract: string;
         deadline: BigNumberish;
         tokenId: BigNumberish;
-        targetPrice: BigNumberish;
+        founderBonus: BigNumberish;
         groupName: string;
         symbol: string;
         payload: BytesLike;
@@ -347,7 +347,7 @@ export class ForumCrowdfund extends BaseContract {
         assetContract: string;
         deadline: number;
         tokenId: BigNumber;
-        targetPrice: BigNumber;
+        founderBonus: BigNumber;
         groupName: string;
         symbol: string;
         payload: string;
@@ -369,7 +369,7 @@ export class ForumCrowdfund extends BaseContract {
         assetContract: string;
         deadline: number;
         tokenId: BigNumber;
-        targetPrice: BigNumber;
+        founderBonus: BigNumber;
         groupName: string;
         symbol: string;
         payload: string;
@@ -385,7 +385,7 @@ export class ForumCrowdfund extends BaseContract {
       assetContract: string;
       deadline: BigNumberish;
       tokenId: BigNumberish;
-      targetPrice: BigNumberish;
+      founderBonus: BigNumberish;
       groupName: string;
       symbol: string;
       payload: BytesLike;
@@ -452,7 +452,7 @@ export class ForumCrowdfund extends BaseContract {
           assetContract: string;
           deadline: number;
           tokenId: BigNumber;
-          targetPrice: BigNumber;
+          founderBonus: BigNumber;
           groupName: string;
           symbol: string;
           payload: string;
@@ -474,7 +474,7 @@ export class ForumCrowdfund extends BaseContract {
           assetContract: string;
           deadline: number;
           tokenId: BigNumber;
-          targetPrice: BigNumber;
+          founderBonus: BigNumber;
           groupName: string;
           symbol: string;
           payload: string;
@@ -490,7 +490,7 @@ export class ForumCrowdfund extends BaseContract {
         assetContract: string;
         deadline: BigNumberish;
         tokenId: BigNumberish;
-        targetPrice: BigNumberish;
+        founderBonus: BigNumberish;
         groupName: string;
         symbol: string;
         payload: BytesLike;
@@ -617,7 +617,7 @@ export class ForumCrowdfund extends BaseContract {
         assetContract: string;
         deadline: BigNumberish;
         tokenId: BigNumberish;
-        targetPrice: BigNumberish;
+        founderBonus: BigNumberish;
         groupName: string;
         symbol: string;
         payload: BytesLike;
@@ -677,7 +677,7 @@ export class ForumCrowdfund extends BaseContract {
         assetContract: string;
         deadline: BigNumberish;
         tokenId: BigNumberish;
-        targetPrice: BigNumberish;
+        founderBonus: BigNumberish;
         groupName: string;
         symbol: string;
         payload: BytesLike;

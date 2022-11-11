@@ -43,7 +43,7 @@ const createCustomCrowdfundInput = (
 	crowdfundAddress,
 	marketplaceAddress,
 	assetAddress,
-	targetPrice,
+	founderBonus,
 	assetPrice
 ) => {
 	//	Setup taker order for marketplace (joepegs) to the corwdfund contract
@@ -73,7 +73,7 @@ const createCustomCrowdfundInput = (
 		assetContract: assetAddress,
 		deadline: 1730817411, // 05-11-2030
 		tokenId: 1,
-		targetPrice: getBigNumber(assetPrice).mul(10250).div(10000),
+		founderBonus: founderBonus,
 		groupName: 'TEST',
 		symbol: 'T',
 		payload: payloadWithFunctionSelector
@@ -117,12 +117,13 @@ describe.only('Crowdfund', function () {
 		// Setp deployments with correct addresses
 		await forumFactory.setPfpStaker(pfpStaker.address)
 		await forumFactory.setFundraiseExtension(ZERO_ADDRESS)
+		await executionManager.addExecutionHandler(joepegsMarket.address, joepegsHandler.address)
 
 		crowdfundInput = createCustomCrowdfundInput(
 			crowdfund.address,
 			joepegsMarket.address,
 			test721.address,
-			2,
+			100,
 			1
 		)
 
@@ -140,7 +141,7 @@ describe.only('Crowdfund', function () {
 
 		// Check initial state
 		expect(crowdfundDetails.details.targetContract).to.equal(crowdfundInput.targetContract)
-		expect(crowdfundDetails.details.targetPrice).to.equal(crowdfundInput.targetPrice)
+		expect(crowdfundDetails.details.founderBonus).to.equal(crowdfundInput.founderBonus)
 		expect(crowdfundDetails.details.deadline).to.equal(crowdfundInput.deadline)
 		expect(crowdfundDetails.details.groupName).to.equal(crowdfundInput.groupName)
 		expect(crowdfundDetails.details.symbol).to.equal(crowdfundInput.symbol)
@@ -155,8 +156,6 @@ describe.only('Crowdfund', function () {
 		const crowdfundDetailsAfterSubmission = await crowdfund.getCrowdfund(testGroupNameHash)
 
 		// Check updated state
-		console.log(crowdfundDetailsAfterSubmission.contributors)
-		console.log(crowdfundDetailsAfterSubmission.contributions)
 		expect(crowdfundDetailsAfterSubmission.contributors).to.have.lengthOf(2)
 		expect(crowdfundDetailsAfterSubmission.contributions).to.have.lengthOf(2)
 		expect(crowdfundDetailsAfterSubmission.details.targetContract).to.equal(
@@ -269,9 +268,6 @@ describe.only('Crowdfund', function () {
 		)
 	})
 	it.only('Should process a crowdfund, and not process it twice', async function () {
-		// Add joepegs handler
-		await executionManager.addExecutionHandler(joepegsMarket.address, joepegsHandler.address)
-
 		// Contribute so target value is reached
 		await crowdfund.submitContribution(testGroupNameHash, {
 			value: getBigNumber(1)
@@ -280,11 +276,15 @@ describe.only('Crowdfund', function () {
 		// Process crowdfund
 		const tx = await (await crowdfund.processCrowdfund(testGroupNameHash)).wait()
 
-		// Get group deployed by crowdfund and check balance of member, and that group owns asset
+		// Get group deployed by crowdfund and check balance of member (with founder bonus), and that group owns asset
 		const group = `0x${tx.events[1].topics[1].substring(26)}`
 		const groupContract = await hardhatEthers.getContractAt('ForumGroupV2', group)
 		expect(await groupContract.balanceOf(proposer.address, MEMBERSHIP)).to.equal(1)
-		expect(await groupContract.balanceOf(proposer.address, TOKEN)).to.equal(getBigNumber(2))
+		expect(await groupContract.balanceOf(proposer.address, TOKEN)).to.equal(
+			getBigNumber(2)
+				.mul(10000 + crowdfundInput.founderBonus)
+				.div(10000)
+		)
 		expect(await test721.ownerOf(crowdfundInput.tokenId)).to.equal(
 			ethers.utils.getAddress(groupContract.address)
 		)
@@ -294,15 +294,12 @@ describe.only('Crowdfund', function () {
 			getBigNumber(5).div(100)
 		)
 
-		// Will fail to process a second time as the balances will be cleared
+		// Will fail to process a second time
 		await expect(crowdfund.processCrowdfund(testGroupNameHash)).to.be.revertedWith(
-			'InsufficientFunds()'
+			'MissingCrowdfund()'
 		)
 	})
 	it.only('Should process a crowdfund with multiple members, and transfer excess funds to group', async function () {
-		// Add joepegs handler
-		await executionManager.addExecutionHandler(joepegsMarket.address, joepegsHandler.address)
-
 		// Contribute so target value is reached
 		await crowdfund.submitContribution(testGroupNameHash, {
 			value: getBigNumber(1)
@@ -320,7 +317,9 @@ describe.only('Crowdfund', function () {
 		const groupContract = await hardhatEthers.getContractAt('ForumGroupV2', group)
 
 		expect(await groupContract.balanceOf(proposer.address, MEMBERSHIP)).to.equal(1)
-		expect(await groupContract.balanceOf(proposer.address, TOKEN)).to.equal(getBigNumber(2))
+		expect(await groupContract.balanceOf(proposer.address, TOKEN)).to.equal(
+			getBigNumber(2).add(getBigNumber(3).mul(crowdfundInput.founderBonus).div(10000))
+		)
 		expect(await groupContract.balanceOf(alice.address, MEMBERSHIP)).to.equal(1)
 		expect(await groupContract.balanceOf(alice.address, TOKEN)).to.equal(getBigNumber(1))
 		expect(await test721.ownerOf(crowdfundInput.tokenId)).to.equal(
@@ -329,12 +328,48 @@ describe.only('Crowdfund', function () {
 
 		// Check commission has been paid to execution manager
 		expect(await hardhatEthers.provider.getBalance(executionManager.address)).to.equal(
-			getBigNumber(75).div(10)
+			getBigNumber(75).div(1000)
+		)
+	})
+	it.only('Should revert if founder bonus over 5, and be OK for bonus = 0', async function () {
+		// Cancel the previous crowdfund
+		advanceTime(1730817412)
+		await crowdfund.cancelCrowdfund(testGroupNameHash)
+
+		const crowdfundInputFailFounderBonusExceeded = createCustomCrowdfundInput(
+			crowdfund.address,
+			joepegsMarket.address,
+			test721.address,
+			600,
+			1
 		)
 
-		// Will fail to process a second time as the balances will be cleared
-		await expect(crowdfund.processCrowdfund(testGroupNameHash)).to.be.revertedWith(
-			'InsufficientFunds()'
+		// Contribute so target value is reached
+		await expect(
+			crowdfund.initiateCrowdfund(crowdfundInputFailFounderBonusExceeded, {
+				value: getBigNumber(2)
+			})
+		).to.be.revertedWith('FounderBonusExceeded()')
+
+		const crowdfundInputPassFounderBonusZero = createCustomCrowdfundInput(
+			crowdfund.address,
+			joepegsMarket.address,
+			test721.address,
+			0,
+			1
 		)
+
+		await crowdfund.initiateCrowdfund(crowdfundInputPassFounderBonusZero, {
+			value: getBigNumber(2)
+		})
+
+		// Process crowdfund
+		const tx = await (await crowdfund.processCrowdfund(testGroupNameHash)).wait()
+
+		// Get group deployed by crowdfund and check balance of member, and that group owns asset
+		const group = `0x${tx.events[1].topics[1].substring(26)}`
+		const groupContract = await hardhatEthers.getContractAt('ForumGroupV2', group)
+		expect(await groupContract.balanceOf(proposer.address, MEMBERSHIP)).to.equal(1)
+		expect(await groupContract.balanceOf(proposer.address, TOKEN)).to.equal(getBigNumber(2))
 	})
 })

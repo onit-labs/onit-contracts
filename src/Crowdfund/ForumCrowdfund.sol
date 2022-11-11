@@ -9,7 +9,6 @@ import {IForumGroup} from "../interfaces/IForumGroup.sol";
 import {IForumGroupFactoryV2} from "../interfaces/IForumGroupFactoryV2.sol";
 import {ICrowdfundExecutionManager} from
     "../interfaces/ICrowdfundExecutionManager.sol";
-import "hardhat/console.sol";
 
 /**
  * @title Forum Crowdfund
@@ -42,7 +41,7 @@ contract ForumCrowdfund is ReentrancyGuard, Owned {
 
     error InsufficientFunds();
 
-    error TargetReached();
+    error FounderBonusExceeded();
 
     error OpenFund();
 
@@ -51,14 +50,14 @@ contract ForumCrowdfund is ReentrancyGuard, Owned {
     /// -----------------------------------------------------------------------
 
     struct CrowdfundParameters {
-        address targetContract;
-        address assetContract;
-        uint32 deadline;
-        uint256 tokenId;
-        uint256 targetPrice;
-        string groupName;
-        string symbol;
-        bytes payload;
+        address targetContract; // When the crowdfund transaction will take place (eg. a marketplace)
+        address assetContract; // The asset contract the crowdfund will buy (eg. an ERC721 collection)
+        uint32 deadline; // The deadline for the crowdfund
+        uint256 tokenId; // The token ID the crowdfund will buy
+        uint256 founderBonus; // An optional bonus the founder can set to incentivize early contributions
+        string groupName; // The name of the group which will be deployed to manage the groups asset
+        string symbol; // The symbol of the group which will be deployed to manage the groups asset
+        bytes payload; // The payload to be sent to the target contract when the crowdfund is processed
     }
 
     struct Crowdfund {
@@ -123,6 +122,9 @@ contract ForumCrowdfund is ReentrancyGuard, Owned {
         bytes32 groupNameHash = keccak256(abi.encode(parameters.groupName));
 
         if (crowdfunds[groupNameHash].parameters.deadline != 0) revert OpenFund();
+
+        // Founder bonus capped at 5%
+        if (parameters.founderBonus > 500) revert FounderBonusExceeded();
 
         // No gas saving to use crowdfund({}) format, and since we need to push to the array, we assign each element individually.
         crowdfunds[groupNameHash].parameters = parameters;
@@ -200,20 +202,9 @@ contract ForumCrowdfund is ReentrancyGuard, Owned {
     {
         Crowdfund storage fund = crowdfunds[groupNameHash];
 
-        // Calculate the total raised
-        uint256 raised;
+        if (fund.parameters.deadline == 0) revert MissingCrowdfund();
 
-        // Unchecked as price or raised amount will not exceed max int
-        unchecked {
-            for (uint256 i; i < fund.contributors.length;) {
-                raised += fund.contributions[fund.contributors[i]];
-                ++i;
-            }
-            if (raised == 0 || raised < fund.parameters.targetPrice) revert
-                InsufficientFunds();
-        }
-
-        // CustomExtension of this address allows this contract to mint each member shares
+        // CustomExtension of address(this) allows this contract to mint each member shares
         address[] memory customExtensions = new address[](1);
         customExtensions[0] = address(this);
 
@@ -239,6 +230,33 @@ contract ForumCrowdfund is ReentrancyGuard, Owned {
             fund.parameters.payload
         );
 
+        // Total raised and expected commission
+        uint256 raised;
+        uint256 expectedCommmission = (assetPrice * commission) / 10000;
+
+        // Unchecked as price or raised amount will not exceed max int
+        unchecked {
+            // Calculate the total raised and mint group shares (id = 1) to each contributor
+            for (uint256 i; i < fund.contributors.length;) {
+                raised += fund.contributions[fund.contributors[i]];
+                forumGroup.mintShares(
+                    fund.contributors[i],
+                    1,
+                    fund.contributions[fund.contributors[i]]
+                );
+                ++i;
+            }
+            if (raised == 0 || raised < expectedCommmission) revert
+                InsufficientFunds();
+        }
+
+        // Send the founder bonus
+        forumGroup.mintShares(
+            fund.contributors[0],
+            1,
+            (raised * fund.parameters.founderBonus) / 10000
+        );
+
         // Execute the tx with payload
         (bool success, bytes memory result) = (fund.parameters.targetContract)
             .call{value: assetPrice}(fund.parameters.payload);
@@ -252,30 +270,20 @@ contract ForumCrowdfund is ReentrancyGuard, Owned {
         // If the transfer fails, revert
         if (!success2) revert(string(result));
 
-        // Revert if commission is less than expected, otherwise send commission to Forum.
-        if (raised - assetPrice < (assetPrice * commission) / 10000) revert
-            InsufficientFunds();
-        executionManager.call{value: ((raised * commission) / 10000)}(
-            new bytes(0)
-        );
+        // Excess funds to pay commission and be transferred to group
+        uint256 excessFunds = raised - assetPrice;
+        uint256 finalCommission = (raised * commission) / 10000;
+
+        // Revert if insufficent funds to pay commission, otherwise send commission to Forum.
+        if (excessFunds < expectedCommmission) revert InsufficientFunds();
+        executionManager.call{value: finalCommission}(new bytes(0));
+
+        // Update the value of the excess funds after commission has been taken
+        excessFunds -= finalCommission;
 
         // If there are leftover funds, transfer them to the forum group
-        if (raised - assetPrice - (assetPrice * commission) / 10000 > 0) {
-            address(forumGroup).call{
-                value: raised - assetPrice - (assetPrice * commission) / 10000
-            }("");
-        }
-
-        // Distribute the group tokens id = 1 for treasury share
-        for (uint256 i; i < fund.contributors.length;) {
-            forumGroup.mintShares(
-                fund.contributors[i], 1, fund.contributions[fund.contributors[i]]
-            );
-
-            // Members can only be 12
-            unchecked {
-                ++i;
-            }
+        if (excessFunds > 0) {
+            address(forumGroup).call{value: excessFunds}("");
         }
 
         emit Processed(fund.parameters.groupName, address(forumGroup));
