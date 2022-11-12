@@ -5,8 +5,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deployer } = await hre.getNamedAccounts()
 	const { deterministic } = hre.deployments
 
-	const deterministicDeployment = await deterministic('ExecutionManager', {
-		contract: 'ExecutionManager',
+	const deterministicDeployment = await deterministic('CommissionManager', {
+		contract: 'CommissionManager',
 		from: deployer,
 		args: [deployer],
 		log: true,
@@ -19,4 +19,4 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 }
 export default func
 func.id = 'deploy_ExecutionManager' // id required to prevent reexecution
-func.tags = ['ExecutionManager', 'Forum']
+func.tags = ['CommissionManager', 'Forum']

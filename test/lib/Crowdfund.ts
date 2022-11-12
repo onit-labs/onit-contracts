@@ -117,17 +117,12 @@ describe.only('Crowdfund', function () {
 			await hardhatEthers.getContractFactory('ERC721Test')
 		).deploy('test', 'test')) as ERC721Test
 		const JoepegsMarket = await hardhatEthers.getContractFactory('MockJoepegsExchange')
-		console.log('0 ')
 		joepegsMarket = await JoepegsMarket.deploy(test721.address)
 
-		console.log('1 ')
 		// Setp deployments with correct addresses
 		await forumFactory.setPfpStaker(pfpStaker.address)
-		console.log('2 ')
 		await forumFactory.setFundraiseExtension(ZERO_ADDRESS)
-		console.log('3 ')
 		await executionManager.addExecutionHandler(joepegsMarket.address, joepegsHandler.address)
-		console.log('4 ')
 
 		crowdfundInput = createCustomCrowdfundInput(
 			crowdfund.address,
@@ -136,13 +131,11 @@ describe.only('Crowdfund', function () {
 			100,
 			1
 		)
-		console.log('5 ')
 
 		// Generate hash of groupname used to locate crowdfund on contract
 		testGroupNameHash = ethers.utils.keccak256(
 			ethers.utils.defaultAbiCoder.encode(['string'], [crowdfundInput.groupName])
 		)
-		console.log('6 ')
 
 		// Initiate a fund used in tests below
 		await crowdfund.initiateCrowdfund(crowdfundInput, { value: getBigNumber(1) })
@@ -280,10 +273,9 @@ describe.only('Crowdfund', function () {
 		)
 	})
 	it.only('Should process a crowdfund, and not process it twice', async function () {
-		console.log(
-			ethers.utils.keccak256(ethers.utils.defaultAbiCoder.encode(['string'], ['crowd3']))
-		)
-
+		// console.log(
+		// 	ethers.utils.keccak256(ethers.utils.defaultAbiCoder.encode(['string'], ['crowd3']))
+		// )
 		// Contribute so target value is reached
 		await crowdfund.submitContribution(testGroupNameHash, {
 			value: getBigNumber(1)
