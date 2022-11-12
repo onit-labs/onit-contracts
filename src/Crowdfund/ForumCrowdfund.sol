@@ -3,6 +3,7 @@
 pragma solidity ^0.8.15;
 
 import {Owned} from "../utils/Owned.sol";
+import {NFTreceiver} from "../utils/NFTreceiver.sol";
 import {ReentrancyGuard} from "../utils/ReentrancyGuard.sol";
 
 import {IForumGroup} from "../interfaces/IForumGroup.sol";
@@ -14,7 +15,7 @@ import {ICrowdfundExecutionManager} from
  * @title Forum Crowdfund
  * @notice Lets people pool funds to purchase an item as a group, deploying a Forum group for management
  */
-contract ForumCrowdfund is ReentrancyGuard, Owned {
+contract ForumCrowdfund is ReentrancyGuard, Owned, NFTreceiver {
     /// -----------------------------------------------------------------------
     /// Events
     /// -----------------------------------------------------------------------
