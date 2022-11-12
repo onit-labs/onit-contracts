@@ -25,3 +25,4 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 export default func
 func.id = 'deploy_Crowdfund' // id required to prevent reexecution
 func.tags = ['ForumCrowdfund', 'Forum']
+func.dependencies = ['ForumFactoryV2', 'CrowdfundExecutionManager']

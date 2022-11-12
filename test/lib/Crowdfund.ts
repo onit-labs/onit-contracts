@@ -99,25 +99,35 @@ describe.only('Crowdfund', function () {
 		;[proposer, alice, bob] = await hardhatEthers.getSigners()
 
 		// Deploy contracts used in tests
-		await deployments.fixture(['Forum', 'Shields'])
+		await deployments.fixture([
+			'ForumCrowdfund',
+			'PfpStakerV2',
+			'CrowdfundExecutionManager',
+			'JoepegsCrowdfundHandler'
+		])
 		forum = await hardhatEthers.getContract('ForumGroupV2')
 		forumFactory = await hardhatEthers.getContract('ForumFactoryV2')
 		crowdfund = await hardhatEthers.getContract('ForumCrowdfund')
 		executionManager = await hardhatEthers.getContract('CrowdfundExecutionManager')
 		joepegsHandler = await hardhatEthers.getContract('JoepegsCrowdfundHandler')
-		pfpStaker = await hardhatEthers.getContract('PfpStaker')
+		pfpStaker = await hardhatEthers.getContract('PfpStakerV2')
 
 		// Deploy a test ERC721 contract and MockJoepegs to test full flow
 		test721 = (await (
 			await hardhatEthers.getContractFactory('ERC721Test')
 		).deploy('test', 'test')) as ERC721Test
 		const JoepegsMarket = await hardhatEthers.getContractFactory('MockJoepegsExchange')
+		console.log('0 ')
 		joepegsMarket = await JoepegsMarket.deploy(test721.address)
 
+		console.log('1 ')
 		// Setp deployments with correct addresses
 		await forumFactory.setPfpStaker(pfpStaker.address)
+		console.log('2 ')
 		await forumFactory.setFundraiseExtension(ZERO_ADDRESS)
+		console.log('3 ')
 		await executionManager.addExecutionHandler(joepegsMarket.address, joepegsHandler.address)
+		console.log('4 ')
 
 		crowdfundInput = createCustomCrowdfundInput(
 			crowdfund.address,
@@ -126,11 +136,13 @@ describe.only('Crowdfund', function () {
 			100,
 			1
 		)
+		console.log('5 ')
 
 		// Generate hash of groupname used to locate crowdfund on contract
 		testGroupNameHash = ethers.utils.keccak256(
 			ethers.utils.defaultAbiCoder.encode(['string'], [crowdfundInput.groupName])
 		)
+		console.log('6 ')
 
 		// Initiate a fund used in tests below
 		await crowdfund.initiateCrowdfund(crowdfundInput, { value: getBigNumber(1) })
@@ -268,6 +280,10 @@ describe.only('Crowdfund', function () {
 		)
 	})
 	it.only('Should process a crowdfund, and not process it twice', async function () {
+		console.log(
+			ethers.utils.keccak256(ethers.utils.defaultAbiCoder.encode(['string'], ['crowd3']))
+		)
+
 		// Contribute so target value is reached
 		await crowdfund.submitContribution(testGroupNameHash, {
 			value: getBigNumber(1)
@@ -299,7 +315,7 @@ describe.only('Crowdfund', function () {
 			'MissingCrowdfund()'
 		)
 	})
-	it.only('Should process a crowdfund with multiple members, and transfer excess funds to group', async function () {
+	it('Should process a crowdfund with multiple members, and transfer excess funds to group', async function () {
 		// Contribute so target value is reached
 		await crowdfund.submitContribution(testGroupNameHash, {
 			value: getBigNumber(1)
@@ -331,7 +347,7 @@ describe.only('Crowdfund', function () {
 			getBigNumber(75).div(1000)
 		)
 	})
-	it.only('Should revert if founder bonus over 5, and be OK for bonus = 0', async function () {
+	it('Should revert if founder bonus over 5, and be OK for bonus = 0', async function () {
 		// Cancel the previous crowdfund
 		advanceTime(1730817412)
 		await crowdfund.cancelCrowdfund(testGroupNameHash)

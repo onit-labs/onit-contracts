@@ -20,5 +20,5 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	await deterministicDeployment.deploy()
 }
 export default func
-func.id = 'deploy_CrowdfundJoepegsHandler' // id required to prevent reexecution
-func.tags = ['CrowdfundJoepegsHandler', 'Forum']
+func.id = 'deploy_JoepegsCrowdfundHandler' // id required to prevent reexecution
+func.tags = ['JoepegsCrowdfundHandler', 'Forum']
