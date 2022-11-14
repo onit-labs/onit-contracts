@@ -70,7 +70,7 @@ contract ForumCrowdfund is ReentrancyGuard, Owned, NFTreceiver {
     address public forumFactory;
     address public executionManager;
 
-    uint256 public commission = 250; // Basis points of 10000 => 2.5%
+    uint256 public commission = 200; // Basis points of 10000 => 2%
 
     mapping(bytes32 => Crowdfund) private crowdfunds;
 

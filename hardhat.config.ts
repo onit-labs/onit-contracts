@@ -27,7 +27,7 @@ import 'solidity-coverage'
 subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS).setAction(async (_, __, runSuper) => {
 	const paths = await runSuper()
 
-	return paths.filter((p) => p.includes('interfaces'))
+	return paths.filter((p) => p.includes('src'))
 })
 
 const OPTIMIZED_COMPILER_SETTINGS = {

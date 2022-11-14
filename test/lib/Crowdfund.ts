@@ -80,7 +80,7 @@ const createCustomCrowdfundInput = (
 	}
 }
 
-describe.only('Crowdfund', function () {
+describe('Crowdfund', function () {
 	let forum: ForumGroup // ForumGroup contract instance
 	let forumFactory: ForumFactory // ForumFactory contract instance
 	let crowdfund: ForumCrowdfund // Crowdfund contract instance
@@ -243,7 +243,6 @@ describe.only('Crowdfund', function () {
 			'InsufficientFunds()'
 		)
 	})
-	// ! need to test failure for incorrect value for nft, or general failure from marketplace call
 	it('Should revert if commission is not paid', async function () {
 		// Add joepegs handler and cancel the crowdfund before creating a new one with details that will fail
 		await executionManager.addExecutionHandler(joepegsMarket.address, joepegsHandler.address)
@@ -270,73 +269,6 @@ describe.only('Crowdfund', function () {
 		// Fail for lack of commission
 		await expect(crowdfund.processCrowdfund(testGroupNameHash)).to.be.revertedWith(
 			'InsufficientFunds()'
-		)
-	})
-	it('Should process a crowdfund, and not process it twice', async function () {
-		// console.log(
-		// 	ethers.utils.keccak256(ethers.utils.defaultAbiCoder.encode(['string'], ['crowd3']))
-		// )
-		// Contribute so target value is reached
-		await crowdfund.submitContribution(testGroupNameHash, {
-			value: getBigNumber(1)
-		})
-
-		// Process crowdfund
-		const tx = await (await crowdfund.processCrowdfund(testGroupNameHash)).wait()
-
-		// Get group deployed by crowdfund and check balance of member (with founder bonus), and that group owns asset
-		const group = `0x${tx.events[1].topics[1].substring(26)}`
-		const groupContract = await hardhatEthers.getContractAt('ForumGroup', group)
-		expect(await groupContract.balanceOf(proposer.address, MEMBERSHIP)).to.equal(1)
-		expect(await groupContract.balanceOf(proposer.address, TOKEN)).to.equal(
-			getBigNumber(2)
-				.mul(10000 + crowdfundInput.founderBonus)
-				.div(10000)
-		)
-		expect(await test721.ownerOf(crowdfundInput.tokenId)).to.equal(
-			ethers.utils.getAddress(groupContract.address)
-		)
-
-		// Check commission has been paid to execution manager
-		expect(await hardhatEthers.provider.getBalance(executionManager.address)).to.equal(
-			getBigNumber(5).div(100)
-		)
-
-		// Will fail to process a second time
-		await expect(crowdfund.processCrowdfund(testGroupNameHash)).to.be.revertedWith(
-			'MissingCrowdfund()'
-		)
-	})
-	it('Should process a crowdfund with multiple members, and transfer excess funds to group', async function () {
-		// Contribute so target value is reached
-		await crowdfund.submitContribution(testGroupNameHash, {
-			value: getBigNumber(1)
-		})
-		// Contribute so target value is reached
-		await crowdfund.connect(alice).submitContribution(testGroupNameHash, {
-			value: getBigNumber(1)
-		})
-
-		// Process crowdfund
-		const tx = await (await crowdfund.processCrowdfund(testGroupNameHash)).wait()
-
-		// Get group deployed by crowdfund and check balance of member, and that group owns asset
-		const group = `0x${tx.events[2].topics[1].substring(26)}`
-		const groupContract = await hardhatEthers.getContractAt('ForumGroup', group)
-
-		expect(await groupContract.balanceOf(proposer.address, MEMBERSHIP)).to.equal(1)
-		expect(await groupContract.balanceOf(proposer.address, TOKEN)).to.equal(
-			getBigNumber(2).add(getBigNumber(3).mul(crowdfundInput.founderBonus).div(10000))
-		)
-		expect(await groupContract.balanceOf(alice.address, MEMBERSHIP)).to.equal(1)
-		expect(await groupContract.balanceOf(alice.address, TOKEN)).to.equal(getBigNumber(1))
-		expect(await test721.ownerOf(crowdfundInput.tokenId)).to.equal(
-			ethers.utils.getAddress(groupContract.address)
-		)
-
-		// Check commission has been paid to execution manager
-		expect(await hardhatEthers.provider.getBalance(executionManager.address)).to.equal(
-			getBigNumber(75).div(1000)
 		)
 	})
 	it('Should revert if founder bonus over 5, and be OK for bonus = 0', async function () {
@@ -379,5 +311,98 @@ describe.only('Crowdfund', function () {
 		const groupContract = await hardhatEthers.getContractAt('ForumGroup', group)
 		expect(await groupContract.balanceOf(proposer.address, MEMBERSHIP)).to.equal(1)
 		expect(await groupContract.balanceOf(proposer.address, TOKEN)).to.equal(getBigNumber(2))
+	})
+	it('Should process a crowdfund, and not process it twice', async function () {
+		// Contribute so target value is reached
+		await crowdfund.submitContribution(testGroupNameHash, {
+			value: getBigNumber(1)
+		})
+
+		// Process crowdfund
+		const tx = await (await crowdfund.processCrowdfund(testGroupNameHash)).wait()
+
+		// Get group deployed by crowdfund and check balance of member (with founder bonus), and that group owns asset
+		const group = `0x${tx.events[1].topics[1].substring(26)}`
+		const groupContract = await hardhatEthers.getContractAt('ForumGroup', group)
+		expect(await groupContract.balanceOf(proposer.address, MEMBERSHIP)).to.equal(1)
+		expect(await groupContract.balanceOf(proposer.address, TOKEN)).to.equal(
+			getBigNumber(2)
+				.mul(10000 + crowdfundInput.founderBonus)
+				.div(10000)
+		)
+		expect(await test721.ownerOf(crowdfundInput.tokenId)).to.equal(
+			ethers.utils.getAddress(groupContract.address)
+		)
+
+		// Check commission has been paid to execution manager
+		expect(await hardhatEthers.provider.getBalance(executionManager.address)).to.equal(
+			getBigNumber(4).div(100)
+		)
+
+		// Will fail to process a second time
+		await expect(crowdfund.processCrowdfund(testGroupNameHash)).to.be.revertedWith(
+			'MissingCrowdfund()'
+		)
+	})
+	it('Should extract commission from execution manager to the owner', async function () {
+		// Contribute so target value is reached
+		await crowdfund.submitContribution(testGroupNameHash, {
+			value: getBigNumber(1)
+		})
+
+		// Process crowdfund
+		await crowdfund.processCrowdfund(testGroupNameHash)
+
+		const ownerBalanceBefore = await hardhatEthers.provider.getBalance(proposer.address)
+		const executionManagerBalanceBefore = await hardhatEthers.provider.getBalance(
+			executionManager.address
+		)
+
+		// Check commission has been paid to execution manager
+		expect(executionManagerBalanceBefore).to.equal(getBigNumber(4).div(100))
+
+		// Extract commission
+		await executionManager.connect(alice).collectFees()
+
+		const ownerBalanceAfter = await hardhatEthers.provider.getBalance(proposer.address)
+		const executionManagerBalanceAfter = await hardhatEthers.provider.getBalance(
+			executionManager.address
+		)
+
+		// Check commission has been paid to owner
+		expect(ownerBalanceAfter.sub(ownerBalanceBefore)).to.equal(getBigNumber(4).div(100))
+		expect(executionManagerBalanceAfter).to.equal(0)
+	})
+	it('Should process a crowdfund with multiple members, and transfer excess funds to group', async function () {
+		// Contribute so target value is reached
+		await crowdfund.submitContribution(testGroupNameHash, {
+			value: getBigNumber(1)
+		})
+		// Contribute so target value is reached
+		await crowdfund.connect(alice).submitContribution(testGroupNameHash, {
+			value: getBigNumber(1)
+		})
+
+		// Process crowdfund
+		const tx = await (await crowdfund.processCrowdfund(testGroupNameHash)).wait()
+
+		// Get group deployed by crowdfund and check balance of member, and that group owns asset
+		const group = `0x${tx.events[2].topics[1].substring(26)}`
+		const groupContract = await hardhatEthers.getContractAt('ForumGroup', group)
+
+		expect(await groupContract.balanceOf(proposer.address, MEMBERSHIP)).to.equal(1)
+		expect(await groupContract.balanceOf(proposer.address, TOKEN)).to.equal(
+			getBigNumber(2).add(getBigNumber(3).mul(crowdfundInput.founderBonus).div(10000))
+		)
+		expect(await groupContract.balanceOf(alice.address, MEMBERSHIP)).to.equal(1)
+		expect(await groupContract.balanceOf(alice.address, TOKEN)).to.equal(getBigNumber(1))
+		expect(await test721.ownerOf(crowdfundInput.tokenId)).to.equal(
+			ethers.utils.getAddress(groupContract.address)
+		)
+
+		// Check commission has been paid to execution manager
+		expect(await hardhatEthers.provider.getBalance(executionManager.address)).to.equal(
+			getBigNumber(60).div(1000)
+		)
 	})
 })
