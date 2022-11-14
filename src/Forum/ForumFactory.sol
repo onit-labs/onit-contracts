@@ -12,13 +12,7 @@ contract ForumFactory is Multicall, Owned {
     /// Errors and Events
     /// ----------------------------------------------------------------------------------------
 
-    event GroupDeployed(
-        ForumGroup indexed forumGroup,
-        string name,
-        string symbol,
-        address[] voters,
-        uint32[4] govSettings
-    );
+    event GroupDeployed(ForumGroup indexed forumGroup, address[] voters);
 
     error NullDeploy();
 
@@ -118,30 +112,7 @@ contract ForumFactory is Multicall, Owned {
             name_, symbol_, voters_, initialExtensions, govSettings_
         );
 
-        emit GroupDeployed(forumGroup, name_, symbol_, voters_, govSettings_);
-    }
-
-    function deployGroup2(
-        string memory name_,
-        string memory symbol_,
-        address[] calldata voters_,
-        uint32[4] memory govSettings_,
-        address[] calldata customExtensions_
-    )
-        public
-        payable
-        virtual
-        returns (ForumGroup forumGroup)
-    {
-        if (voters_.length > 100) revert MemberLimitExceeded();
-
-        forumGroup = ForumGroup(_cloneAsMinimalProxy(forumMaster, name_));
-
-        forumGroup.init{value: msg.value}(
-            name_, symbol_, voters_, customExtensions_, govSettings_
-        );
-
-        emit GroupDeployed(forumGroup, name_, symbol_, voters_, govSettings_);
+        emit GroupDeployed(forumGroup, voters_);
     }
 
     /// @dev modified from Aelin (https://github.com/AelinXYZ/aelin/blob/main/contracts/MinimalProxyFactory.sol)
