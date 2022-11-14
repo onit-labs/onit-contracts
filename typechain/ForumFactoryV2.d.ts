@@ -20,9 +20,10 @@ import { Listener, Provider } from "@ethersproject/providers";
 import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 
-interface ForumFactoryInterface extends ethers.utils.Interface {
+interface ForumFactoryV2Interface extends ethers.utils.Interface {
   functions: {
     "deployGroup(string,string,address[],uint32[4],address[])": FunctionFragment;
+    "deployGroup2(string,string,address[],uint32[4],address[])": FunctionFragment;
     "executionManager()": FunctionFragment;
     "forumMaster()": FunctionFragment;
     "fundraiseExtension()": FunctionFragment;
@@ -38,6 +39,16 @@ interface ForumFactoryInterface extends ethers.utils.Interface {
 
   encodeFunctionData(
     functionFragment: "deployGroup",
+    values: [
+      string,
+      string,
+      string[],
+      [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      string[]
+    ]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "deployGroup2",
     values: [
       string,
       string,
@@ -87,6 +98,10 @@ interface ForumFactoryInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "deployGroup2",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "executionManager",
     data: BytesLike
   ): Result;
@@ -120,7 +135,7 @@ interface ForumFactoryInterface extends ethers.utils.Interface {
   ): Result;
 
   events: {
-    "GroupDeployed(address,address[])": EventFragment;
+    "GroupDeployed(address,string,string,address[],uint32[4])": EventFragment;
     "OwnerUpdated(address,address)": EventFragment;
   };
 
@@ -129,14 +144,20 @@ interface ForumFactoryInterface extends ethers.utils.Interface {
 }
 
 export type GroupDeployedEvent = TypedEvent<
-  [string, string[]] & { forumGroup: string; voters: string[] }
+  [string, string, string, string[], [number, number, number, number]] & {
+    forumGroup: string;
+    name: string;
+    symbol: string;
+    voters: string[];
+    govSettings: [number, number, number, number];
+  }
 >;
 
 export type OwnerUpdatedEvent = TypedEvent<
   [string, string] & { user: string; newOwner: string }
 >;
 
-export class ForumFactory extends BaseContract {
+export class ForumFactoryV2 extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
   attach(addressOrName: string): this;
   deployed(): Promise<this>;
@@ -177,10 +198,19 @@ export class ForumFactory extends BaseContract {
     toBlock?: string | number | undefined
   ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>;
 
-  interface: ForumFactoryInterface;
+  interface: ForumFactoryV2Interface;
 
   functions: {
     deployGroup(
+      name_: string,
+      symbol_: string,
+      voters_: string[],
+      govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      customExtensions_: string[],
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
+    deployGroup2(
       name_: string,
       symbol_: string,
       voters_: string[],
@@ -239,6 +269,15 @@ export class ForumFactory extends BaseContract {
     overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
+  deployGroup2(
+    name_: string,
+    symbol_: string,
+    voters_: string[],
+    govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+    customExtensions_: string[],
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
   executionManager(overrides?: CallOverrides): Promise<string>;
 
   forumMaster(overrides?: CallOverrides): Promise<string>;
@@ -289,6 +328,15 @@ export class ForumFactory extends BaseContract {
       overrides?: CallOverrides
     ): Promise<string>;
 
+    deployGroup2(
+      name_: string,
+      symbol_: string,
+      voters_: string[],
+      govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      customExtensions_: string[],
+      overrides?: CallOverrides
+    ): Promise<string>;
+
     executionManager(overrides?: CallOverrides): Promise<string>;
 
     forumMaster(overrides?: CallOverrides): Promise<string>;
@@ -322,20 +370,38 @@ export class ForumFactory extends BaseContract {
   };
 
   filters: {
-    "GroupDeployed(address,address[])"(
+    "GroupDeployed(address,string,string,address[],uint32[4])"(
       forumGroup?: string | null,
-      voters?: null
+      name?: null,
+      symbol?: null,
+      voters?: null,
+      govSettings?: null
     ): TypedEventFilter<
-      [string, string[]],
-      { forumGroup: string; voters: string[] }
+      [string, string, string, string[], [number, number, number, number]],
+      {
+        forumGroup: string;
+        name: string;
+        symbol: string;
+        voters: string[];
+        govSettings: [number, number, number, number];
+      }
     >;
 
     GroupDeployed(
       forumGroup?: string | null,
-      voters?: null
+      name?: null,
+      symbol?: null,
+      voters?: null,
+      govSettings?: null
     ): TypedEventFilter<
-      [string, string[]],
-      { forumGroup: string; voters: string[] }
+      [string, string, string, string[], [number, number, number, number]],
+      {
+        forumGroup: string;
+        name: string;
+        symbol: string;
+        voters: string[];
+        govSettings: [number, number, number, number];
+      }
     >;
 
     "OwnerUpdated(address,address)"(
@@ -351,6 +417,15 @@ export class ForumFactory extends BaseContract {
 
   estimateGas: {
     deployGroup(
+      name_: string,
+      symbol_: string,
+      voters_: string[],
+      govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      customExtensions_: string[],
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
+    deployGroup2(
       name_: string,
       symbol_: string,
       voters_: string[],
@@ -402,6 +477,15 @@ export class ForumFactory extends BaseContract {
 
   populateTransaction: {
     deployGroup(
+      name_: string,
+      symbol_: string,
+      voters_: string[],
+      govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      customExtensions_: string[],
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    deployGroup2(
       name_: string,
       symbol_: string,
       voters_: string[],

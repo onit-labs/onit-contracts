@@ -20,7 +20,7 @@ import { Listener, Provider } from "@ethersproject/providers";
 import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 
-interface ForumGroupInterface extends ethers.utils.Interface {
+interface ForumGroupV2Interface extends ethers.utils.Interface {
   functions: {
     "DELEGATION_TYPEHASH()": FunctionFragment;
     "DOMAIN_SEPARATOR()": FunctionFragment;
@@ -436,7 +436,7 @@ export type URIEvent = TypedEvent<
   [string, BigNumber] & { value: string; id: BigNumber }
 >;
 
-export class ForumGroup extends BaseContract {
+export class ForumGroupV2 extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
   attach(addressOrName: string): this;
   deployed(): Promise<this>;
@@ -477,7 +477,7 @@ export class ForumGroup extends BaseContract {
     toBlock?: string | number | undefined
   ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>;
 
-  interface: ForumGroupInterface;
+  interface: ForumGroupV2Interface;
 
   functions: {
     DELEGATION_TYPEHASH(overrides?: CallOverrides): Promise<[string]>;

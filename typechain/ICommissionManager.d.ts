@@ -19,37 +19,43 @@ import { Listener, Provider } from "@ethersproject/providers";
 import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 
-interface IPfpStakerInterface extends ethers.utils.Interface {
+interface ICommissionManagerInterface extends ethers.utils.Interface {
   functions: {
-    "getStakedNFT(address)": FunctionFragment;
-    "getURI(address,string)": FunctionFragment;
-    "stakeNFT(address,address,uint256)": FunctionFragment;
+    "addProposalHandler(address,address)": FunctionFragment;
+    "manageCommission(address,uint256,bytes)": FunctionFragment;
+    "updateProposalHandler(address,address)": FunctionFragment;
   };
 
   encodeFunctionData(
-    functionFragment: "getStakedNFT",
-    values: [string]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getURI",
+    functionFragment: "addProposalHandler",
     values: [string, string]
   ): string;
   encodeFunctionData(
-    functionFragment: "stakeNFT",
-    values: [string, string, BigNumberish]
+    functionFragment: "manageCommission",
+    values: [string, BigNumberish, BytesLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "updateProposalHandler",
+    values: [string, string]
   ): string;
 
   decodeFunctionResult(
-    functionFragment: "getStakedNFT",
+    functionFragment: "addProposalHandler",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "getURI", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "stakeNFT", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "manageCommission",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "updateProposalHandler",
+    data: BytesLike
+  ): Result;
 
   events: {};
 }
 
-export class IPfpStaker extends BaseContract {
+export class ICommissionManager extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
   attach(addressOrName: string): this;
   deployed(): Promise<this>;
@@ -90,66 +96,65 @@ export class IPfpStaker extends BaseContract {
     toBlock?: string | number | undefined
   ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>;
 
-  interface: IPfpStakerInterface;
+  interface: ICommissionManagerInterface;
 
   functions: {
-    getStakedNFT(
-      arg0: string,
-      overrides?: CallOverrides
-    ): Promise<
-      [string, BigNumber] & { NftContract: string; tokenId: BigNumber }
-    >;
+    addProposalHandler(
+      newHandledAddress: string,
+      handlerAddress: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
 
-    getURI(
-      arg0: string,
-      arg1: string,
-      overrides?: CallOverrides
-    ): Promise<[string] & { nftURI: string }>;
+    manageCommission(
+      target: string,
+      value: BigNumberish,
+      payload: BytesLike,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
 
-    stakeNFT(
-      arg0: string,
-      arg1: string,
-      arg2: BigNumberish,
+    updateProposalHandler(
+      proposalHandler: string,
+      newProposalHandler: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
   };
 
-  getStakedNFT(
-    arg0: string,
-    overrides?: CallOverrides
-  ): Promise<[string, BigNumber] & { NftContract: string; tokenId: BigNumber }>;
+  addProposalHandler(
+    newHandledAddress: string,
+    handlerAddress: string,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
 
-  getURI(
-    arg0: string,
-    arg1: string,
-    overrides?: CallOverrides
-  ): Promise<string>;
+  manageCommission(
+    target: string,
+    value: BigNumberish,
+    payload: BytesLike,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
 
-  stakeNFT(
-    arg0: string,
-    arg1: string,
-    arg2: BigNumberish,
+  updateProposalHandler(
+    proposalHandler: string,
+    newProposalHandler: string,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
   callStatic: {
-    getStakedNFT(
-      arg0: string,
+    addProposalHandler(
+      newHandledAddress: string,
+      handlerAddress: string,
       overrides?: CallOverrides
-    ): Promise<
-      [string, BigNumber] & { NftContract: string; tokenId: BigNumber }
-    >;
+    ): Promise<void>;
 
-    getURI(
-      arg0: string,
-      arg1: string,
+    manageCommission(
+      target: string,
+      value: BigNumberish,
+      payload: BytesLike,
       overrides?: CallOverrides
-    ): Promise<string>;
+    ): Promise<BigNumber>;
 
-    stakeNFT(
-      arg0: string,
-      arg1: string,
-      arg2: BigNumberish,
+    updateProposalHandler(
+      proposalHandler: string,
+      newProposalHandler: string,
       overrides?: CallOverrides
     ): Promise<void>;
   };
@@ -157,38 +162,43 @@ export class IPfpStaker extends BaseContract {
   filters: {};
 
   estimateGas: {
-    getStakedNFT(arg0: string, overrides?: CallOverrides): Promise<BigNumber>;
-
-    getURI(
-      arg0: string,
-      arg1: string,
-      overrides?: CallOverrides
+    addProposalHandler(
+      newHandledAddress: string,
+      handlerAddress: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
-    stakeNFT(
-      arg0: string,
-      arg1: string,
-      arg2: BigNumberish,
+    manageCommission(
+      target: string,
+      value: BigNumberish,
+      payload: BytesLike,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
+    updateProposalHandler(
+      proposalHandler: string,
+      newProposalHandler: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
   };
 
   populateTransaction: {
-    getStakedNFT(
-      arg0: string,
-      overrides?: CallOverrides
+    addProposalHandler(
+      newHandledAddress: string,
+      handlerAddress: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
-    getURI(
-      arg0: string,
-      arg1: string,
-      overrides?: CallOverrides
+    manageCommission(
+      target: string,
+      value: BigNumberish,
+      payload: BytesLike,
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
-    stakeNFT(
-      arg0: string,
-      arg1: string,
-      arg2: BigNumberish,
+    updateProposalHandler(
+      proposalHandler: string,
+      newProposalHandler: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
   };

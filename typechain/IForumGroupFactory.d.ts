@@ -11,7 +11,7 @@ import {
   PopulatedTransaction,
   BaseContract,
   ContractTransaction,
-  Overrides,
+  PayableOverrides,
   CallOverrides,
 } from "ethers";
 import { BytesLike } from "@ethersproject/bytes";
@@ -19,37 +19,31 @@ import { Listener, Provider } from "@ethersproject/providers";
 import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 
-interface IPfpStakerInterface extends ethers.utils.Interface {
+interface IForumGroupFactoryInterface extends ethers.utils.Interface {
   functions: {
-    "getStakedNFT(address)": FunctionFragment;
-    "getURI(address,string)": FunctionFragment;
-    "stakeNFT(address,address,uint256)": FunctionFragment;
+    "deployGroup(string,string,address[],uint32[4],address[])": FunctionFragment;
   };
 
   encodeFunctionData(
-    functionFragment: "getStakedNFT",
-    values: [string]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getURI",
-    values: [string, string]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "stakeNFT",
-    values: [string, string, BigNumberish]
+    functionFragment: "deployGroup",
+    values: [
+      string,
+      string,
+      string[],
+      [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      string[]
+    ]
   ): string;
 
   decodeFunctionResult(
-    functionFragment: "getStakedNFT",
+    functionFragment: "deployGroup",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "getURI", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "stakeNFT", data: BytesLike): Result;
 
   events: {};
 }
 
-export class IPfpStaker extends BaseContract {
+export class IForumGroupFactory extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
   attach(addressOrName: string): this;
   deployed(): Promise<this>;
@@ -90,106 +84,60 @@ export class IPfpStaker extends BaseContract {
     toBlock?: string | number | undefined
   ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>;
 
-  interface: IPfpStakerInterface;
+  interface: IForumGroupFactoryInterface;
 
   functions: {
-    getStakedNFT(
-      arg0: string,
-      overrides?: CallOverrides
-    ): Promise<
-      [string, BigNumber] & { NftContract: string; tokenId: BigNumber }
-    >;
-
-    getURI(
-      arg0: string,
-      arg1: string,
-      overrides?: CallOverrides
-    ): Promise<[string] & { nftURI: string }>;
-
-    stakeNFT(
-      arg0: string,
-      arg1: string,
-      arg2: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
+    deployGroup(
+      name_: string,
+      symbol_: string,
+      voters_: string[],
+      govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      customExtensions_: string[],
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
   };
 
-  getStakedNFT(
-    arg0: string,
-    overrides?: CallOverrides
-  ): Promise<[string, BigNumber] & { NftContract: string; tokenId: BigNumber }>;
-
-  getURI(
-    arg0: string,
-    arg1: string,
-    overrides?: CallOverrides
-  ): Promise<string>;
-
-  stakeNFT(
-    arg0: string,
-    arg1: string,
-    arg2: BigNumberish,
-    overrides?: Overrides & { from?: string | Promise<string> }
+  deployGroup(
+    name_: string,
+    symbol_: string,
+    voters_: string[],
+    govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+    customExtensions_: string[],
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
   callStatic: {
-    getStakedNFT(
-      arg0: string,
-      overrides?: CallOverrides
-    ): Promise<
-      [string, BigNumber] & { NftContract: string; tokenId: BigNumber }
-    >;
-
-    getURI(
-      arg0: string,
-      arg1: string,
+    deployGroup(
+      name_: string,
+      symbol_: string,
+      voters_: string[],
+      govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      customExtensions_: string[],
       overrides?: CallOverrides
     ): Promise<string>;
-
-    stakeNFT(
-      arg0: string,
-      arg1: string,
-      arg2: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>;
   };
 
   filters: {};
 
   estimateGas: {
-    getStakedNFT(arg0: string, overrides?: CallOverrides): Promise<BigNumber>;
-
-    getURI(
-      arg0: string,
-      arg1: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    stakeNFT(
-      arg0: string,
-      arg1: string,
-      arg2: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
+    deployGroup(
+      name_: string,
+      symbol_: string,
+      voters_: string[],
+      govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      customExtensions_: string[],
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
   };
 
   populateTransaction: {
-    getStakedNFT(
-      arg0: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    getURI(
-      arg0: string,
-      arg1: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    stakeNFT(
-      arg0: string,
-      arg1: string,
-      arg2: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
+    deployGroup(
+      name_: string,
+      symbol_: string,
+      voters_: string[],
+      govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      customExtensions_: string[],
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
   };
 }

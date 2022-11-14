@@ -19,13 +19,13 @@ import { Listener, Provider } from "@ethersproject/providers";
 import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 
-interface ExecutionManagerInterface extends ethers.utils.Interface {
+interface CommissionManagerInterface extends ethers.utils.Interface {
   functions: {
     "addProposalHandler(address,address)": FunctionFragment;
     "baseCommission()": FunctionFragment;
     "collectERC20(address)": FunctionFragment;
     "collectFees()": FunctionFragment;
-    "manageExecution(address,uint256,bytes)": FunctionFragment;
+    "manageCommission(address,uint256,bytes)": FunctionFragment;
     "nonCommissionContracts(address)": FunctionFragment;
     "owner()": FunctionFragment;
     "proposalHandlers(address)": FunctionFragment;
@@ -52,7 +52,7 @@ interface ExecutionManagerInterface extends ethers.utils.Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "manageExecution",
+    functionFragment: "manageCommission",
     values: [string, BigNumberish, BytesLike]
   ): string;
   encodeFunctionData(
@@ -95,7 +95,7 @@ interface ExecutionManagerInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "manageExecution",
+    functionFragment: "manageCommission",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -156,7 +156,7 @@ export type ProposalHandlerUpdatedEvent = TypedEvent<
   [string, string] & { handledAddress: string; newProposalHandler: string }
 >;
 
-export class ExecutionManager extends BaseContract {
+export class CommissionManager extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
   attach(addressOrName: string): this;
   deployed(): Promise<this>;
@@ -197,7 +197,7 @@ export class ExecutionManager extends BaseContract {
     toBlock?: string | number | undefined
   ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>;
 
-  interface: ExecutionManagerInterface;
+  interface: CommissionManagerInterface;
 
   functions: {
     addProposalHandler(
@@ -217,7 +217,7 @@ export class ExecutionManager extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
-    manageExecution(
+    manageCommission(
       target: string,
       value: BigNumberish,
       payload: BytesLike,
@@ -275,7 +275,7 @@ export class ExecutionManager extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
-  manageExecution(
+  manageCommission(
     target: string,
     value: BigNumberish,
     payload: BytesLike,
@@ -325,7 +325,7 @@ export class ExecutionManager extends BaseContract {
 
     collectFees(overrides?: CallOverrides): Promise<void>;
 
-    manageExecution(
+    manageCommission(
       target: string,
       value: BigNumberish,
       payload: BytesLike,
@@ -446,7 +446,7 @@ export class ExecutionManager extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
-    manageExecution(
+    manageCommission(
       target: string,
       value: BigNumberish,
       payload: BytesLike,
@@ -505,7 +505,7 @@ export class ExecutionManager extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
-    manageExecution(
+    manageCommission(
       target: string,
       value: BigNumberish,
       payload: BytesLike,

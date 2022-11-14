@@ -23,7 +23,7 @@ import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 interface IJoepegsExchangeInterface extends ethers.utils.Interface {
   functions: {
     "matchAskWithTakerBid((bool,address,uint256,uint256,uint256,bytes),(bool,address,address,uint256,uint256,uint256,address,address,uint256,uint256,uint256,uint256,bytes,uint8,bytes32,bytes32))": FunctionFragment;
-    "matchAskWithTakerBidUsingETHAndWETH((bool,address,uint256,uint256,uint256,bytes),(bool,address,address,uint256,uint256,uint256,address,address,uint256,uint256,uint256,uint256,bytes,uint8,bytes32,bytes32))": FunctionFragment;
+    "matchAskWithTakerBidUsingAVAXAndWAVAX((bool,address,uint256,uint256,uint256,bytes),(bool,address,address,uint256,uint256,uint256,address,address,uint256,uint256,uint256,uint256,bytes,uint8,bytes32,bytes32))": FunctionFragment;
     "matchBidWithTakerAsk((bool,address,uint256,uint256,uint256,bytes),(bool,address,address,uint256,uint256,uint256,address,address,uint256,uint256,uint256,uint256,bytes,uint8,bytes32,bytes32))": FunctionFragment;
   };
 
@@ -59,7 +59,7 @@ interface IJoepegsExchangeInterface extends ethers.utils.Interface {
     ]
   ): string;
   encodeFunctionData(
-    functionFragment: "matchAskWithTakerBidUsingETHAndWETH",
+    functionFragment: "matchAskWithTakerBidUsingAVAXAndWAVAX",
     values: [
       {
         isOrderAsk: boolean;
@@ -126,7 +126,7 @@ interface IJoepegsExchangeInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "matchAskWithTakerBidUsingETHAndWETH",
+    functionFragment: "matchAskWithTakerBidUsingAVAXAndWAVAX",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -211,7 +211,7 @@ export class IJoepegsExchange extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
-    matchAskWithTakerBidUsingETHAndWETH(
+    matchAskWithTakerBidUsingAVAXAndWAVAX(
       takerBid: {
         isOrderAsk: boolean;
         taker: string;
@@ -302,7 +302,7 @@ export class IJoepegsExchange extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
-  matchAskWithTakerBidUsingETHAndWETH(
+  matchAskWithTakerBidUsingAVAXAndWAVAX(
     takerBid: {
       isOrderAsk: boolean;
       taker: string;
@@ -393,7 +393,7 @@ export class IJoepegsExchange extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>;
 
-    matchAskWithTakerBidUsingETHAndWETH(
+    matchAskWithTakerBidUsingAVAXAndWAVAX(
       takerBid: {
         isOrderAsk: boolean;
         taker: string;
@@ -487,7 +487,7 @@ export class IJoepegsExchange extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
-    matchAskWithTakerBidUsingETHAndWETH(
+    matchAskWithTakerBidUsingAVAXAndWAVAX(
       takerBid: {
         isOrderAsk: boolean;
         taker: string;
@@ -579,7 +579,7 @@ export class IJoepegsExchange extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
-    matchAskWithTakerBidUsingETHAndWETH(
+    matchAskWithTakerBidUsingAVAXAndWAVAX(
       takerBid: {
         isOrderAsk: boolean;
         taker: string;

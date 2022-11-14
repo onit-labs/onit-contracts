@@ -2,155 +2,146 @@
 
 pragma solidity ^0.8.13;
 
-import {IPfpStaker} from '../interfaces/IPfpStaker.sol';
-import {IShieldManager} from '../interfaces/IShieldManager.sol';
+import {Owned} from "../utils/Owned.sol";
 
-import {Owned} from '../utils/Owned.sol';
-
-import {ForumGroup, Multicall} from './ForumGroup.sol';
+import {ForumGroup, Multicall} from "./ForumGroup.sol";
 
 /// @notice Factory to deploy forum group.
 contract ForumFactory is Multicall, Owned {
-	/// ----------------------------------------------------------------------------------------
-	/// Errors and Events
-	/// ----------------------------------------------------------------------------------------
+    /// ----------------------------------------------------------------------------------------
+    /// Errors and Events
+    /// ----------------------------------------------------------------------------------------
 
-	event GroupDeployed(
-		ForumGroup indexed forumGroup,
-		string name,
-		string symbol,
-		address[] voters,
-		uint32[4] govSettings,
-		uint256 shieldPass
-	);
+    event GroupDeployed(ForumGroup indexed forumGroup, address[] voters);
 
-	error NullDeploy();
+    error NullDeploy();
 
-	error MintingClosed();
+    error MemberLimitExceeded();
 
-	error MemberLimitExceeded();
+    /// ----------------------------------------------------------------------------------------
+    /// Factory Storage
+    /// ----------------------------------------------------------------------------------------
 
-	/// ----------------------------------------------------------------------------------------
-	/// Factory Storage
-	/// ----------------------------------------------------------------------------------------
+    address public forumMaster;
+    address public fundraiseExtension;
+    address public executionManager;
+    address public pfpStaker;
 
-	address payable public forumMaster;
-	address payable public forumRelay;
-	address payable public fundraiseExtension;
-	address payable public executionManager;
+    /// ----------------------------------------------------------------------------------------
+    /// Constructor
+    /// ----------------------------------------------------------------------------------------
 
-	IPfpStaker public pfpStaker;
-	IShieldManager public shieldManager;
+    constructor(
+        address deployer,
+        address forumMaster_,
+        address executionManager_
+    )
+        Owned(deployer)
+    {
+        forumMaster = forumMaster_;
 
-	bool public factoryLive = false;
+        executionManager = executionManager_;
+    }
 
-	/// ----------------------------------------------------------------------------------------
-	/// Constructor
-	/// ----------------------------------------------------------------------------------------
+    /// ----------------------------------------------------------------------------------------
+    /// Owner Interface
+    /// ----------------------------------------------------------------------------------------
 
-	constructor(
-		address deployer,
-		address payable forumMaster_,
-		address payable executionManager_,
-		IShieldManager shieldManager_
-	) Owned(deployer) {
-		forumMaster = forumMaster_;
+    function setForumMaster(address forumMaster_) external onlyOwner {
+        forumMaster = forumMaster_;
+    }
 
-		executionManager = executionManager_;
+    function setPfpStaker(address pfpStaker_) external onlyOwner {
+        pfpStaker = pfpStaker_;
+    }
 
-		shieldManager = shieldManager_;
-	}
+    function setFundraiseExtension(address fundraiseExtension_)
+        external
+        onlyOwner
+    {
+        fundraiseExtension = fundraiseExtension_;
+    }
 
-	/// ----------------------------------------------------------------------------------------
-	/// Owner Interface
-	/// ----------------------------------------------------------------------------------------
+    function setExecutionManager(address executionManager_)
+        external
+        onlyOwner
+    {
+        executionManager = executionManager_;
+    }
 
-	function setLaunched(bool setting) external onlyOwner {
-		factoryLive = setting;
-	}
+    /// ----------------------------------------------------------------------------------------
+    /// Factory Logic
+    /// ----------------------------------------------------------------------------------------
 
-	function setForumMaster(address payable forumMaster_) external onlyOwner {
-		forumMaster = forumMaster_;
-	}
+    function deployGroup(
+        string calldata name_,
+        string calldata symbol_,
+        address[] calldata voters_,
+        uint32[4] calldata govSettings_,
+        address[] calldata customExtensions_
+    )
+        public
+        payable
+        virtual
+        returns (ForumGroup forumGroup)
+    {
+        if (voters_.length > 100) revert MemberLimitExceeded();
 
-	function setForumRelay(address payable forumRelay_) external onlyOwner {
-		forumRelay = forumRelay_;
-	}
+        forumGroup = ForumGroup(_cloneAsMinimalProxy(forumMaster, name_));
 
-	function setShieldManager(address payable shieldManager_) external onlyOwner {
-		shieldManager = IShieldManager(shieldManager_);
-	}
+        // Create initialExtensions array of correct length. 3 Forum set extensions + customExtensions
+        address[] memory initialExtensions =
+            new address[](3 + customExtensions_.length);
 
-	function setPfpStaker(address payable pfpStaker_) external onlyOwner {
-		pfpStaker = IPfpStaker(pfpStaker_);
-	}
+        // Set the base Forum extensions
+        (initialExtensions[0], initialExtensions[1], initialExtensions[2]) =
+            (pfpStaker, executionManager, fundraiseExtension);
 
-	function setFundraiseExtension(address payable fundraiseExtension_) external onlyOwner {
-		fundraiseExtension = fundraiseExtension_;
-	}
+        // Set the custom extensions
+        if (customExtensions_.length != 0) {
+            // Cannot realistically overflow on human timescales
+            unchecked {
+                for (uint256 i = 0; i < customExtensions_.length; i++) {
+                    // +3 offsets the base Forum extensions
+                    initialExtensions[i + 3] = customExtensions_[i];
+                }
+            }
+        }
 
-	function setExecutionManager(address payable executionManager_) external onlyOwner {
-		executionManager = executionManager_;
-	}
+        forumGroup.init{value: msg.value}(
+            name_, symbol_, voters_, initialExtensions, govSettings_
+        );
 
-	/// ----------------------------------------------------------------------------------------
-	/// Factory Logic
-	/// ----------------------------------------------------------------------------------------
+        emit GroupDeployed(forumGroup, voters_);
+    }
 
-	function deployGroup(
-		string memory name_,
-		string memory symbol_,
-		address[] calldata voters_,
-		uint32[4] memory govSettings_
-	) public payable virtual returns (ForumGroup forumGroup) {
-		if (!factoryLive)
-			if (msg.sender != forumRelay) revert MintingClosed();
+    /// @dev modified from Aelin (https://github.com/AelinXYZ/aelin/blob/main/contracts/MinimalProxyFactory.sol)
+    function _cloneAsMinimalProxy(address base, string memory name_)
+        internal
+        virtual
+        returns (address payable clone)
+    {
+        bytes memory createData = abi.encodePacked(
+            // constructor
+            bytes10(0x3d602d80600a3d3981f3),
+            // proxy code
+            bytes10(0x363d3d373d3d3d363d73),
+            base,
+            bytes15(0x5af43d82803e903d91602b57fd5bf3)
+        );
 
-		if (voters_.length > 12) revert MemberLimitExceeded();
+        bytes32 salt = keccak256(bytes(name_));
 
-		forumGroup = ForumGroup(_cloneAsMinimalProxy(forumMaster, name_));
-
-		address[3] memory initialExtensions = [
-			address(pfpStaker),
-			executionManager,
-			fundraiseExtension
-		];
-
-		forumGroup.init{value: msg.value}(name_, symbol_, voters_, initialExtensions, govSettings_);
-
-		// Mint shield pass for new group and stake it to the pfpStaker
-		uint256 shieldPass = shieldManager.mintShieldPass(address(pfpStaker));
-		pfpStaker.stakeInitialShield(address(forumGroup), shieldPass);
-
-		emit GroupDeployed(forumGroup, name_, symbol_, voters_, govSettings_, shieldPass);
-	}
-
-	/// @dev modified from Aelin (https://github.com/AelinXYZ/aelin/blob/main/contracts/MinimalProxyFactory.sol)
-	function _cloneAsMinimalProxy(address payable base, string memory name_)
-		internal
-		virtual
-		returns (address payable clone)
-	{
-		bytes memory createData = abi.encodePacked(
-			// constructor
-			bytes10(0x3d602d80600a3d3981f3),
-			// proxy code
-			bytes10(0x363d3d373d3d3d363d73),
-			base,
-			bytes15(0x5af43d82803e903d91602b57fd5bf3)
-		);
-
-		bytes32 salt = keccak256(bytes(name_));
-
-		assembly {
-			clone := create2(
-				0, // no value
-				add(createData, 0x20), // data
-				mload(createData),
-				salt
-			)
-		}
-		// if CREATE2 fails for some reason, address(0) is returned
-		if (clone == address(0)) revert NullDeploy();
-	}
+        assembly {
+            clone :=
+                create2(
+                    0, // no value
+                    add(createData, 0x20), // data
+                    mload(createData),
+                    salt
+                )
+        }
+        // if CREATE2 fails for some reason, address(0) is returned
+        if (clone == address(0)) revert NullDeploy();
+    }
 }

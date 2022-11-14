@@ -26,7 +26,7 @@ describe('Fundraise', function () {
 		// TODO implement non avax funding in version 2
 
 		// Similar to deploying the master forum multisig
-		await deployments.fixture(['Forum', 'Shields'])
+		await deployments.fixture(['Forum'])
 		forum = await hardhatEthers.getContract('ForumGroup')
 		fundraise = await hardhatEthers.getContract('ForumGroupFundraise')
 
@@ -35,7 +35,7 @@ describe('Fundraise', function () {
 			'FORUM',
 			[proposer.address, alice.address],
 			[ZERO_ADDRESS, ZERO_ADDRESS, fundraise.address],
-			[30, 0, 50, 60]
+			[30, 12, 50, 60]
 		)
 
 		// Submit Fundraise to forum with multiplier of 1
@@ -134,7 +134,9 @@ describe('Fundraise', function () {
 		await fundraise.cancelFundRound(forum.address)
 
 		await expect(
-			fundraise.connect(bob).initiateFundRound(forum.address, 1, 1, { value: getBigNumber(50) })
+			fundraise
+				.connect(bob)
+				.initiateFundRound(forum.address, 1, 1, { value: getBigNumber(50) })
 		).revertedWith('NotMember()')
 	})
 	it('Should revert if a fund is already open', async function () {
@@ -146,7 +148,9 @@ describe('Fundraise', function () {
 	})
 	it('Should revert if incorrect value sent', async function () {
 		await expect(
-			fundraise.connect(alice).submitFundContribution(forum.address, { value: getBigNumber(5000) })
+			fundraise
+				.connect(alice)
+				.submitFundContribution(forum.address, { value: getBigNumber(5000) })
 		).revertedWith('IncorrectContribution()')
 	})
 	it('Should revert if no fund is open', async function () {
@@ -164,12 +168,16 @@ describe('Fundraise', function () {
 
 	it('Should revert if non group member taking part', async function () {
 		await expect(
-			fundraise.connect(bob).submitFundContribution(forum.address, { value: getBigNumber(50) })
+			fundraise
+				.connect(bob)
+				.submitFundContribution(forum.address, { value: getBigNumber(50) })
 		).revertedWith('NotMember()')
 	})
 	it('Should revert if user is depositing twice', async function () {
 		await expect(
-			fundraise.connect(proposer).submitFundContribution(forum.address, { value: getBigNumber(50) })
+			fundraise
+				.connect(proposer)
+				.submitFundContribution(forum.address, { value: getBigNumber(50) })
 		).revertedWith('IncorrectContribution()')
 	})
 	it('Should cancel round only if cancelled by proposer or dao, and return funds', async function () {

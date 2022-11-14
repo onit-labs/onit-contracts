@@ -19,7 +19,7 @@ import { Listener, Provider } from "@ethersproject/providers";
 import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 
-interface PfpStakerInterface extends ethers.utils.Interface {
+interface PfpStakerV2Interface extends ethers.utils.Interface {
   functions: {
     "getStakedNFT(address)": FunctionFragment;
     "getURI(address,string)": FunctionFragment;
@@ -103,7 +103,7 @@ export type StakedNFTEvent = TypedEvent<
   }
 >;
 
-export class PfpStaker extends BaseContract {
+export class PfpStakerV2 extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
   attach(addressOrName: string): this;
   deployed(): Promise<this>;
@@ -144,7 +144,7 @@ export class PfpStaker extends BaseContract {
     toBlock?: string | number | undefined
   ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>;
 
-  interface: PfpStakerInterface;
+  interface: PfpStakerV2Interface;
 
   functions: {
     getStakedNFT(

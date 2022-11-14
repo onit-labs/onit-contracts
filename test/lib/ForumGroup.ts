@@ -2,8 +2,9 @@ import { createSignature } from '../utils/createSignature'
 import { expect } from '../utils/expect'
 import { findPrivateKey } from '../utils/hardhat-keys'
 import { advanceTime, getBigNumber } from '../utils/helpers'
-import { createMakerOrder, createTakerOrder } from '../utils/order-helper'
 import { processProposal } from '../utils/processProposal'
+
+import { ERC721Test, ForumGroup } from '../../typechain'
 
 import {
 	ALLOW_CONTRACT_SIG,
@@ -11,7 +12,7 @@ import {
 	CALL,
 	ERC1271_MAGIC_VALUE,
 	EXTENSION,
-	GPERIOD,
+	MEMBER_LIMIT,
 	MEMBER,
 	MEMBERSHIP,
 	MINT,
@@ -35,28 +36,29 @@ import { beforeEach, describe, it } from 'mocha'
 ///			 set to [proposer.address]. This is to simplify minting tokens for that address since
 ///			 the mintShares function is modified with onlyExtension.
 
-describe('Forum Multisig Setup and Functions', function () {
+describe('Forum Multisig  Setup and Functions', function () {
 	// let Forum: any // ForumGroup contract
-	let forum: Contract // ForumGroup contract instance
-	let shieldManager: Contract // ForumGroup contract instance
+	let forum: ForumGroup // ForumGroup contract instance
 	let owner: SignerWithAddress // signer
 	let proposer: SignerWithAddress // signerA
 	let alice: SignerWithAddress // signerB
 	let bob: SignerWithAddress // signerC
-	let tokenId: number // token for shield
+	let test721: ERC721Test // ERC721Test contract instance
 
 	beforeEach(async () => {
 		;[owner, proposer, alice, bob] = await hardhatEthers.getSigners()
 
+		// TODO this is very slow, should find workaround for Initilized() error
+		await hardhatEthers.provider.send('hardhat_reset', [])
+
 		// Similar to deploying the master forum multisig
-		await deployments.fixture(['Forum', 'Shields'])
-		shieldManager = await hardhatEthers.getContract('ShieldManager')
+		await deployments.fixture(['Forum'])
 		forum = await hardhatEthers.getContract('ForumGroup')
 
-		await shieldManager.connect(owner).setPublicMintActive(true)
-
-		const tx = await (await shieldManager.mintShieldPass(alice.address, { value: MINT_FEE })).wait()
-		tokenId = parseInt(tx.events?.[0].args?.tokenId)
+		// Test erc721, deploy a test 721 contract and mint a token for founder
+		test721 = (await (
+			await hardhatEthers.getContractFactory('ERC721Test')
+		).deploy('test', 'test')) as ERC721Test
 	})
 	describe('Init', function () {
 		it('Should initialize with correct params', async function () {
@@ -65,7 +67,7 @@ describe('Forum Multisig Setup and Functions', function () {
 				'T',
 				[proposer.address],
 				[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-				[30, 60, 50, 52]
+				[30, 12, 50, 52]
 			)
 
 			expect(await forum.name()).equal('forum')
@@ -74,6 +76,7 @@ describe('Forum Multisig Setup and Functions', function () {
 			expect(await forum.paused()).equal(true)
 			expect(await forum.balanceOf(proposer.address, 0)).equal(1)
 			expect(await forum.votingPeriod()).equal(30)
+			expect(await forum.memberLimit()).equal(12)
 			expect(await forum.memberVoteThreshold()).equal(50)
 			expect(await forum.tokenVoteThreshold()).equal(52)
 			expect(await forum.proposalVoteTypes(0)).equal(0)
@@ -97,7 +100,7 @@ describe('Forum Multisig Setup and Functions', function () {
 				'FORUM',
 				[proposer.address],
 				[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-				[30, 0, 50, 60]
+				[30, 12, 50, 60]
 			)
 			// members should have MEMBERSHIP before shield is created
 			expect(await forum.balanceOf(proposer.address, MEMBERSHIP)).equal(1)
@@ -117,7 +120,25 @@ describe('Forum Multisig Setup and Functions', function () {
 					'FORUM',
 					[proposer.address],
 					[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-					[30, 0, 0, 60]
+					[30, 101, 1, 60]
+				)
+			).revertedWith('MemberLimitExceeded()')
+			await expect(
+				forum.init(
+					'FORUM',
+					'FORUM',
+					[proposer.address],
+					[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
+					[30, 0, 1, 60]
+				)
+			).revertedWith('MemberLimitExceeded()')
+			await expect(
+				forum.init(
+					'FORUM',
+					'FORUM',
+					[proposer.address],
+					[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
+					[30, 12, 0, 60]
 				)
 			).revertedWith('VoteThresholdBounds()')
 			await expect(
@@ -126,7 +147,7 @@ describe('Forum Multisig Setup and Functions', function () {
 					'FORUM',
 					[proposer.address],
 					[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-					[30, 0, 101, 60]
+					[30, 12, 101, 60]
 				)
 			).revertedWith('VoteThresholdBounds()')
 			await expect(
@@ -135,7 +156,7 @@ describe('Forum Multisig Setup and Functions', function () {
 					'FORUM',
 					[proposer.address],
 					[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-					[30, 0, 60, 101]
+					[30, 12, 60, 101]
 				)
 			).revertedWith('VoteThresholdBounds()')
 		})
@@ -145,7 +166,7 @@ describe('Forum Multisig Setup and Functions', function () {
 				'FORUM',
 				[bob.address],
 				[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-				[30, 0, 60, 52]
+				[30, 12, 60, 52]
 			)
 			await expect(
 				forum.init(
@@ -153,20 +174,21 @@ describe('Forum Multisig Setup and Functions', function () {
 					'FORUM',
 					[bob.address],
 					[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-					[30, 0, 60, 52]
+					[30, 12, 60, 52]
 				)
 			).revertedWith('Initialized()')
 		})
 	})
 
 	describe('Proposals', function () {
+		// ! consider this check
 		it("Should revert if proposal arrays don't match", async function () {
 			await forum.init(
 				'FORUM',
 				'FORUM',
 				[bob.address],
 				[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-				[30, 0, 60, 52]
+				[30, 12, 60, 52]
 			)
 			await expect(
 				forum
@@ -180,41 +202,15 @@ describe('Forum Multisig Setup and Functions', function () {
 				'FORUM',
 				[bob.address],
 				[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-				[30, 0, 60, 52]
+				[30, 12, 60, 52]
 			)
 			// normal
 			await forum.connect(proposer).propose(3, [bob.address], [9000], [0x00])
-			await expect(forum.connect(proposer).propose(3, [bob.address], [0], [0x00])).revertedWith(
-				'PeriodBounds()'
-			)
+			await expect(
+				forum.connect(proposer).propose(3, [bob.address], [0], [0x00])
+			).revertedWith('PeriodBounds()')
 			await expect(
 				forum.connect(proposer).propose(3, [bob.address], [31536001], [0x00])
-			).revertedWith('PeriodBounds()')
-		})
-		it('Should revert if grace proposal is for longer than year', async function () {
-			await forum.init(
-				'FORUM',
-				'FORUM',
-				[bob.address],
-				[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-				[30, 0, 50, 60]
-			)
-			// 2 normal, then the third is expected to fail
-			//await forum.connect(proposer).propose(4, [bob.address], [9000], [0x00])
-			processProposal(forum, [proposer], 1, {
-				type: 4,
-				accounts: [bob.address],
-				amounts: [9000],
-				payloads: [0x00]
-			})
-			processProposal(forum, [proposer], 2, {
-				type: 4,
-				accounts: [bob.address],
-				amounts: [0],
-				payloads: [0x00]
-			})
-			await expect(
-				forum.connect(proposer).propose(4, [bob.address], [31536001], [0x00])
 			).revertedWith('PeriodBounds()')
 		})
 		it('Should revert if membership vote proposal is for greater than 100 or 0', async function () {
@@ -223,16 +219,16 @@ describe('Forum Multisig Setup and Functions', function () {
 				'FORUM',
 				[bob.address],
 				[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-				[30, 0, 50, 60]
+				[30, 12, 50, 60]
 			)
 			// normal
 			await forum.connect(proposer).propose(5, [bob.address], [50], [0x00])
-			await expect(forum.connect(proposer).propose(5, [bob.address], [101], [0x00])).revertedWith(
-				'VoteThresholdBounds()'
-			)
-			await expect(forum.connect(proposer).propose(5, [bob.address], [0], [0x00])).revertedWith(
-				'VoteThresholdBounds()'
-			)
+			await expect(
+				forum.connect(proposer).propose(5, [bob.address], [101], [0x00])
+			).revertedWith('VoteThresholdBounds()')
+			await expect(
+				forum.connect(proposer).propose(5, [bob.address], [0], [0x00])
+			).revertedWith('VoteThresholdBounds()')
 		})
 		it("Should revert if type proposal has proposal type greater than 13, vote type greater than 2, or setting length isn't 2", async function () {
 			await forum.init(
@@ -240,20 +236,31 @@ describe('Forum Multisig Setup and Functions', function () {
 				'FORUM',
 				[bob.address],
 				[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-				[30, 0, 50, 60]
+				[30, 12, 50, 60]
 			)
 			// normal
-			await forum.connect(proposer).propose(7, [bob.address, alice.address], [0, 0], [0x00, 0x00])
+			await forum
+				.connect(proposer)
+				.propose(7, [bob.address, alice.address], [0, 0], [0x00, 0x00])
 			await expect(
-				forum.connect(proposer).propose(7, [bob.address, alice.address], [14, 2], [0x00, 0x00])
-			).revertedWith('TypeBounds()')
-			await expect(
-				forum.connect(proposer).propose(7, [bob.address, alice.address], [0, 3], [0x00, 0x00])
+				forum
+					.connect(proposer)
+					.propose(7, [bob.address, alice.address], [14, 2], [0x00, 0x00])
 			).revertedWith('TypeBounds()')
 			await expect(
 				forum
 					.connect(proposer)
-					.propose(7, [proposer.address, bob.address, alice.address], [0, 1, 0], [0x00, 0x00, 0x00])
+					.propose(7, [bob.address, alice.address], [0, 3], [0x00, 0x00])
+			).revertedWith('TypeBounds()')
+			await expect(
+				forum
+					.connect(proposer)
+					.propose(
+						7,
+						[proposer.address, bob.address, alice.address],
+						[0, 1, 0],
+						[0x00, 0x00, 0x00]
+					)
 			).revertedWith('TypeBounds()')
 		})
 		it('Should forbid processing a non-existent proposal', async function () {
@@ -262,7 +269,7 @@ describe('Forum Multisig Setup and Functions', function () {
 				'FORUM',
 				[proposer.address],
 				[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-				[30, 0, 50, 60]
+				[30, 12, 50, 60]
 			)
 			await expect(
 				forum.processProposal(2, [
@@ -280,7 +287,7 @@ describe('Forum Multisig Setup and Functions', function () {
 				'FORUM',
 				[proposer.address],
 				[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-				[30, 0, 50, 60]
+				[30, 12, 50, 60]
 			)
 
 			await processProposal(forum, [proposer], 1, {
@@ -305,96 +312,94 @@ describe('Forum Multisig Setup and Functions', function () {
 				'FORUM',
 				[proposer.address],
 				[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-				[30, 0, 50, 60]
+				[30, 12, 50, 60]
 			)
 
-			await forum.connect(proposer).propose(MINT, [proposer.address], [getBigNumber(1000)], [0x00])
+			await forum
+				.connect(proposer)
+				.propose(MINT, [proposer.address], [getBigNumber(1000)], [0x00])
 
 			// Submit the same sig multiple times and expect this to fail
-			const proposerSig = await createSignature(0, forum, proposer, { proposal: 1 })
+			const proposerSig = await createSignature(0, forum, proposer, {
+				proposal: 1
+			})
 			await expect(forum.processProposal(1, [proposerSig, proposerSig])).revertedWith(
 				'InvalidSignature()'
 			)
 		})
+		// ! consider this
 		it.skip('Should forbid voting after period ends - skipped, no hard deadline, instead encourage deletion of old proposals', async function () {
 			await forum.init(
 				'FORUM',
 				'FORUM',
 				[proposer.address],
 				[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-				[30, 0, 50, 60]
+				[30, 12, 50, 60]
 			)
-			await forum.connect(proposer).propose(MINT, [proposer.address], [getBigNumber(1000)], [0x00])
+			await forum
+				.connect(proposer)
+				.propose(MINT, [proposer.address], [getBigNumber(1000)], [0x00])
 			await advanceTime(35)
-			const proposerSig = await createSignature(0, forum, proposer, { proposal: 1 })
+			const proposerSig = await createSignature(0, forum, proposer, {
+				proposal: 1
+			})
 			await expect(forum.processProposal(1, [proposerSig])).revertedWith('NotVoteable()')
 		})
-		it('Should forbid processing before voting period ends only if grace period is not 0', async function () {
+		it('Should forbid changing member limit beyond bounds, or to below member count', async function () {
 			await forum.init(
 				'FORUM',
 				'FORUM',
 				[proposer.address],
 				[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-				[30, 30, 50, 60]
+				[30, 12, 50, 60]
 			)
 
+			// Add member so member count is 2
+			await forum
+				.connect(proposer)
+				.propose(MINT, [alice.address], [getBigNumber(1000)], [0x00])
+			const proposerSig = await createSignature(0, forum, proposer, {
+				proposal: 1
+			})
+			await forum.processProposal(1, [proposerSig])
+
+			// Fail to change member limit to 1
 			await expect(
-				processProposal(forum, [proposer], 1, {
-					type: MINT,
-					accounts: [alice.address],
-					amounts: [getBigNumber(1000)],
-					payloads: [0x00]
-				})
-			).revertedWith('VotingNotEnded()')
+				forum
+					.connect(proposer)
+					.propose(MEMBER_LIMIT, [ZERO_ADDRESS], [getBigNumber(1)], [0x00])
+			).revertedWith('MemberLimitExceeded()')
 
-			// Make and successfully process prop after the grace period
-			await forum.connect(proposer).propose(0, [proposer.address], [getBigNumber(1000)], [0x00])
-			await advanceTime(100)
-			const proposerSig2 = await createSignature(0, forum, proposer, { proposal: 2 })
-			expect(await forum.processProposal(2, [proposerSig2]))
-			expect(await forum.balanceOf(proposer.address, TOKEN)).equal(getBigNumber(1000))
-
-			// Set grace period to 0
-			await forum.connect(proposer).propose(4, [ZERO_ADDRESS], [0], [0x00])
-			await advanceTime(100)
-			const proposerSig3 = await createSignature(0, forum, proposer, { proposal: 3 })
-			expect(await forum.processProposal(3, [proposerSig3]))
-			expect(await forum.gracePeriod()).equal(0)
-
-			// Make and successfully process prop immediately
-			await forum.connect(proposer).propose(0, [proposer.address], [getBigNumber(1000)], [0x00])
-			const proposerSig4 = await createSignature(0, forum, proposer, { proposal: 4 })
-			expect(await forum.processProposal(4, [proposerSig4]))
-			expect(await forum.balanceOf(proposer.address, TOKEN)).equal(getBigNumber(2000))
+			// Fail to change member limit to 101
+			await expect(
+				forum
+					.connect(proposer)
+					.propose(MEMBER_LIMIT, [ZERO_ADDRESS], [getBigNumber(101)], [0x00])
+			).revertedWith('MemberLimitExceeded()')
 		})
-		it('Should forbid processing before grace period ends', async function () {
+		it('Should process membership proposal and revert if too many added', async function () {
 			await forum.init(
 				'FORUM',
 				'FORUM',
 				[proposer.address],
 				[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-				[30, 30, 50, 60]
-			)
-			await forum.connect(proposer).propose(MINT, [proposer.address], [getBigNumber(1000)], [0x00])
-			await advanceTime(29)
-			const proposerSig = await createSignature(0, forum, proposer, { proposal: 1 })
-			await expect(forum.processProposal(1, [proposerSig])).revertedWith('VotingNotEnded()')
-		})
-		it('Should process membership proposal', async function () {
-			await forum.init(
-				'FORUM',
-				'FORUM',
-				[proposer.address],
-				[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-				[30, 0, 50, 60]
+				[30, 2, 50, 60]
 			)
 			await processProposal(forum, [proposer], 1, {
 				type: MINT,
-				accounts: [proposer.address],
+				accounts: [alice.address],
 				amounts: [getBigNumber(1000)],
 				payloads: [0x00]
 			})
-			expect(await forum.balanceOf(proposer.address, TOKEN)).equal(getBigNumber(1000))
+			await expect(
+				processProposal(forum, [proposer], 1, {
+					type: MINT,
+					accounts: [bob.address],
+					amounts: [getBigNumber(1000)],
+					payloads: [0x00]
+				})
+			).revertedWith('MemberLimitExceeded()')
+			expect(await forum.balanceOf(alice.address, TOKEN)).equal(getBigNumber(1000))
 		})
 		it('Should process voting period proposal', async function () {
 			await forum.init(
@@ -402,7 +407,7 @@ describe('Forum Multisig Setup and Functions', function () {
 				'FORUM',
 				[proposer.address],
 				[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-				[30, 0, 50, 60]
+				[30, 12, 50, 60]
 			)
 			expect(await forum.votingPeriod()).equal(30)
 			await processProposal(forum, [proposer], 1, {
@@ -413,22 +418,22 @@ describe('Forum Multisig Setup and Functions', function () {
 			})
 			expect(await forum.votingPeriod()).equal(90)
 		})
-		it('Should process grace period proposal', async function () {
+		it('Should process member limit proposal', async function () {
 			await forum.init(
 				'FORUM',
 				'FORUM',
 				[proposer.address],
 				[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-				[30, 0, 50, 60]
+				[30, 12, 50, 60]
 			)
-			expect(await forum.gracePeriod()).equal(0)
+
 			await processProposal(forum, [proposer], 1, {
-				type: 4,
-				accounts: [proposer.address],
-				amounts: [60],
+				type: MEMBER_LIMIT,
+				accounts: [ZERO_ADDRESS],
+				amounts: [13],
 				payloads: [0x00]
 			})
-			expect(await forum.gracePeriod()).equal(60)
+			expect(await forum.memberLimit()).equal(13)
 		})
 		it('Should process tokenVoteThreshold proposal', async function () {
 			await forum.init(
@@ -436,7 +441,7 @@ describe('Forum Multisig Setup and Functions', function () {
 				'FORUM',
 				[proposer.address],
 				[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-				[30, 0, 50, 60]
+				[30, 12, 50, 60]
 			)
 			await processProposal(forum, [proposer], 1, {
 				type: 6,
@@ -452,7 +457,7 @@ describe('Forum Multisig Setup and Functions', function () {
 				'FORUM',
 				[proposer.address],
 				[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-				[30, 0, 50, 60]
+				[30, 12, 50, 60]
 			)
 			await processProposal(forum, [proposer], 1, {
 				type: 7,
@@ -468,7 +473,7 @@ describe('Forum Multisig Setup and Functions', function () {
 				'FORUM',
 				[proposer.address],
 				[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-				[30, 0, 50, 60]
+				[30, 12, 50, 60]
 			)
 			await processProposal(forum, [proposer], 1, {
 				type: 8,
@@ -485,7 +490,7 @@ describe('Forum Multisig Setup and Functions', function () {
 				'FORUM',
 				[proposer.address],
 				[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-				[30, 0, 50, 60]
+				[30, 12, 50, 60]
 			)
 			// Exact addresss does not matter, we use alice as an example
 			await processProposal(forum, [proposer], 1, {
@@ -502,7 +507,7 @@ describe('Forum Multisig Setup and Functions', function () {
 				'FORUM',
 				[proposer.address],
 				[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-				[30, 0, 50, 60]
+				[30, 12, 50, 60]
 			)
 			// Exact addresss does not matter, we use alice as an example
 			await processProposal(forum, [proposer], 1, {
@@ -519,12 +524,16 @@ describe('Forum Multisig Setup and Functions', function () {
 				'FORUM',
 				[proposer.address],
 				[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-				[30, 0, 50, 60]
+				[30, 12, 50, 60]
 			)
-			await forum.connect(proposer).propose(0, [proposer.address], [getBigNumber(1000)], [0x00])
+			await forum
+				.connect(proposer)
+				.propose(0, [proposer.address], [getBigNumber(1000)], [0x00])
 
 			await forum.connect(proposer).propose(0, [proposer.address], [getBigNumber(99)], [0x00])
-			const proposerSig2 = await createSignature(0, forum, proposer, { proposal: 2 })
+			const proposerSig2 = await createSignature(0, forum, proposer, {
+				proposal: 2
+			})
 
 			await forum.connect(proposer).propose(10, [proposer.address], [2], [0x00])
 
@@ -544,7 +553,7 @@ describe('Forum Multisig Setup and Functions', function () {
 				'FORUM',
 				[proposer.address],
 				[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-				[30, 0, 50, 60]
+				[30, 12, 50, 60]
 			)
 
 			const byteArr = hardhatEthers.utils.toUtf8Bytes('hello@abcd.com')
@@ -563,14 +572,20 @@ describe('Forum Multisig Setup and Functions', function () {
 				'FORUM',
 				[proposer.address],
 				[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-				[30, 0, 50, 60]
+				[30, 12, 50, 60]
 			)
 
-			await forum.connect(proposer).propose(0, [proposer.address], [getBigNumber(1000)], [0x00])
-			const proposerSig1 = await createSignature(0, forum, proposer, { proposal: 1 })
+			await forum
+				.connect(proposer)
+				.propose(0, [proposer.address], [getBigNumber(1000)], [0x00])
+			const proposerSig1 = await createSignature(0, forum, proposer, {
+				proposal: 1
+			})
 
 			await forum.connect(proposer).propose(0, [proposer.address], [getBigNumber(99)], [0x00])
-			const proposerSig2 = await createSignature(0, forum, proposer, { proposal: 2 })
+			const proposerSig2 = await createSignature(0, forum, proposer, {
+				proposal: 2
+			})
 
 			expect(await forum.processProposal(2, [proposerSig2]))
 			expect(await forum.processProposal(1, [proposerSig1]))
@@ -599,7 +614,7 @@ describe('Forum Multisig Setup and Functions', function () {
 				'FORUM',
 				[proposer.address],
 				[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-				[30, 0, 50, 60]
+				[30, 12, 50, 60]
 			)
 			await processProposal(forum, [proposer], 1, {
 				type: 1,
@@ -611,40 +626,39 @@ describe('Forum Multisig Setup and Functions', function () {
 		})
 		it('Should process contract call proposal - Single', async function () {
 			// Deploy execution manager which will format proposals to specific contracts to extract commission
-			const ExecutionManager = await hardhatEthers.getContractFactory('ExecutionManager')
-			const executionManager = await ExecutionManager.deploy(proposer.address)
+			const CommissionManager = await hardhatEthers.getContractFactory('CommissionManager')
+			const executionManager = await CommissionManager.deploy(proposer.address)
 
 			// Set the handler in the execution manager
-			await executionManager.connect(proposer).toggleNonCommissionContract(shieldManager.address)
+			await executionManager.connect(proposer).toggleNonCommissionContract(test721.address)
 
-			let payload = shieldManager.interface.encodeFunctionData('mintShieldPass', [alice.address])
+			let payload = test721.interface.encodeFunctionData('mint', [alice.address, 1])
 			await forum.init(
 				'FORUM',
 				'FORUM',
 				[proposer.address],
 				[ZERO_ADDRESS, executionManager.address, ZERO_ADDRESS],
-				[30, 0, 50, 60]
+				[30, 12, 50, 60]
 			)
 			await processProposal(forum, [proposer], 1, {
 				type: CALL,
-				accounts: [shieldManager.address],
+				accounts: [test721.address],
 				amounts: [getBigNumber(0.5)],
 				payloads: [payload]
 			})
-			expect(await shieldManager.totalSupply()).equal(1)
-			expect(await shieldManager.balanceOf(alice.address)).equal(1)
+			expect(await test721.balanceOf(alice.address)).equal(1)
 		})
 		it('Should process contract call proposal - Multiple', async function () {
 			// Deploy execution manager which will format proposals to specific contracts to extract commission
-			const ExecutionManager = await hardhatEthers.getContractFactory('ExecutionManager')
-			const executionManager = await ExecutionManager.deploy(proposer.address)
+			const CommissionManager = await hardhatEthers.getContractFactory('CommissionManager')
+			const executionManager = await CommissionManager.deploy(proposer.address)
 
 			await forum.init(
 				'FORUM',
 				'FORUM',
 				[proposer.address],
 				[ZERO_ADDRESS, executionManager.address, ZERO_ADDRESS],
-				[30, 0, 50, 60]
+				[30, 12, 50, 60]
 			)
 
 			// Send Eth to forum
@@ -654,7 +668,7 @@ describe('Forum Multisig Setup and Functions', function () {
 			})
 
 			// Create first payload from shield manager
-			let payload1 = shieldManager.interface.encodeFunctionData('mintShieldPass', [alice.address])
+			let payload1 = test721.interface.encodeFunctionData('mint', [alice.address, 1])
 
 			// Instantiate 2nd contract and make payload
 			let Test1155 = await hardhatEthers.getContractFactory('ERC1155Test')
@@ -668,17 +682,17 @@ describe('Forum Multisig Setup and Functions', function () {
 			])
 
 			// Set the handler in the execution manager for both targets
-			await executionManager.connect(proposer).toggleNonCommissionContract(shieldManager.address)
+			await executionManager.connect(proposer).toggleNonCommissionContract(test721.address)
 			await executionManager.connect(proposer).toggleNonCommissionContract(test1155.address)
 
 			await processProposal(forum, [proposer], 1, {
 				type: CALL,
-				accounts: [shieldManager.address, test1155.address],
+				accounts: [test721.address, test1155.address],
 				amounts: [getBigNumber(0.5), getBigNumber(0)],
 				payloads: [payload1, payload2]
 			})
 
-			expect(await shieldManager.ownerOf(1)).equal(alice.address)
+			expect(await test721.ownerOf(1)).equal(alice.address)
 			expect(await test1155.balanceOf(alice.address, 1)).equal(getBigNumber(5))
 		})
 	})
@@ -694,7 +708,7 @@ describe('Forum Multisig Setup and Functions', function () {
 				'FORUM',
 				[sender.address, receiver.address],
 				[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-				[30, 0, 50, 60]
+				[30, 12, 50, 60]
 			)
 
 			// TESTING - set an address to act as an extension, this allows us to mint shares. In prod this will be a real extension contract
@@ -735,7 +749,13 @@ describe('Forum Multisig Setup and Functions', function () {
 			await expect(
 				forum
 					.connect(receiver)
-					.safeTransferFrom(receiver.address, sender.address, TOKEN, getBigNumber(21), '0x00')
+					.safeTransferFrom(
+						receiver.address,
+						sender.address,
+						TOKEN,
+						getBigNumber(21),
+						'0x00'
+					)
 			).reverted()
 		})
 		it('Should allow a member to approve transfers', async function () {
@@ -756,7 +776,13 @@ describe('Forum Multisig Setup and Functions', function () {
 			await expect(
 				await forum
 					.connect(receiver)
-					.safeTransferFrom(sender.address, receiver.address, TOKEN, getBigNumber(30), '0x00')
+					.safeTransferFrom(
+						sender.address,
+						receiver.address,
+						TOKEN,
+						getBigNumber(30),
+						'0x00'
+					)
 			).reverted()
 		})
 		it('Should not allow an approved account to transfer (safeTransferFrom) if paused', async function () {
@@ -771,7 +797,13 @@ describe('Forum Multisig Setup and Functions', function () {
 			await expect(
 				forum
 					.connect(receiver)
-					.safeTransferFrom(sender.address, receiver.address, TOKEN, getBigNumber(10), '0x00')
+					.safeTransferFrom(
+						sender.address,
+						receiver.address,
+						TOKEN,
+						getBigNumber(10),
+						'0x00'
+					)
 			).revertedWith('Paused()')
 		})
 		it('Should not allow a member to transfer (safeTransferFrom) shares if paused', async function () {
@@ -786,7 +818,13 @@ describe('Forum Multisig Setup and Functions', function () {
 			await expect(
 				forum
 					.connect(sender)
-					.safeTransferFrom(sender.address, receiver.address, TOKEN, getBigNumber(1), '0x00')
+					.safeTransferFrom(
+						sender.address,
+						receiver.address,
+						TOKEN,
+						getBigNumber(1),
+						'0x00'
+					)
 			).revertedWith('Paused()')
 		})
 	})
@@ -805,7 +843,7 @@ describe('Forum Multisig Setup and Functions', function () {
 				'FORUM',
 				[sender.address, receiver.address, alice.address],
 				[ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS],
-				[30, 0, 50, 60]
+				[30, 12, 50, 60]
 			)
 
 			// TESTING - set an address to act as an extension, this allows us to mint shares. In prod this will be a real extension contract
@@ -958,8 +996,12 @@ describe('Forum Multisig Setup and Functions', function () {
 			)
 		})
 		it('should forbid delegation interactions from/to non member', async function () {
-			await expect(forum.connect(bob).delegate(sender.address)).revertedWith('InvalidDelegate()')
-			await expect(forum.connect(sender).delegate(bob.address)).revertedWith('InvalidDelegate()')
+			await expect(forum.connect(bob).delegate(sender.address)).revertedWith(
+				'InvalidDelegate()'
+			)
+			await expect(forum.connect(sender).delegate(bob.address)).revertedWith(
+				'InvalidDelegate()'
+			)
 		})
 		it('should forbid member from transferring membership if they have delegates or are delegated to', async function () {
 			// Disable pause for this test
@@ -983,7 +1025,13 @@ describe('Forum Multisig Setup and Functions', function () {
 			await expect(
 				forum
 					.connect(receiver)
-					.safeBatchTransferFrom(receiver.address, sender.address, [MEMBERSHIP], [1], '0x00')
+					.safeBatchTransferFrom(
+						receiver.address,
+						sender.address,
+						[MEMBERSHIP],
+						[1],
+						'0x00'
+					)
 			).revertedWith('InvalidDelegate()')
 		})
 		it('should forbid member from leaving if they have delegates or are delegated to', async function () {
@@ -1076,12 +1124,14 @@ describe('Forum Multisig Setup and Functions', function () {
 		})
 		it('should not count votes if member has delegated', async function () {})
 		it('should forbid calling a non-whitelisted extension', async function () {
-			await expect(forum.callExtension(sender.address, 10, 0x0)).revertedWith('NotExtension()')
-		})
-		it('should forbid non-whitelisted extension calling DAO', async function () {
-			await expect(forum.connect(alice).callExtension(nonextension.address, 10, 0x0)).revertedWith(
+			await expect(forum.callExtension(sender.address, 10, 0x0)).revertedWith(
 				'NotExtension()'
 			)
+		})
+		it('should forbid non-whitelisted extension calling DAO', async function () {
+			await expect(
+				forum.connect(alice).callExtension(nonextension.address, 10, 0x0)
+			).revertedWith('NotExtension()')
 		})
 		it('should not call if null length payload', async () => {
 			let CallMock // CallMock contract
@@ -1112,18 +1162,24 @@ describe('Forum Multisig Setup and Functions', function () {
 				payloads: [testData]
 			})
 
-			expect(await forum.connect(sender).isValidSignature(testData, fullSig)).equal('0x1626ba7e')
+			expect(await forum.connect(sender).isValidSignature(testData, fullSig)).equal(
+				'0x1626ba7e'
+			)
 		})
 		it('should revert is signature replayed', async function () {
 			// Propose a simple VPeriod proposal
 			forum.connect(proposer).propose(VPERIOD, [ZERO_ADDRESS], [100], [0x00])
 
-			const proposerSig2 = await createSignature(0, forum, proposer, { proposal: 2 })
+			const proposerSig2 = await createSignature(0, forum, proposer, {
+				proposal: 2
+			})
 			await forum.processProposal(2, [proposerSig2])
 
 			// Propose another simple VPeriod proposal
 			forum.connect(proposer).propose(VPERIOD, [ZERO_ADDRESS], [200], [0x00])
-			await expect(forum.processProposal(3, [proposerSig2])).revertedWith('InvalidSignature()')
+			await expect(forum.processProposal(3, [proposerSig2])).revertedWith(
+				'InvalidSignature()'
+			)
 		})
 		// The below test is correctly reverting, but the expect is failing here
 		it.skip('should revert reentrant calls', async () => {
@@ -1138,7 +1194,7 @@ describe('Forum Multisig Setup and Functions', function () {
 			// 	'FORUM',
 			// 	[sender.address, receiver.address],
 			// 	[ZERO_ADDRESS,ZERO_ADDRESS, ZERO_ADDRESS],
-			// 	[30, 0, 50, 60]
+			// 	[30, 12, 50, 60]
 			// )
 
 			await forum.connect(sender).propose(9, [reentrantMock.address], [1], [0x00])

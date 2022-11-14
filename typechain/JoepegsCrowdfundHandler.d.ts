@@ -11,7 +11,6 @@ import {
   PopulatedTransaction,
   BaseContract,
   ContractTransaction,
-  Overrides,
   CallOverrides,
 } from "ethers";
 import { BytesLike } from "@ethersproject/bytes";
@@ -19,37 +18,52 @@ import { Listener, Provider } from "@ethersproject/providers";
 import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 
-interface IPfpStakerInterface extends ethers.utils.Interface {
+interface JoepegsCrowdfundHandlerInterface extends ethers.utils.Interface {
   functions: {
-    "getStakedNFT(address)": FunctionFragment;
-    "getURI(address,string)": FunctionFragment;
-    "stakeNFT(address,address,uint256)": FunctionFragment;
+    "INTERFACE_ID_ERC1155()": FunctionFragment;
+    "INTERFACE_ID_ERC721()": FunctionFragment;
+    "enabledMethods(bytes4)": FunctionFragment;
+    "handleCrowdfundExecution(address,address,address,uint256,bytes)": FunctionFragment;
   };
 
   encodeFunctionData(
-    functionFragment: "getStakedNFT",
-    values: [string]
+    functionFragment: "INTERFACE_ID_ERC1155",
+    values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "getURI",
-    values: [string, string]
+    functionFragment: "INTERFACE_ID_ERC721",
+    values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "stakeNFT",
-    values: [string, string, BigNumberish]
+    functionFragment: "enabledMethods",
+    values: [BytesLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "handleCrowdfundExecution",
+    values: [string, string, string, BigNumberish, BytesLike]
   ): string;
 
   decodeFunctionResult(
-    functionFragment: "getStakedNFT",
+    functionFragment: "INTERFACE_ID_ERC1155",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "getURI", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "stakeNFT", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "INTERFACE_ID_ERC721",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "enabledMethods",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "handleCrowdfundExecution",
+    data: BytesLike
+  ): Result;
 
   events: {};
 }
 
-export class IPfpStaker extends BaseContract {
+export class JoepegsCrowdfundHandler extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
   attach(addressOrName: string): this;
   deployed(): Promise<this>;
@@ -90,106 +104,109 @@ export class IPfpStaker extends BaseContract {
     toBlock?: string | number | undefined
   ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>;
 
-  interface: IPfpStakerInterface;
+  interface: JoepegsCrowdfundHandlerInterface;
 
   functions: {
-    getStakedNFT(
-      arg0: string,
-      overrides?: CallOverrides
-    ): Promise<
-      [string, BigNumber] & { NftContract: string; tokenId: BigNumber }
-    >;
+    INTERFACE_ID_ERC1155(overrides?: CallOverrides): Promise<[string]>;
 
-    getURI(
-      arg0: string,
-      arg1: string,
-      overrides?: CallOverrides
-    ): Promise<[string] & { nftURI: string }>;
+    INTERFACE_ID_ERC721(overrides?: CallOverrides): Promise<[string]>;
 
-    stakeNFT(
-      arg0: string,
-      arg1: string,
-      arg2: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>;
+    enabledMethods(
+      arg0: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>;
+
+    handleCrowdfundExecution(
+      crowdfundContract: string,
+      assetContract: string,
+      forumGroup: string,
+      tokenId: BigNumberish,
+      payload: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber, string]>;
   };
 
-  getStakedNFT(
-    arg0: string,
-    overrides?: CallOverrides
-  ): Promise<[string, BigNumber] & { NftContract: string; tokenId: BigNumber }>;
+  INTERFACE_ID_ERC1155(overrides?: CallOverrides): Promise<string>;
 
-  getURI(
-    arg0: string,
-    arg1: string,
-    overrides?: CallOverrides
-  ): Promise<string>;
+  INTERFACE_ID_ERC721(overrides?: CallOverrides): Promise<string>;
 
-  stakeNFT(
-    arg0: string,
-    arg1: string,
-    arg2: BigNumberish,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
+  enabledMethods(
+    arg0: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<BigNumber>;
+
+  handleCrowdfundExecution(
+    crowdfundContract: string,
+    assetContract: string,
+    forumGroup: string,
+    tokenId: BigNumberish,
+    payload: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<[BigNumber, string]>;
 
   callStatic: {
-    getStakedNFT(
-      arg0: string,
-      overrides?: CallOverrides
-    ): Promise<
-      [string, BigNumber] & { NftContract: string; tokenId: BigNumber }
-    >;
+    INTERFACE_ID_ERC1155(overrides?: CallOverrides): Promise<string>;
 
-    getURI(
-      arg0: string,
-      arg1: string,
-      overrides?: CallOverrides
-    ): Promise<string>;
+    INTERFACE_ID_ERC721(overrides?: CallOverrides): Promise<string>;
 
-    stakeNFT(
-      arg0: string,
-      arg1: string,
-      arg2: BigNumberish,
+    enabledMethods(
+      arg0: BytesLike,
       overrides?: CallOverrides
-    ): Promise<void>;
+    ): Promise<BigNumber>;
+
+    handleCrowdfundExecution(
+      crowdfundContract: string,
+      assetContract: string,
+      forumGroup: string,
+      tokenId: BigNumberish,
+      payload: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber, string]>;
   };
 
   filters: {};
 
   estimateGas: {
-    getStakedNFT(arg0: string, overrides?: CallOverrides): Promise<BigNumber>;
+    INTERFACE_ID_ERC1155(overrides?: CallOverrides): Promise<BigNumber>;
 
-    getURI(
-      arg0: string,
-      arg1: string,
+    INTERFACE_ID_ERC721(overrides?: CallOverrides): Promise<BigNumber>;
+
+    enabledMethods(
+      arg0: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    stakeNFT(
-      arg0: string,
-      arg1: string,
-      arg2: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
+    handleCrowdfundExecution(
+      crowdfundContract: string,
+      assetContract: string,
+      forumGroup: string,
+      tokenId: BigNumberish,
+      payload: BytesLike,
+      overrides?: CallOverrides
     ): Promise<BigNumber>;
   };
 
   populateTransaction: {
-    getStakedNFT(
-      arg0: string,
+    INTERFACE_ID_ERC1155(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    getURI(
-      arg0: string,
-      arg1: string,
+    INTERFACE_ID_ERC721(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    stakeNFT(
-      arg0: string,
-      arg1: string,
-      arg2: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
+    enabledMethods(
+      arg0: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    handleCrowdfundExecution(
+      crowdfundContract: string,
+      assetContract: string,
+      forumGroup: string,
+      tokenId: BigNumberish,
+      payload: BytesLike,
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
   };
 }
