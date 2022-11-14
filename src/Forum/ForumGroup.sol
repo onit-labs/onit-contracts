@@ -84,7 +84,7 @@ contract ForumGroup is
     /// ----------------------------------------------------------------------------------------
 
     address private pfpExtension;
-    address private executionManager;
+    address private commissionManager;
 
     uint256 public proposalCount;
     uint32 public votingPeriod;
@@ -139,11 +139,8 @@ contract ForumGroup is
         if (govSettings_[0] == 0 || govSettings_[0] > 365 days) revert
             PeriodBounds();
 
-        // todo possibly condnense these into a single check, do we need <1 check?
-        if (
-            govSettings_[1] < 1 || govSettings_[1] > 100
-                || govSettings_[1] < members_.length
-        ) revert MemberLimitExceeded();
+        if (govSettings_[1] > 100 || govSettings_[1] < members_.length) revert
+            MemberLimitExceeded();
 
         if (govSettings_[2] < 1 || govSettings_[2] > 100) revert
             VoteThresholdBounds();
@@ -156,8 +153,8 @@ contract ForumGroup is
         // Set the pfpSetter - determines uri of group token
         pfpExtension = extensions_[0];
 
-        // Set the executionManager - handles routing of calls and commission
-        executionManager = extensions_[1];
+        // Set the commissionManager - handles routing of calls and commission
+        commissionManager = extensions_[1];
 
         // Set the fundraise extension to true - allows it to mint shares
         extensions[extensions_[2]] = true;
@@ -167,8 +164,6 @@ contract ForumGroup is
             unchecked {
                 for (uint256 i = 3; i < extensions_.length; i++) {
                     extensions[extensions_[i]] = true;
-
-                    // ! consider setting extension data here too
                 }
             }
         }
@@ -372,16 +367,16 @@ contract ForumGroup is
                             .call{value: prop.amounts[i]}(prop.payloads[i]);
 
                         if (success) commissionValue += ICommissionManager(
-                            executionManager
+                            commissionManager
                         ).manageCommission(
                             prop.accounts[i], prop.amounts[i], prop.payloads[i]
-                        );
+                        ); else revert CallError();
 
                         results[i] = result;
                     }
                     // Send the commission calculated in the executionManger
                     (bool success,) =
-                        executionManager.call{value: commissionValue}("");
+                        commissionManager.call{value: commissionValue}("");
                     if (!success) revert CallError();
                 }
 
