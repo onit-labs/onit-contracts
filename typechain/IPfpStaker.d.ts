@@ -21,20 +21,18 @@ import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 
 interface IPfpStakerInterface extends ethers.utils.Interface {
   functions: {
-    "getStakedNFT()": FunctionFragment;
-    "getURI(address)": FunctionFragment;
-    "stakeInitialShield(address,uint256)": FunctionFragment;
+    "getStakedNFT(address)": FunctionFragment;
+    "getURI(address,string)": FunctionFragment;
     "stakeNFT(address,address,uint256)": FunctionFragment;
   };
 
   encodeFunctionData(
     functionFragment: "getStakedNFT",
-    values?: undefined
+    values: [string]
   ): string;
-  encodeFunctionData(functionFragment: "getURI", values: [string]): string;
   encodeFunctionData(
-    functionFragment: "stakeInitialShield",
-    values: [string, BigNumberish]
+    functionFragment: "getURI",
+    values: [string, string]
   ): string;
   encodeFunctionData(
     functionFragment: "stakeNFT",
@@ -46,10 +44,6 @@ interface IPfpStakerInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "getURI", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "stakeInitialShield",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(functionFragment: "stakeNFT", data: BytesLike): Result;
 
   events: {};
@@ -100,21 +94,17 @@ export class IPfpStaker extends BaseContract {
 
   functions: {
     getStakedNFT(
+      arg0: string,
       overrides?: CallOverrides
     ): Promise<
-      [string, BigNumber] & { NFTContract: string; tokenId: BigNumber }
+      [string, BigNumber] & { NftContract: string; tokenId: BigNumber }
     >;
 
     getURI(
       arg0: string,
+      arg1: string,
       overrides?: CallOverrides
     ): Promise<[string] & { nftURI: string }>;
-
-    stakeInitialShield(
-      arg0: string,
-      arg1: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>;
 
     stakeNFT(
       arg0: string,
@@ -125,16 +115,15 @@ export class IPfpStaker extends BaseContract {
   };
 
   getStakedNFT(
-    overrides?: CallOverrides
-  ): Promise<[string, BigNumber] & { NFTContract: string; tokenId: BigNumber }>;
-
-  getURI(arg0: string, overrides?: CallOverrides): Promise<string>;
-
-  stakeInitialShield(
     arg0: string,
-    arg1: BigNumberish,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
+    overrides?: CallOverrides
+  ): Promise<[string, BigNumber] & { NftContract: string; tokenId: BigNumber }>;
+
+  getURI(
+    arg0: string,
+    arg1: string,
+    overrides?: CallOverrides
+  ): Promise<string>;
 
   stakeNFT(
     arg0: string,
@@ -145,18 +134,17 @@ export class IPfpStaker extends BaseContract {
 
   callStatic: {
     getStakedNFT(
+      arg0: string,
       overrides?: CallOverrides
     ): Promise<
-      [string, BigNumber] & { NFTContract: string; tokenId: BigNumber }
+      [string, BigNumber] & { NftContract: string; tokenId: BigNumber }
     >;
 
-    getURI(arg0: string, overrides?: CallOverrides): Promise<string>;
-
-    stakeInitialShield(
+    getURI(
       arg0: string,
-      arg1: BigNumberish,
+      arg1: string,
       overrides?: CallOverrides
-    ): Promise<void>;
+    ): Promise<string>;
 
     stakeNFT(
       arg0: string,
@@ -169,14 +157,12 @@ export class IPfpStaker extends BaseContract {
   filters: {};
 
   estimateGas: {
-    getStakedNFT(overrides?: CallOverrides): Promise<BigNumber>;
+    getStakedNFT(arg0: string, overrides?: CallOverrides): Promise<BigNumber>;
 
-    getURI(arg0: string, overrides?: CallOverrides): Promise<BigNumber>;
-
-    stakeInitialShield(
+    getURI(
       arg0: string,
-      arg1: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
+      arg1: string,
+      overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     stakeNFT(
@@ -188,17 +174,15 @@ export class IPfpStaker extends BaseContract {
   };
 
   populateTransaction: {
-    getStakedNFT(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    getURI(
+    getStakedNFT(
       arg0: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    stakeInitialShield(
+    getURI(
       arg0: string,
-      arg1: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
+      arg1: string,
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     stakeNFT(

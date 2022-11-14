@@ -22,24 +22,19 @@ import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 
 interface ForumFactoryInterface extends ethers.utils.Interface {
   functions: {
-    "deployGroup(string,string,address[],uint32[4])": FunctionFragment;
+    "deployGroup(string,string,address[],uint32[4],address[])": FunctionFragment;
+    "deployGroup2(string,string,address[],uint32[4],address[])": FunctionFragment;
     "executionManager()": FunctionFragment;
-    "factoryLive()": FunctionFragment;
     "forumMaster()": FunctionFragment;
-    "forumRelay()": FunctionFragment;
     "fundraiseExtension()": FunctionFragment;
     "multicall(bytes[])": FunctionFragment;
     "owner()": FunctionFragment;
     "pfpStaker()": FunctionFragment;
     "setExecutionManager(address)": FunctionFragment;
     "setForumMaster(address)": FunctionFragment;
-    "setForumRelay(address)": FunctionFragment;
     "setFundraiseExtension(address)": FunctionFragment;
-    "setLaunched(bool)": FunctionFragment;
     "setOwner(address)": FunctionFragment;
     "setPfpStaker(address)": FunctionFragment;
-    "setShieldManager(address)": FunctionFragment;
-    "shieldManager()": FunctionFragment;
   };
 
   encodeFunctionData(
@@ -48,7 +43,18 @@ interface ForumFactoryInterface extends ethers.utils.Interface {
       string,
       string,
       string[],
-      [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+      [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      string[]
+    ]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "deployGroup2",
+    values: [
+      string,
+      string,
+      string[],
+      [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      string[]
     ]
   ): string;
   encodeFunctionData(
@@ -56,15 +62,7 @@ interface ForumFactoryInterface extends ethers.utils.Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "factoryLive",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
     functionFragment: "forumMaster",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "forumRelay",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -86,29 +84,13 @@ interface ForumFactoryInterface extends ethers.utils.Interface {
     values: [string]
   ): string;
   encodeFunctionData(
-    functionFragment: "setForumRelay",
-    values: [string]
-  ): string;
-  encodeFunctionData(
     functionFragment: "setFundraiseExtension",
     values: [string]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "setLaunched",
-    values: [boolean]
   ): string;
   encodeFunctionData(functionFragment: "setOwner", values: [string]): string;
   encodeFunctionData(
     functionFragment: "setPfpStaker",
     values: [string]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "setShieldManager",
-    values: [string]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "shieldManager",
-    values?: undefined
   ): string;
 
   decodeFunctionResult(
@@ -116,18 +98,17 @@ interface ForumFactoryInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "executionManager",
+    functionFragment: "deployGroup2",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "factoryLive",
+    functionFragment: "executionManager",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
     functionFragment: "forumMaster",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "forumRelay", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "fundraiseExtension",
     data: BytesLike
@@ -144,15 +125,7 @@ interface ForumFactoryInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "setForumRelay",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
     functionFragment: "setFundraiseExtension",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "setLaunched",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "setOwner", data: BytesLike): Result;
@@ -160,17 +133,9 @@ interface ForumFactoryInterface extends ethers.utils.Interface {
     functionFragment: "setPfpStaker",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(
-    functionFragment: "setShieldManager",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "shieldManager",
-    data: BytesLike
-  ): Result;
 
   events: {
-    "GroupDeployed(address,string,string,address[],uint32[4],uint256)": EventFragment;
+    "GroupDeployed(address,string,string,address[],uint32[4])": EventFragment;
     "OwnerUpdated(address,address)": EventFragment;
   };
 
@@ -179,20 +144,12 @@ interface ForumFactoryInterface extends ethers.utils.Interface {
 }
 
 export type GroupDeployedEvent = TypedEvent<
-  [
-    string,
-    string,
-    string,
-    string[],
-    [number, number, number, number],
-    BigNumber
-  ] & {
+  [string, string, string, string[], [number, number, number, number]] & {
     forumGroup: string;
     name: string;
     symbol: string;
     voters: string[];
     govSettings: [number, number, number, number];
-    shieldPass: BigNumber;
   }
 >;
 
@@ -249,16 +206,22 @@ export class ForumFactory extends BaseContract {
       symbol_: string,
       voters_: string[],
       govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      customExtensions_: string[],
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
+    deployGroup2(
+      name_: string,
+      symbol_: string,
+      voters_: string[],
+      govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      customExtensions_: string[],
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
     executionManager(overrides?: CallOverrides): Promise<[string]>;
 
-    factoryLive(overrides?: CallOverrides): Promise<[boolean]>;
-
     forumMaster(overrides?: CallOverrides): Promise<[string]>;
-
-    forumRelay(overrides?: CallOverrides): Promise<[string]>;
 
     fundraiseExtension(overrides?: CallOverrides): Promise<[string]>;
 
@@ -281,18 +244,8 @@ export class ForumFactory extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
-    setForumRelay(
-      forumRelay_: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>;
-
     setFundraiseExtension(
       fundraiseExtension_: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>;
-
-    setLaunched(
-      setting: boolean,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
@@ -305,13 +258,6 @@ export class ForumFactory extends BaseContract {
       pfpStaker_: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
-
-    setShieldManager(
-      shieldManager_: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>;
-
-    shieldManager(overrides?: CallOverrides): Promise<[string]>;
   };
 
   deployGroup(
@@ -319,16 +265,22 @@ export class ForumFactory extends BaseContract {
     symbol_: string,
     voters_: string[],
     govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+    customExtensions_: string[],
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
+  deployGroup2(
+    name_: string,
+    symbol_: string,
+    voters_: string[],
+    govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+    customExtensions_: string[],
     overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
   executionManager(overrides?: CallOverrides): Promise<string>;
 
-  factoryLive(overrides?: CallOverrides): Promise<boolean>;
-
   forumMaster(overrides?: CallOverrides): Promise<string>;
-
-  forumRelay(overrides?: CallOverrides): Promise<string>;
 
   fundraiseExtension(overrides?: CallOverrides): Promise<string>;
 
@@ -351,18 +303,8 @@ export class ForumFactory extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
-  setForumRelay(
-    forumRelay_: string,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
-
   setFundraiseExtension(
     fundraiseExtension_: string,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
-
-  setLaunched(
-    setting: boolean,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
@@ -376,29 +318,28 @@ export class ForumFactory extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
-  setShieldManager(
-    shieldManager_: string,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
-
-  shieldManager(overrides?: CallOverrides): Promise<string>;
-
   callStatic: {
     deployGroup(
       name_: string,
       symbol_: string,
       voters_: string[],
       govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      customExtensions_: string[],
+      overrides?: CallOverrides
+    ): Promise<string>;
+
+    deployGroup2(
+      name_: string,
+      symbol_: string,
+      voters_: string[],
+      govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      customExtensions_: string[],
       overrides?: CallOverrides
     ): Promise<string>;
 
     executionManager(overrides?: CallOverrides): Promise<string>;
 
-    factoryLive(overrides?: CallOverrides): Promise<boolean>;
-
     forumMaster(overrides?: CallOverrides): Promise<string>;
-
-    forumRelay(overrides?: CallOverrides): Promise<string>;
 
     fundraiseExtension(overrides?: CallOverrides): Promise<string>;
 
@@ -418,54 +359,31 @@ export class ForumFactory extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>;
 
-    setForumRelay(
-      forumRelay_: string,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
     setFundraiseExtension(
       fundraiseExtension_: string,
       overrides?: CallOverrides
     ): Promise<void>;
 
-    setLaunched(setting: boolean, overrides?: CallOverrides): Promise<void>;
-
     setOwner(newOwner: string, overrides?: CallOverrides): Promise<void>;
 
     setPfpStaker(pfpStaker_: string, overrides?: CallOverrides): Promise<void>;
-
-    setShieldManager(
-      shieldManager_: string,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    shieldManager(overrides?: CallOverrides): Promise<string>;
   };
 
   filters: {
-    "GroupDeployed(address,string,string,address[],uint32[4],uint256)"(
+    "GroupDeployed(address,string,string,address[],uint32[4])"(
       forumGroup?: string | null,
       name?: null,
       symbol?: null,
       voters?: null,
-      govSettings?: null,
-      shieldPass?: null
+      govSettings?: null
     ): TypedEventFilter<
-      [
-        string,
-        string,
-        string,
-        string[],
-        [number, number, number, number],
-        BigNumber
-      ],
+      [string, string, string, string[], [number, number, number, number]],
       {
         forumGroup: string;
         name: string;
         symbol: string;
         voters: string[];
         govSettings: [number, number, number, number];
-        shieldPass: BigNumber;
       }
     >;
 
@@ -474,24 +392,15 @@ export class ForumFactory extends BaseContract {
       name?: null,
       symbol?: null,
       voters?: null,
-      govSettings?: null,
-      shieldPass?: null
+      govSettings?: null
     ): TypedEventFilter<
-      [
-        string,
-        string,
-        string,
-        string[],
-        [number, number, number, number],
-        BigNumber
-      ],
+      [string, string, string, string[], [number, number, number, number]],
       {
         forumGroup: string;
         name: string;
         symbol: string;
         voters: string[];
         govSettings: [number, number, number, number];
-        shieldPass: BigNumber;
       }
     >;
 
@@ -512,16 +421,22 @@ export class ForumFactory extends BaseContract {
       symbol_: string,
       voters_: string[],
       govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      customExtensions_: string[],
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
+    deployGroup2(
+      name_: string,
+      symbol_: string,
+      voters_: string[],
+      govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      customExtensions_: string[],
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
     executionManager(overrides?: CallOverrides): Promise<BigNumber>;
 
-    factoryLive(overrides?: CallOverrides): Promise<BigNumber>;
-
     forumMaster(overrides?: CallOverrides): Promise<BigNumber>;
-
-    forumRelay(overrides?: CallOverrides): Promise<BigNumber>;
 
     fundraiseExtension(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -544,18 +459,8 @@ export class ForumFactory extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
-    setForumRelay(
-      forumRelay_: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>;
-
     setFundraiseExtension(
       fundraiseExtension_: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>;
-
-    setLaunched(
-      setting: boolean,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
@@ -568,13 +473,6 @@ export class ForumFactory extends BaseContract {
       pfpStaker_: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
-
-    setShieldManager(
-      shieldManager_: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>;
-
-    shieldManager(overrides?: CallOverrides): Promise<BigNumber>;
   };
 
   populateTransaction: {
@@ -583,16 +481,22 @@ export class ForumFactory extends BaseContract {
       symbol_: string,
       voters_: string[],
       govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      customExtensions_: string[],
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    deployGroup2(
+      name_: string,
+      symbol_: string,
+      voters_: string[],
+      govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      customExtensions_: string[],
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
     executionManager(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
-    factoryLive(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
     forumMaster(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    forumRelay(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     fundraiseExtension(
       overrides?: CallOverrides
@@ -617,18 +521,8 @@ export class ForumFactory extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
-    setForumRelay(
-      forumRelay_: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>;
-
     setFundraiseExtension(
       fundraiseExtension_: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>;
-
-    setLaunched(
-      setting: boolean,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
@@ -641,12 +535,5 @@ export class ForumFactory extends BaseContract {
       pfpStaker_: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
-
-    setShieldManager(
-      shieldManager_: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>;
-
-    shieldManager(overrides?: CallOverrides): Promise<PopulatedTransaction>;
   };
 }

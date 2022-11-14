@@ -36,12 +36,12 @@ interface ForumGroupInterface extends ethers.utils.Interface {
     "docs()": FunctionFragment;
     "extensions(address)": FunctionFragment;
     "getProposalArrays(uint256)": FunctionFragment;
-    "gracePeriod()": FunctionFragment;
-    "init(string,string,address[],address[3],uint32[4])": FunctionFragment;
+    "init(string,string,address[],address[],uint32[4])": FunctionFragment;
     "isApprovedForAll(address,address)": FunctionFragment;
     "isValidSignature(bytes32,bytes)": FunctionFragment;
     "memberCount()": FunctionFragment;
     "memberDelegatee(address)": FunctionFragment;
+    "memberLimit()": FunctionFragment;
     "memberVoteThreshold()": FunctionFragment;
     "mintShares(address,uint256,uint256)": FunctionFragment;
     "multicall(bytes[])": FunctionFragment;
@@ -117,16 +117,12 @@ interface ForumGroupInterface extends ethers.utils.Interface {
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
-    functionFragment: "gracePeriod",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
     functionFragment: "init",
     values: [
       string,
       string,
       string[],
-      [string, string, string],
+      string[],
       [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
     ]
   ): string;
@@ -145,6 +141,10 @@ interface ForumGroupInterface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: "memberDelegatee",
     values: [string]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "memberLimit",
+    values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "memberVoteThreshold",
@@ -263,10 +263,6 @@ interface ForumGroupInterface extends ethers.utils.Interface {
     functionFragment: "getProposalArrays",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(
-    functionFragment: "gracePeriod",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(functionFragment: "init", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "isApprovedForAll",
@@ -282,6 +278,10 @@ interface ForumGroupInterface extends ethers.utils.Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "memberDelegatee",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "memberLimit",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -549,13 +549,11 @@ export class ForumGroup extends BaseContract {
       }
     >;
 
-    gracePeriod(overrides?: CallOverrides): Promise<[number]>;
-
     init(
       name_: string,
       symbol_: string,
       members_: string[],
-      extensions_: [string, string, string],
+      extensions_: string[],
       govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
@@ -575,6 +573,8 @@ export class ForumGroup extends BaseContract {
     memberCount(overrides?: CallOverrides): Promise<[BigNumber]>;
 
     memberDelegatee(arg0: string, overrides?: CallOverrides): Promise<[string]>;
+
+    memberLimit(overrides?: CallOverrides): Promise<[number]>;
 
     memberVoteThreshold(overrides?: CallOverrides): Promise<[number]>;
 
@@ -761,13 +761,11 @@ export class ForumGroup extends BaseContract {
     }
   >;
 
-  gracePeriod(overrides?: CallOverrides): Promise<number>;
-
   init(
     name_: string,
     symbol_: string,
     members_: string[],
-    extensions_: [string, string, string],
+    extensions_: string[],
     govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
     overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
@@ -787,6 +785,8 @@ export class ForumGroup extends BaseContract {
   memberCount(overrides?: CallOverrides): Promise<BigNumber>;
 
   memberDelegatee(arg0: string, overrides?: CallOverrides): Promise<string>;
+
+  memberLimit(overrides?: CallOverrides): Promise<number>;
 
   memberVoteThreshold(overrides?: CallOverrides): Promise<number>;
 
@@ -968,13 +968,11 @@ export class ForumGroup extends BaseContract {
       }
     >;
 
-    gracePeriod(overrides?: CallOverrides): Promise<number>;
-
     init(
       name_: string,
       symbol_: string,
       members_: string[],
-      extensions_: [string, string, string],
+      extensions_: string[],
       govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
       overrides?: CallOverrides
     ): Promise<void>;
@@ -994,6 +992,8 @@ export class ForumGroup extends BaseContract {
     memberCount(overrides?: CallOverrides): Promise<BigNumber>;
 
     memberDelegatee(arg0: string, overrides?: CallOverrides): Promise<string>;
+
+    memberLimit(overrides?: CallOverrides): Promise<number>;
 
     memberVoteThreshold(overrides?: CallOverrides): Promise<number>;
 
@@ -1357,13 +1357,11 @@ export class ForumGroup extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    gracePeriod(overrides?: CallOverrides): Promise<BigNumber>;
-
     init(
       name_: string,
       symbol_: string,
       members_: string[],
-      extensions_: [string, string, string],
+      extensions_: string[],
       govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
@@ -1386,6 +1384,8 @@ export class ForumGroup extends BaseContract {
       arg0: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
+
+    memberLimit(overrides?: CallOverrides): Promise<BigNumber>;
 
     memberVoteThreshold(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -1573,13 +1573,11 @@ export class ForumGroup extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    gracePeriod(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
     init(
       name_: string,
       symbol_: string,
       members_: string[],
-      extensions_: [string, string, string],
+      extensions_: string[],
       govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
@@ -1602,6 +1600,8 @@ export class ForumGroup extends BaseContract {
       arg0: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
+
+    memberLimit(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     memberVoteThreshold(
       overrides?: CallOverrides

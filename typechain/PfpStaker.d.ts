@@ -21,39 +21,25 @@ import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 
 interface PfpStakerInterface extends ethers.utils.Interface {
   functions: {
-    "enabledPfpContracts(address)": FunctionFragment;
-    "forumFactory()": FunctionFragment;
-    "getStakedNFT()": FunctionFragment;
-    "getURI(address)": FunctionFragment;
+    "getStakedNFT(address)": FunctionFragment;
+    "getURI(address,string)": FunctionFragment;
     "onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)": FunctionFragment;
     "onERC1155Received(address,address,uint256,uint256,bytes)": FunctionFragment;
     "onERC721Received(address,address,uint256,bytes)": FunctionFragment;
     "owner()": FunctionFragment;
-    "restrictedContracts()": FunctionFragment;
-    "setEnabledContract(address)": FunctionFragment;
-    "setForumFactory(address)": FunctionFragment;
     "setOwner(address)": FunctionFragment;
-    "setRestrictedContracts()": FunctionFragment;
-    "setShieldContract(address)": FunctionFragment;
-    "shieldContract()": FunctionFragment;
-    "stakeInitialShield(address,uint256)": FunctionFragment;
     "stakeNFT(address,address,uint256)": FunctionFragment;
     "stakes(address)": FunctionFragment;
   };
 
   encodeFunctionData(
-    functionFragment: "enabledPfpContracts",
+    functionFragment: "getStakedNFT",
     values: [string]
   ): string;
   encodeFunctionData(
-    functionFragment: "forumFactory",
-    values?: undefined
+    functionFragment: "getURI",
+    values: [string, string]
   ): string;
-  encodeFunctionData(
-    functionFragment: "getStakedNFT",
-    values?: undefined
-  ): string;
-  encodeFunctionData(functionFragment: "getURI", values: [string]): string;
   encodeFunctionData(
     functionFragment: "onERC1155BatchReceived",
     values: [string, string, BigNumberish[], BigNumberish[], BytesLike]
@@ -67,49 +53,13 @@ interface PfpStakerInterface extends ethers.utils.Interface {
     values: [string, string, BigNumberish, BytesLike]
   ): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: "restrictedContracts",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "setEnabledContract",
-    values: [string]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "setForumFactory",
-    values: [string]
-  ): string;
   encodeFunctionData(functionFragment: "setOwner", values: [string]): string;
-  encodeFunctionData(
-    functionFragment: "setRestrictedContracts",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "setShieldContract",
-    values: [string]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "shieldContract",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "stakeInitialShield",
-    values: [string, BigNumberish]
-  ): string;
   encodeFunctionData(
     functionFragment: "stakeNFT",
     values: [string, string, BigNumberish]
   ): string;
   encodeFunctionData(functionFragment: "stakes", values: [string]): string;
 
-  decodeFunctionResult(
-    functionFragment: "enabledPfpContracts",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "forumFactory",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(
     functionFragment: "getStakedNFT",
     data: BytesLike
@@ -128,35 +78,7 @@ interface PfpStakerInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "restrictedContracts",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "setEnabledContract",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "setForumFactory",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(functionFragment: "setOwner", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "setRestrictedContracts",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "setShieldContract",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "shieldContract",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "stakeInitialShield",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(functionFragment: "stakeNFT", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "stakes", data: BytesLike): Result;
 
@@ -176,7 +98,7 @@ export type OwnerUpdatedEvent = TypedEvent<
 export type StakedNFTEvent = TypedEvent<
   [string, string, BigNumber] & {
     dao: string;
-    NFTContract: string;
+    NftContract: string;
     tokenId: BigNumber;
   }
 >;
@@ -225,23 +147,18 @@ export class PfpStaker extends BaseContract {
   interface: PfpStakerInterface;
 
   functions: {
-    enabledPfpContracts(
-      arg0: string,
-      overrides?: CallOverrides
-    ): Promise<[boolean]>;
-
-    forumFactory(overrides?: CallOverrides): Promise<[string]>;
-
     getStakedNFT(
+      staker: string,
       overrides?: CallOverrides
     ): Promise<
-      [string, BigNumber] & { NFTContract: string; tokenId: BigNumber }
+      [string, BigNumber] & { NftContract: string; tokenId: BigNumber }
     >;
 
     getURI(
       staker: string,
+      groupName: string,
       overrides?: CallOverrides
-    ): Promise<[string] & { nftURI: string }>;
+    ): Promise<[string]>;
 
     onERC1155BatchReceived(
       arg0: string,
@@ -271,43 +188,14 @@ export class PfpStaker extends BaseContract {
 
     owner(overrides?: CallOverrides): Promise<[string]>;
 
-    restrictedContracts(overrides?: CallOverrides): Promise<[boolean]>;
-
-    setEnabledContract(
-      NFTContract: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>;
-
-    setForumFactory(
-      forumFactory_: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>;
-
     setOwner(
       newOwner: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
-    setRestrictedContracts(
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>;
-
-    setShieldContract(
-      shieldContract_: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>;
-
-    shieldContract(overrides?: CallOverrides): Promise<[string]>;
-
-    stakeInitialShield(
-      recipient: string,
-      shieldId: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>;
-
     stakeNFT(
       staker: string,
-      NFTContract: string,
+      NftContract: string,
       tokenId: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
@@ -316,22 +204,20 @@ export class PfpStaker extends BaseContract {
       arg0: string,
       overrides?: CallOverrides
     ): Promise<
-      [string, BigNumber] & { NFTcontract: string; tokenId: BigNumber }
+      [string, BigNumber] & { Nftcontract: string; tokenId: BigNumber }
     >;
   };
 
-  enabledPfpContracts(
-    arg0: string,
-    overrides?: CallOverrides
-  ): Promise<boolean>;
-
-  forumFactory(overrides?: CallOverrides): Promise<string>;
-
   getStakedNFT(
+    staker: string,
     overrides?: CallOverrides
-  ): Promise<[string, BigNumber] & { NFTContract: string; tokenId: BigNumber }>;
+  ): Promise<[string, BigNumber] & { NftContract: string; tokenId: BigNumber }>;
 
-  getURI(staker: string, overrides?: CallOverrides): Promise<string>;
+  getURI(
+    staker: string,
+    groupName: string,
+    overrides?: CallOverrides
+  ): Promise<string>;
 
   onERC1155BatchReceived(
     arg0: string,
@@ -361,43 +247,14 @@ export class PfpStaker extends BaseContract {
 
   owner(overrides?: CallOverrides): Promise<string>;
 
-  restrictedContracts(overrides?: CallOverrides): Promise<boolean>;
-
-  setEnabledContract(
-    NFTContract: string,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
-
-  setForumFactory(
-    forumFactory_: string,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
-
   setOwner(
     newOwner: string,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
-  setRestrictedContracts(
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
-
-  setShieldContract(
-    shieldContract_: string,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
-
-  shieldContract(overrides?: CallOverrides): Promise<string>;
-
-  stakeInitialShield(
-    recipient: string,
-    shieldId: BigNumberish,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
-
   stakeNFT(
     staker: string,
-    NFTContract: string,
+    NftContract: string,
     tokenId: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
@@ -405,23 +262,21 @@ export class PfpStaker extends BaseContract {
   stakes(
     arg0: string,
     overrides?: CallOverrides
-  ): Promise<[string, BigNumber] & { NFTcontract: string; tokenId: BigNumber }>;
+  ): Promise<[string, BigNumber] & { Nftcontract: string; tokenId: BigNumber }>;
 
   callStatic: {
-    enabledPfpContracts(
-      arg0: string,
-      overrides?: CallOverrides
-    ): Promise<boolean>;
-
-    forumFactory(overrides?: CallOverrides): Promise<string>;
-
     getStakedNFT(
+      staker: string,
       overrides?: CallOverrides
     ): Promise<
-      [string, BigNumber] & { NFTContract: string; tokenId: BigNumber }
+      [string, BigNumber] & { NftContract: string; tokenId: BigNumber }
     >;
 
-    getURI(staker: string, overrides?: CallOverrides): Promise<string>;
+    getURI(
+      staker: string,
+      groupName: string,
+      overrides?: CallOverrides
+    ): Promise<string>;
 
     onERC1155BatchReceived(
       arg0: string,
@@ -451,38 +306,11 @@ export class PfpStaker extends BaseContract {
 
     owner(overrides?: CallOverrides): Promise<string>;
 
-    restrictedContracts(overrides?: CallOverrides): Promise<boolean>;
-
-    setEnabledContract(
-      NFTContract: string,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    setForumFactory(
-      forumFactory_: string,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
     setOwner(newOwner: string, overrides?: CallOverrides): Promise<void>;
-
-    setRestrictedContracts(overrides?: CallOverrides): Promise<void>;
-
-    setShieldContract(
-      shieldContract_: string,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    shieldContract(overrides?: CallOverrides): Promise<string>;
-
-    stakeInitialShield(
-      recipient: string,
-      shieldId: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>;
 
     stakeNFT(
       staker: string,
-      NFTContract: string,
+      NftContract: string,
       tokenId: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>;
@@ -491,7 +319,7 @@ export class PfpStaker extends BaseContract {
       arg0: string,
       overrides?: CallOverrides
     ): Promise<
-      [string, BigNumber] & { NFTcontract: string; tokenId: BigNumber }
+      [string, BigNumber] & { Nftcontract: string; tokenId: BigNumber }
     >;
   };
 
@@ -508,34 +336,31 @@ export class PfpStaker extends BaseContract {
 
     "StakedNFT(address,address,uint256)"(
       dao?: string | null,
-      NFTContract?: null,
+      NftContract?: null,
       tokenId?: null
     ): TypedEventFilter<
       [string, string, BigNumber],
-      { dao: string; NFTContract: string; tokenId: BigNumber }
+      { dao: string; NftContract: string; tokenId: BigNumber }
     >;
 
     StakedNFT(
       dao?: string | null,
-      NFTContract?: null,
+      NftContract?: null,
       tokenId?: null
     ): TypedEventFilter<
       [string, string, BigNumber],
-      { dao: string; NFTContract: string; tokenId: BigNumber }
+      { dao: string; NftContract: string; tokenId: BigNumber }
     >;
   };
 
   estimateGas: {
-    enabledPfpContracts(
-      arg0: string,
+    getStakedNFT(staker: string, overrides?: CallOverrides): Promise<BigNumber>;
+
+    getURI(
+      staker: string,
+      groupName: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
-
-    forumFactory(overrides?: CallOverrides): Promise<BigNumber>;
-
-    getStakedNFT(overrides?: CallOverrides): Promise<BigNumber>;
-
-    getURI(staker: string, overrides?: CallOverrides): Promise<BigNumber>;
 
     onERC1155BatchReceived(
       arg0: string,
@@ -565,43 +390,14 @@ export class PfpStaker extends BaseContract {
 
     owner(overrides?: CallOverrides): Promise<BigNumber>;
 
-    restrictedContracts(overrides?: CallOverrides): Promise<BigNumber>;
-
-    setEnabledContract(
-      NFTContract: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>;
-
-    setForumFactory(
-      forumFactory_: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>;
-
     setOwner(
       newOwner: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
-    setRestrictedContracts(
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>;
-
-    setShieldContract(
-      shieldContract_: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>;
-
-    shieldContract(overrides?: CallOverrides): Promise<BigNumber>;
-
-    stakeInitialShield(
-      recipient: string,
-      shieldId: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>;
-
     stakeNFT(
       staker: string,
-      NFTContract: string,
+      NftContract: string,
       tokenId: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
@@ -610,17 +406,14 @@ export class PfpStaker extends BaseContract {
   };
 
   populateTransaction: {
-    enabledPfpContracts(
-      arg0: string,
+    getStakedNFT(
+      staker: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    forumFactory(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    getStakedNFT(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
     getURI(
       staker: string,
+      groupName: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
@@ -652,45 +445,14 @@ export class PfpStaker extends BaseContract {
 
     owner(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
-    restrictedContracts(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    setEnabledContract(
-      NFTContract: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>;
-
-    setForumFactory(
-      forumFactory_: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>;
-
     setOwner(
       newOwner: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
-    setRestrictedContracts(
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>;
-
-    setShieldContract(
-      shieldContract_: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>;
-
-    shieldContract(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    stakeInitialShield(
-      recipient: string,
-      shieldId: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>;
-
     stakeNFT(
       staker: string,
-      NFTContract: string,
+      NftContract: string,
       tokenId: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;

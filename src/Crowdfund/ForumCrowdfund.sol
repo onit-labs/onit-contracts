@@ -7,7 +7,7 @@ import {NFTreceiver} from "../utils/NFTreceiver.sol";
 import {ReentrancyGuard} from "../utils/ReentrancyGuard.sol";
 
 import {IForumGroup} from "../interfaces/IForumGroup.sol";
-import {IForumGroupFactoryV2} from "../interfaces/IForumGroupFactoryV2.sol";
+import {IForumGroupFactory} from "../interfaces/IForumGroupFactory.sol";
 import {ICrowdfundExecutionManager} from
     "../interfaces/ICrowdfundExecutionManager.sol";
 
@@ -211,7 +211,7 @@ contract ForumCrowdfund is ReentrancyGuard, Owned, NFTreceiver {
 
         // Deploy the Forum group to hold the NFT as a group
         // Default settings of 3 days vote period, 100 member limit, 80% member & token vote thresholds
-        IForumGroup forumGroup = IForumGroupFactoryV2(forumFactory).deployGroup(
+        IForumGroup forumGroup = IForumGroupFactory(forumFactory).deployGroup(
             fund.parameters.groupName,
             fund.parameters.symbol,
             fund.contributors,

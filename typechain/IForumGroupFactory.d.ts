@@ -21,7 +21,7 @@ import type { TypedEventFilter, TypedEvent, TypedListener } from "./common";
 
 interface IForumGroupFactoryInterface extends ethers.utils.Interface {
   functions: {
-    "deployGroup(string,string,address[],uint32[4])": FunctionFragment;
+    "deployGroup(string,string,address[],uint32[4],address[])": FunctionFragment;
   };
 
   encodeFunctionData(
@@ -30,7 +30,8 @@ interface IForumGroupFactoryInterface extends ethers.utils.Interface {
       string,
       string,
       string[],
-      [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+      [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      string[]
     ]
   ): string;
 
@@ -91,6 +92,7 @@ export class IForumGroupFactory extends BaseContract {
       symbol_: string,
       voters_: string[],
       govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      customExtensions_: string[],
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
   };
@@ -100,6 +102,7 @@ export class IForumGroupFactory extends BaseContract {
     symbol_: string,
     voters_: string[],
     govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+    customExtensions_: string[],
     overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
@@ -109,6 +112,7 @@ export class IForumGroupFactory extends BaseContract {
       symbol_: string,
       voters_: string[],
       govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      customExtensions_: string[],
       overrides?: CallOverrides
     ): Promise<string>;
   };
@@ -121,6 +125,7 @@ export class IForumGroupFactory extends BaseContract {
       symbol_: string,
       voters_: string[],
       govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      customExtensions_: string[],
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
   };
@@ -131,6 +136,7 @@ export class IForumGroupFactory extends BaseContract {
       symbol_: string,
       voters_: string[],
       govSettings_: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      customExtensions_: string[],
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
   };

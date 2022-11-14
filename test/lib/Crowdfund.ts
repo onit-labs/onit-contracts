@@ -2,8 +2,8 @@ import { expect } from '../utils/expect'
 
 import { MEMBERSHIP, TOKEN, ZERO_ADDRESS } from '../config'
 import {
-	ForumGroupV2,
-	ForumFactoryV2,
+	ForumGroup,
+	ForumFactory,
 	ForumCrowdfund,
 	CrowdfundExecutionManager,
 	JoepegsCrowdfundHandler,
@@ -81,8 +81,8 @@ const createCustomCrowdfundInput = (
 }
 
 describe.only('Crowdfund', function () {
-	let forum: ForumGroupV2 // ForumGroup contract instance
-	let forumFactory: ForumFactoryV2 // ForumFactory contract instance
+	let forum: ForumGroup // ForumGroup contract instance
+	let forumFactory: ForumFactory // ForumFactory contract instance
 	let crowdfund: ForumCrowdfund // Crowdfund contract instance
 	let executionManager: CrowdfundExecutionManager // CrowdfundExecutionManager contract instance
 	let joepegsHandler: JoepegsCrowdfundHandler // CrowdfundExecutionManager contract instance
@@ -101,16 +101,16 @@ describe.only('Crowdfund', function () {
 		// Deploy contracts used in tests
 		await deployments.fixture([
 			'ForumCrowdfund',
-			'PfpStakerV2',
+			'PfpStaker',
 			'CrowdfundExecutionManager',
 			'JoepegsCrowdfundHandler'
 		])
-		forum = await hardhatEthers.getContract('ForumGroupV2')
-		forumFactory = await hardhatEthers.getContract('ForumFactoryV2')
+		forum = await hardhatEthers.getContract('ForumGroup')
+		forumFactory = await hardhatEthers.getContract('ForumFactory')
 		crowdfund = await hardhatEthers.getContract('ForumCrowdfund')
 		executionManager = await hardhatEthers.getContract('CrowdfundExecutionManager')
 		joepegsHandler = await hardhatEthers.getContract('JoepegsCrowdfundHandler')
-		pfpStaker = await hardhatEthers.getContract('PfpStakerV2')
+		pfpStaker = await hardhatEthers.getContract('PfpStaker')
 
 		// Deploy a test ERC721 contract and MockJoepegs to test full flow
 		test721 = (await (
@@ -286,7 +286,7 @@ describe.only('Crowdfund', function () {
 
 		// Get group deployed by crowdfund and check balance of member (with founder bonus), and that group owns asset
 		const group = `0x${tx.events[1].topics[1].substring(26)}`
-		const groupContract = await hardhatEthers.getContractAt('ForumGroupV2', group)
+		const groupContract = await hardhatEthers.getContractAt('ForumGroup', group)
 		expect(await groupContract.balanceOf(proposer.address, MEMBERSHIP)).to.equal(1)
 		expect(await groupContract.balanceOf(proposer.address, TOKEN)).to.equal(
 			getBigNumber(2)
@@ -322,7 +322,7 @@ describe.only('Crowdfund', function () {
 
 		// Get group deployed by crowdfund and check balance of member, and that group owns asset
 		const group = `0x${tx.events[2].topics[1].substring(26)}`
-		const groupContract = await hardhatEthers.getContractAt('ForumGroupV2', group)
+		const groupContract = await hardhatEthers.getContractAt('ForumGroup', group)
 
 		expect(await groupContract.balanceOf(proposer.address, MEMBERSHIP)).to.equal(1)
 		expect(await groupContract.balanceOf(proposer.address, TOKEN)).to.equal(
@@ -376,7 +376,7 @@ describe.only('Crowdfund', function () {
 
 		// Get group deployed by crowdfund and check balance of member, and that group owns asset
 		const group = `0x${tx.events[1].topics[1].substring(26)}`
-		const groupContract = await hardhatEthers.getContractAt('ForumGroupV2', group)
+		const groupContract = await hardhatEthers.getContractAt('ForumGroup', group)
 		expect(await groupContract.balanceOf(proposer.address, MEMBERSHIP)).to.equal(1)
 		expect(await groupContract.balanceOf(proposer.address, TOKEN)).to.equal(getBigNumber(2))
 	})

@@ -2,12 +2,18 @@
 
 pragma solidity ^0.8.13;
 
-/// @notice Forum Factory Interface.
+import {IForumGroup} from "./IForumGroup.sol";
+
+/// @notice Forum Factory V2 Interface.
 interface IForumGroupFactory {
     function deployGroup(
-        string memory name_,
-        string memory symbol_,
+        string calldata name_,
+        string calldata symbol_,
         address[] calldata voters_,
-        uint32[4] memory govSettings_
-    ) external payable returns (address);
+        uint32[4] calldata govSettings_,
+        address[] calldata customExtensions_
+    )
+        external
+        payable
+        returns (IForumGroup);
 }
