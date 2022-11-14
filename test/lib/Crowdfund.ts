@@ -272,7 +272,7 @@ describe.only('Crowdfund', function () {
 			'InsufficientFunds()'
 		)
 	})
-	it.only('Should process a crowdfund, and not process it twice', async function () {
+	it('Should process a crowdfund, and not process it twice', async function () {
 		// console.log(
 		// 	ethers.utils.keccak256(ethers.utils.defaultAbiCoder.encode(['string'], ['crowd3']))
 		// )
