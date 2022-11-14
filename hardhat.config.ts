@@ -23,16 +23,15 @@ import { subtask } from 'hardhat/config'
 import { HardhatUserConfig, ProjectPathsUserConfig } from 'hardhat/types'
 import 'solidity-coverage'
 
-// TESTING - does not compile SVG files saving a lot of time
+// Used for compiling specific contracts manually to save time
 subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS).setAction(async (_, __, runSuper) => {
 	const paths = await runSuper()
 
-	return paths.filter((p) => !p.includes('SVG'))
+	return paths.filter((p) => p.includes('interfaces'))
 })
 
-/// @dev when deploying SVG on other chains, bytecodeHash should be set to none
 const OPTIMIZED_COMPILER_SETTINGS = {
-	version: '0.8.13',
+	version: '0.8.15',
 	settings: {
 		optimizer: {
 			enabled: true,
@@ -42,20 +41,6 @@ const OPTIMIZED_COMPILER_SETTINGS = {
 			}
 		},
 		viaIR: true,
-		metadata: {
-			bytecodeHash: 'none'
-		}
-	}
-}
-
-// Previously used for FieldSVGs 9, 15, 16, 17, 22
-const DEFAULT_COMPILER_SETTINGS = {
-	version: '0.8.13',
-	settings: {
-		optimizer: {
-			enabled: true,
-			runs: 10000
-		},
 		metadata: {
 			bytecodeHash: 'none'
 		}
@@ -98,14 +83,7 @@ const config: HardhatUserConfigExtended = {
 		strict: false
 	},
 	solidity: {
-		compilers: [OPTIMIZED_COMPILER_SETTINGS],
-		overrides: {
-			'contracts/ShieldManager/SVGs/Fields/FieldSVGs9.sol': DEFAULT_COMPILER_SETTINGS,
-			'contracts/ShieldManager/SVGs/Fields/FieldSVGs15.sol': DEFAULT_COMPILER_SETTINGS,
-			'contracts/ShieldManager/SVGs/Fields/FieldSVGs16.sol': DEFAULT_COMPILER_SETTINGS,
-			'contracts/ShieldManager/SVGs/Fields/FieldSVGs17.sol': DEFAULT_COMPILER_SETTINGS,
-			'contracts/ShieldManager/SVGs/Fields/FieldSVGs22.sol': DEFAULT_COMPILER_SETTINGS
-		}
+		compilers: [OPTIMIZED_COMPILER_SETTINGS]
 	},
 	namedAccounts: {
 		deployer: 0,
