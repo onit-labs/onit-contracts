@@ -344,7 +344,10 @@ contract ForumGroup is
                 if (prop.proposalType == ProposalType.MINT) for (
                     uint256 i; i < prop.accounts.length;
                 ) {
-                    _mint(prop.accounts[i], MEMBERSHIP, 1, "");
+                    // Only mint membership token if the account is not already a member
+                    if (balanceOf[prop.accounts[i]][MEMBERSHIP] == 0) _mint(
+                        prop.accounts[i], MEMBERSHIP, 1, ""
+                    );
                     _mint(prop.accounts[i], TOKEN, prop.amounts[i], "");
                     ++i;
                 }
@@ -363,10 +366,10 @@ contract ForumGroup is
                     for (uint256 i; i < prop.accounts.length; i++) {
                         results = new bytes[](prop.accounts.length);
 
-                        (bool success, bytes memory result) = prop.accounts[i]
+                        (bool successCall, bytes memory result) = prop.accounts[i]
                             .call{value: prop.amounts[i]}(prop.payloads[i]);
 
-                        if (success) commissionValue += ICommissionManager(
+                        if (successCall) commissionValue += ICommissionManager(
                             commissionManager
                         ).manageCommission(
                             prop.accounts[i], prop.amounts[i], prop.payloads[i]
@@ -375,9 +378,9 @@ contract ForumGroup is
                         results[i] = result;
                     }
                     // Send the commission calculated in the executionManger
-                    (bool success,) =
+                    (bool successCommission,) =
                         commissionManager.call{value: commissionValue}("");
-                    if (!success) revert CallError();
+                    if (!successCommission) revert CallError();
                 }
 
                 // Governance settings
