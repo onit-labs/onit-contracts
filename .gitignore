@@ -10,6 +10,7 @@ artifacts
 
 #Foundry files
 out
+forge-cache
 
 #Deployment folder
 deployments/
