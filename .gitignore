@@ -8,6 +8,9 @@ typechain/factories
 cache
 artifacts
 
+#Foundry files
+out
+
 #Deployment folder
 deployments/
 
