@@ -3,7 +3,11 @@ pragma solidity >=0.8.4;
 
 /// @notice Forum group share manager interface
 interface IForumShareManager {
-    function mintShares(address to, uint256 amount) external payable;
+    function mintShares(address to, uint256 id, uint256 amount)
+        external
+        payable;
 
-    function burnShares(address from, uint256 amount) external payable;
+    function burnShares(address from, uint256 id, uint256 amount)
+        external
+        payable;
 }

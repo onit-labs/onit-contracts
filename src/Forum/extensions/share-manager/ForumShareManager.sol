@@ -5,6 +5,7 @@ import {IForumShareManager} from "../../../interfaces/IForumShareManager.sol";
 
 import {ReentrancyGuard} from "../../../utils/ReentrancyGuard.sol";
 
+// ! TODO handle minting of correct tokenid for erc1155
 /**
  * @title ForumShareManager
  * @notice Forum Group share manager extension to mint/burn group tokens when called by approved 'manager'
@@ -71,9 +72,9 @@ contract ForumShareManager is ReentrancyGuard {
                 abi.decode(extensionData[i], (address, uint256, bool));
 
             if (mint) {
-                IForumShareManager(dao).mintShares(account, amount);
+                IForumShareManager(dao).mintShares(account, 1, amount);
             } else {
-                IForumShareManager(dao).burnShares(account, amount);
+                IForumShareManager(dao).burnShares(account, 1, amount);
             }
             // cannot realistically overflow
             unchecked {
