@@ -20,17 +20,17 @@ contract ForumCrowdfund is ReentrancyGuard, Owned, NFTreceiver {
     /// Events
     /// -----------------------------------------------------------------------
 
-    event NewCrowdfund(string indexed groupName);
+    event NewCrowdfund(string groupName, CrowdfundParameters parameters);
 
     event FundsAdded(
-        string indexed groupName, address contributor, uint256 contribution
+        string groupName, address contributor, uint256 contribution
     );
 
     event CommissionSet(uint256 commission);
 
-    event Cancelled(string indexed groupName);
+    event Cancelled(string groupName);
 
-    event Processed(string indexed groupName, address indexed groupAddress);
+    event Processed(string groupName, address indexed groupAddress);
 
     /// -----------------------------------------------------------------------
     /// Errors
@@ -132,7 +132,7 @@ contract ForumCrowdfund is ReentrancyGuard, Owned, NFTreceiver {
         crowdfunds[groupNameHash].contributors.push(msg.sender);
         crowdfunds[groupNameHash].contributions[msg.sender] = msg.value;
 
-        emit NewCrowdfund(parameters.groupName);
+        emit NewCrowdfund(parameters.groupName, parameters);
     }
 
     /**
