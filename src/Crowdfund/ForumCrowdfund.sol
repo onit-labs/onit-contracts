@@ -72,9 +72,7 @@ contract ForumCrowdfund is ReentrancyGuard, Owned, NFTreceiver {
 
     uint256 public commission = 200; // Basis points of 10000 => 2%
 
-    mapping(bytes32 => Crowdfund) private crowdfunds;
-
-    mapping(address => mapping(address => bool)) public contributionTracker;
+    mapping(bytes32 => Crowdfund) public crowdfunds;
 
     /// -----------------------------------------------------------------------
     /// Constructor
@@ -293,17 +291,13 @@ contract ForumCrowdfund is ReentrancyGuard, Owned, NFTreceiver {
     }
 
     /**
-     * @notice Get the details of a crowdfund
+     * @notice Get the details of contributions from a crowdfund
      * @param groupNameHash hash of the group name
      */
-    function getCrowdfund(bytes32 groupNameHash)
+    function getCrowdfundContributors(bytes32 groupNameHash)
         public
         view
-        returns (
-            CrowdfundParameters memory details,
-            address[] memory contributors,
-            uint256[] memory contributions
-        )
+        returns (address[] memory contributors, uint256[] memory contributions)
     {
         Crowdfund storage fund = crowdfunds[groupNameHash];
 
@@ -315,7 +309,6 @@ contract ForumCrowdfund is ReentrancyGuard, Owned, NFTreceiver {
                 ++i;
             }
         }
-        (details, contributors, contributions) =
-            (fund.parameters, fund.contributors, contributions);
+        (contributors, contributions) = (fund.contributors, contributions);
     }
 }

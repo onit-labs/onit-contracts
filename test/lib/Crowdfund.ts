@@ -80,7 +80,7 @@ const createCustomCrowdfundInput = (
 	}
 }
 
-describe('Crowdfund', function () {
+describe.only('Crowdfund', function () {
 	let forum: ForumGroup // ForumGroup contract instance
 	let forumFactory: ForumFactory // ForumFactory contract instance
 	let crowdfund: ForumCrowdfund // Crowdfund contract instance
@@ -142,15 +142,16 @@ describe('Crowdfund', function () {
 		console.log('after: ')
 	})
 	it('Should initiate crowdfund and submit contribution', async function () {
-		const crowdfundDetails = await crowdfund.getCrowdfund(testGroupNameHash)
+		const crowdfundDetails = await crowdfund.crowdfunds(testGroupNameHash)
+		const crowdfundContributions = await crowdfund.getCrowdfundContributors(testGroupNameHash)
 
 		// Check initial state
-		expect(crowdfundDetails.details.targetContract).to.equal(crowdfundInput.targetContract)
-		expect(crowdfundDetails.details.founderBonus).to.equal(crowdfundInput.founderBonus)
-		expect(crowdfundDetails.details.deadline).to.equal(crowdfundInput.deadline)
-		expect(crowdfundDetails.details.groupName).to.equal(crowdfundInput.groupName)
-		expect(crowdfundDetails.details.symbol).to.equal(crowdfundInput.symbol)
-		expect(crowdfundDetails.contributors[0]).to.equal(proposer.address)
+		expect(crowdfundDetails.targetContract).to.equal(crowdfundInput.targetContract)
+		expect(crowdfundDetails.founderBonus).to.equal(crowdfundInput.founderBonus)
+		expect(crowdfundDetails.deadline).to.equal(crowdfundInput.deadline)
+		expect(crowdfundDetails.groupName).to.equal(crowdfundInput.groupName)
+		expect(crowdfundDetails.symbol).to.equal(crowdfundInput.symbol)
+		expect(crowdfundContributions.contributors[0]).to.equal(proposer.address)
 		//expect(crowdfundDetails.payload).to.equal(crowdfundInput.payload)
 
 		await crowdfund.connect(alice).submitContribution(testGroupNameHash),
@@ -158,33 +159,38 @@ describe('Crowdfund', function () {
 				value: getBigNumber(1)
 			}
 
-		const crowdfundDetailsAfterSubmission = await crowdfund.getCrowdfund(testGroupNameHash)
+		const crowdfundDetailsAfterSubmission = await crowdfund.crowdfunds(testGroupNameHash)
+		const crowdfundContributionsAfterSubmission = await crowdfund.getCrowdfundContributors(
+			testGroupNameHash
+		)
 
 		// Check updated state
-		expect(crowdfundDetailsAfterSubmission.contributors).to.have.lengthOf(2)
-		expect(crowdfundDetailsAfterSubmission.contributions).to.have.lengthOf(2)
-		expect(crowdfundDetailsAfterSubmission.details.targetContract).to.equal(
+		expect(crowdfundContributionsAfterSubmission.contributors).to.have.lengthOf(2)
+		expect(crowdfundContributionsAfterSubmission.contributions).to.have.lengthOf(2)
+		expect(crowdfundDetailsAfterSubmission.targetContract).to.equal(
 			crowdfundInput.targetContract
 		)
 	})
 	it('Should submit second contribution', async function () {
-		const crowdfundDetails = await crowdfund.getCrowdfund(testGroupNameHash)
+		const crowdfundContributions = await crowdfund.getCrowdfundContributors(testGroupNameHash)
 
 		// Check initial state
-		expect(crowdfundDetails.contributors).to.have.lengthOf(1)
-		expect(crowdfundDetails.contributors[0]).to.equal(proposer.address)
-		expect(crowdfundDetails.contributions[0]).to.equal(getBigNumber(1))
+		expect(crowdfundContributions.contributors).to.have.lengthOf(1)
+		expect(crowdfundContributions.contributors[0]).to.equal(proposer.address)
+		expect(crowdfundContributions.contributions[0]).to.equal(getBigNumber(1))
 
 		await crowdfund.submitContribution(testGroupNameHash, {
 			value: getBigNumber(1)
 		})
 
-		const crowdfundDetailsAfterSubmission = await crowdfund.getCrowdfund(testGroupNameHash)
+		const crowdfundContributionsAfterSubmission = await crowdfund.getCrowdfundContributors(
+			testGroupNameHash
+		)
 
 		// Check updated state
-		expect(crowdfundDetailsAfterSubmission.contributors).to.have.lengthOf(1)
-		expect(crowdfundDetailsAfterSubmission.contributors[0]).to.equal(proposer.address)
-		expect(crowdfundDetailsAfterSubmission.contributions[0]).to.equal(getBigNumber(2))
+		expect(crowdfundContributionsAfterSubmission.contributors).to.have.lengthOf(1)
+		expect(crowdfundContributionsAfterSubmission.contributors[0]).to.equal(proposer.address)
+		expect(crowdfundContributionsAfterSubmission.contributions[0]).to.equal(getBigNumber(2))
 	})
 	// TODO need a check for previously deployed group with same name - create2 will fail, we should catch this
 	it('Should revert creating a crowdfund if a duplicate name exists', async function () {
@@ -233,10 +239,10 @@ describe('Crowdfund', function () {
 		expect(bal2).to.be.gt(bal1)
 
 		// Check the contributions mapping has been cleared
-		const crowdfundDetails = await crowdfund.getCrowdfund(testGroupNameHash)
+		const crowdfundContributions = await crowdfund.getCrowdfundContributors(testGroupNameHash)
 
-		expect(crowdfundDetails.contributors).to.have.lengthOf(0)
-		expect(crowdfundDetails.contributions).to.have.lengthOf(0)
+		expect(crowdfundContributions.contributors).to.have.lengthOf(0)
+		expect(crowdfundContributions.contributions).to.have.lengthOf(0)
 	})
 	it('Should revert if trying to process a fund which hasnt hit its target', async function () {
 		await expect(crowdfund.processCrowdfund(testGroupNameHash)).to.be.revertedWith(
