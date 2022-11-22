@@ -4,6 +4,8 @@ pragma solidity ^0.8.13;
 import {ForumGroup} from "../../src/Forum/ForumGroup.sol";
 import {TestShareManager} from "../../src/Test/TestShareManager.sol";
 import {ForumWithdrawal} from "../../src/Withdrawal/Withdrawal.sol";
+import {WithdrawalTransferManager} from
+    "../../src/Withdrawal/WithdrawalTransferManager.sol";
 import {CommissionManager} from
     "../../src/CommissionManager/CommissionManager.sol";
 
@@ -12,6 +14,7 @@ import {IForumGroup} from "../../src/interfaces/IForumGroup.sol";
 
 import {MockERC20} from "@solbase/test/utils/mocks/MockERC20.sol";
 import {MockERC721} from "@solbase/test/utils/mocks/MockERC721.sol";
+import {MockERC1155} from "@solbase/test/utils/mocks/MockERC1155.sol";
 
 import "forge-std/Test.sol";
 import "forge-std/StdCheats.sol";
@@ -19,12 +22,14 @@ import "forge-std/StdCheats.sol";
 contract WithdrawalTest is Test {
     ForumGroup public forumGroup;
     ForumWithdrawal public forumWithdrawal;
+    WithdrawalTransferManager public withdrawalTransferManager;
     TestShareManager public groupShareManager;
     CommissionManager public commissionManager;
 
     MockERC20 public mockErc20;
     MockERC20 public mockErc20_2;
     MockERC721 public mockErc721;
+    MockERC1155 public mockErc1155;
 
     address internal alice;
     uint256 internal alicePk;
@@ -45,13 +50,16 @@ contract WithdrawalTest is Test {
 
         // Contracts used in tests
         forumGroup = new ForumGroup();
-        forumWithdrawal = new ForumWithdrawal();
+        withdrawalTransferManager = new WithdrawalTransferManager();
+        forumWithdrawal =
+            new ForumWithdrawal(address(withdrawalTransferManager));
         commissionManager = new CommissionManager(alice);
         groupShareManager = new TestShareManager();
 
         mockErc20 = new MockERC20("MockERC20", "M20", 18);
         mockErc20_2 = new MockERC20("MockERC20_2", "M20_2", 18);
         mockErc721 = new MockERC721("MockERC721", "M721");
+        mockErc1155 = new MockERC1155();
 
         // Initialise Forum Group
         setupForumGroup();
@@ -61,6 +69,7 @@ contract WithdrawalTest is Test {
         mockErc20.mint(address(forumGroup), 1000);
         mockErc20_2.mint(address(forumGroup), 1000);
         mockErc721.mint(address(forumGroup), 1);
+        mockErc1155.mint(address(forumGroup), 1, 1, "");
 
         // Set mock ERC20 as a withdrawal token
         tokens.push(address(mockErc20));
@@ -267,40 +276,53 @@ contract WithdrawalTest is Test {
     }
 
     // A withdrawal of a non approved token via a custom proposal
-    function testCallExtensionCustomWithdrawal() public {
+    function testSubmitCustomWithdrawal() public {
+        // Set one of each type ot token to test
+        address[] memory accounts = new address[](3);
+        accounts[0] = address(mockErc721);
+        accounts[1] = address(mockErc1155);
+        accounts[2] = address(mockErc20);
+
+        // SOme amounts of each token to test
+        uint256[] memory amounts = new uint256[](3);
+        amounts[0] = uint256(1);
+        amounts[1] = uint256(1);
+        amounts[2] = uint256(100);
+
+        // Create custom withdrawal
+        vm.prank(alice, alice);
+        forumWithdrawal.submitWithdrawlProposal(
+            IForumGroup(address(forumGroup)), accounts, amounts, 100
+        );
+
+        (address[] memory withdrawalAssets, uint256[] memory withdrawalAmounts)
+        = forumWithdrawal.getCustomWithdrawals(address(forumGroup), alice);
+
+        assertEq(withdrawalAssets, accounts);
+        assertEq(withdrawalAmounts, amounts);
+    }
+
+    // A withdrawal of a non approved token via a custom proposal
+    function testProcessCustomWithdrawal() public {
         // Check init balances
         assertEq(mockErc20.balanceOf(address(forumGroup)), 1000);
         assertEq(mockErc20.balanceOf(alice), 0);
         assertEq(forumGroup.balanceOf(alice, TOKEN), 1000);
 
-        // Create payload for custom transfer of asset
-        bytes memory payloadTransfer = abi.encodeWithSignature(
-            "safeTransferFrom(address,address,uint256)",
-            address(forumGroup),
-            alice,
-            1
-        );
+        address[] memory accounts = new address[](3);
+        accounts[0] = address(mockErc721);
+        accounts[1] = address(mockErc1155);
+        accounts[2] = address(mockErc20);
 
-        // Create payload for processing the withdrawal
-        bytes memory payloadBurn =
-            abi.encodeWithSignature("burnGroupShares(address,uint256)", alice, 100);
-
-        bytes[] memory payloads = new bytes[](2);
-        payloads[0] = payloadTransfer;
-        payloads[1] = payloadBurn;
-
-        address[] memory addresses = new address[](2);
-        addresses[0] = address(mockErc721);
-        addresses[1] = address(forumWithdrawal);
+        uint256[] memory amounts = new uint256[](3);
+        amounts[0] = uint256(1);
+        amounts[1] = uint256(1);
+        amounts[2] = uint256(100);
 
         // Create custom withdrawal
         vm.prank(alice, alice);
         forumWithdrawal.submitWithdrawlProposal(
-            IForumGroup(address(forumGroup)),
-            addresses,
-            new uint256[](2),
-            payloads,
-            100
+            IForumGroup(address(forumGroup)), accounts, amounts, 100
         );
 
         // Sign the proposal number 1 as alice and process
@@ -320,6 +342,8 @@ contract WithdrawalTest is Test {
         // Check balances after erc721 withdrawal
         // assertEq(mockErc20.balanceOf(address(forumGroup)), 900);
         assertEq(mockErc721.balanceOf(alice), 1);
+        assertEq(mockErc1155.balanceOf(alice, 1), 1);
+        assertEq(mockErc20.balanceOf(alice), 100);
         assertEq(forumGroup.balanceOf(alice, TOKEN), 900);
     }
 }

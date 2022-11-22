@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-pragma solidity >=0.8.4;
+pragma solidity ^0.8.15;
 
-import "../libraries/SafeTransferLib.sol";
+import {SafeTransferLib} from "../libraries/SafeTransferLib.sol";
 
-import "../interfaces/IERC20.sol"; // consider minimal version
-import "../interfaces/IForumGroup.sol";
+import {IERC20} from "../interfaces/IERC20.sol"; // consider minimal version
+import {IForumGroup, IForumGroupTypes} from "../interfaces/IForumGroup.sol";
+import {IWithdrawalTransferManager} from
+    "../interfaces/IWithdrawalTransferManager.sol";
 
-import "../utils/ReentrancyGuard.sol";
+import {ReentrancyGuard} from "../utils/ReentrancyGuard.sol";
 
-import "forge-std/console2.sol";
+import {console2} from "../../lib/forge-std/src/console2.sol";
 
 /// @notice Withdrawal contract that transfers registered tokens from Forum group in proportion to burnt DAO tokens.
 contract ForumWithdrawal is ReentrancyGuard {
@@ -52,12 +54,32 @@ contract ForumWithdrawal is ReentrancyGuard {
     /// Withdrawl Storage
     /// ----------------------------------------------------------------------------------------
 
+    struct CustomWithdrawal {
+        address[] tokens;
+        uint256[] amountOrId;
+        uint256 amountToBurn;
+    }
+
+    IWithdrawalTransferManager public withdrawalTransferManager;
+
     // Pre-set assets which can be redeemed at any point by members
     mapping(address => address[]) public withdrawables;
-    // Allowance the group can burn for a member in a custom withdrawal (group, member, amount))
-    mapping(address => mapping(address => uint256)) public allowances;
     // Start time for withdrawals
     mapping(address => uint256) public withdrawalStarts;
+    // Allowance the group can burn for a member in a custom withdrawal (group, member, amount))
+    mapping(address => mapping(address => uint256)) public allowances;
+    // Custom withdrawals proposed to a group by a member (group, member, CustomWithdrawal)
+    mapping(address => mapping(address => CustomWithdrawal)) private
+        customWithdrawals;
+
+    /// ----------------------------------------------------------------------------------------
+    /// Constructor
+    /// ----------------------------------------------------------------------------------------
+
+    constructor(address _withdrawalTransferManager) {
+        withdrawalTransferManager =
+            IWithdrawalTransferManager(_withdrawalTransferManager);
+    }
 
     /// ----------------------------------------------------------------------------------------
     /// Withdrawal Logic
@@ -136,13 +158,11 @@ contract ForumWithdrawal is ReentrancyGuard {
      * @param group to withdraw from
      * @param accounts contract address of assets to withdraw
      * @param amounts to withdraw if needed
-     * @param payloads to withdraw ie. transfer the group asset to the member
      */
     function submitWithdrawlProposal(
         IForumGroup group,
         address[] calldata accounts,
         uint256[] calldata amounts,
-        bytes[] calldata payloads,
         uint256 amount
     )
         public
@@ -153,14 +173,66 @@ contract ForumWithdrawal is ReentrancyGuard {
         // Sender must be group member
         if (group.balanceOf(msg.sender, 0) == 0) revert NotMember();
 
+        // Array lenghts must match
+        if (accounts.length != amounts.length) revert IncorrectAmount();
+
         // Set allowance for DAO to burn members tokens
         allowances[address(group)][msg.sender] += amount;
+        customWithdrawals[address(group)][msg.sender].amountToBurn += amount;
 
-        // Create payload based on input tokens and amounts
+        // +1 to include the call to processWithdrawalProposal function on this contract
+        uint256 adjustedArrayLength = accounts.length + 1;
 
-        // Submit proposal to DAO
+        // Accouts to be sent to the group proposal
+        address[] memory proposalAccounts = new address[](adjustedArrayLength);
+
+        for (uint256 i; i < accounts.length;) {
+            proposalAccounts[i] = accounts[i];
+
+            // Will not overflow for length of assets
+            unchecked {
+                ++i;
+            }
+        }
+
+        // Add this contract to the end of the array
+        proposalAccounts[adjustedArrayLength - 1] = address(this);
+
+        // Create payloads based on input tokens and amounts
+        bytes[] memory proposalPayloads = new bytes[](adjustedArrayLength);
+
+        // Loop the input asset accounts and create payloads
+        for (uint256 i; i < accounts.length;) {
+            // Build the approval for the group to allow the asset to be transferred
+            proposalPayloads[i] = withdrawalTransferManager
+                .buildApprovalPayloads(accounts[i], amounts[i]);
+            // Store the asset contract and amountOrId
+            // This ensures that only this member from this group can withdraw the assets the group have approved
+            customWithdrawals[address(group)][msg.sender].tokens.push(
+                accounts[i]
+            );
+            customWithdrawals[address(group)][msg.sender].amountOrId.push(
+                amounts[i]
+            );
+
+            // Will not overflow for length of assets
+            unchecked {
+                ++i;
+            }
+        }
+
+        // Build the payload to call processWithdrawalProposal on this contract and put it as the last payload
+        // This will process the withdrawal as soon as the vote is passed
+        proposalPayloads[adjustedArrayLength - 1] = abi.encodeWithSignature(
+            "processWithdrawalProposal(address)", msg.sender
+        );
+
+        // Submit proposal to DAO - amounts is set to an new empty array as it is not needed (amounts are set in the payloads)
         uint256 proposal = group.propose(
-            IForumGroupTypes.ProposalType.CALL, accounts, amounts, payloads
+            IForumGroupTypes.ProposalType.CALL,
+            proposalAccounts,
+            new uint256[](adjustedArrayLength),
+            proposalPayloads
         );
 
         emit CustomWithdrawalAdded(msg.sender, address(group), proposal, amount);
@@ -169,23 +241,41 @@ contract ForumWithdrawal is ReentrancyGuard {
     /**
      * @notice processWithdrawalProposal processes a proposal to withdraw an item not already set in the extension.
      * @param withdrawer to take burn tokens for
-     * @param amount to withdraw
      */
-    function processWithdrawalProposal(address withdrawer, uint256 amount)
+    function processWithdrawalProposal(address withdrawer)
         public
         virtual
         nonReentrant
     {
-        // ! NEED TO check withdrawer has agreed to this so tokens cant just be burnt
+        CustomWithdrawal storage withdrawal =
+            customWithdrawals[msg.sender][withdrawer];
 
         // Sender must have allowance to withdraw
-        if (allowances[msg.sender][withdrawer] < amount) revert IncorrectAmount();
+        if (allowances[msg.sender][withdrawer] < withdrawal.amountToBurn) revert
+            IncorrectAmount();
 
         // Burn allowance
-        allowances[msg.sender][withdrawer] -= amount;
+        allowances[msg.sender][withdrawer] -= withdrawal.amountToBurn;
 
         // Burn group tokens
-        IForumGroup(msg.sender).burnShares(withdrawer, 1, amount);
+        IForumGroup(msg.sender).burnShares(
+            withdrawer, 1, withdrawal.amountToBurn
+        );
+
+        for (uint256 i; i < withdrawal.tokens.length;) {
+            // For each token, transfer the amountOrId to the withdrawer
+            withdrawalTransferManager.executeTransferPayloads(
+                withdrawal.tokens[i],
+                msg.sender,
+                withdrawer,
+                withdrawal.amountOrId[i]
+            );
+
+            // Will not overflow for length of assets
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     /**
@@ -243,5 +333,20 @@ contract ForumWithdrawal is ReentrancyGuard {
         returns (address[] memory tokens)
     {
         tokens = withdrawables[group];
+    }
+
+    /**
+     * @notice Returns the custom withdrawal for a member of a group
+     * @param group to get custom withdrawal from
+     * @param member to get custom withdrawal for
+     */
+    function getCustomWithdrawals(address group, address member)
+        public
+        view
+        virtual
+        returns (address[] memory tokens, uint256[] memory amounts)
+    {
+        tokens = customWithdrawals[group][member].tokens;
+        amounts = customWithdrawals[group][member].amountOrId;
     }
 }
