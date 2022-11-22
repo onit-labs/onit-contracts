@@ -7,8 +7,11 @@ import {ForumWithdrawal} from "../../src/Withdrawal/Withdrawal.sol";
 import {CommissionManager} from
     "../../src/CommissionManager/CommissionManager.sol";
 
+import {IForumGroupTypes} from "../../src/interfaces/IForumGroupTypes.sol";
+import {IForumGroup} from "../../src/interfaces/IForumGroup.sol";
+
 import {MockERC20} from "@solbase/test/utils/mocks/MockERC20.sol";
-import {MockERC1155} from "@solbase/test/utils/mocks/MockERC1155.sol";
+import {MockERC721} from "@solbase/test/utils/mocks/MockERC721.sol";
 
 import "forge-std/Test.sol";
 import "forge-std/StdCheats.sol";
@@ -20,9 +23,11 @@ contract WithdrawalTest is Test {
     CommissionManager public commissionManager;
 
     MockERC20 public mockErc20;
-    MockERC1155 public mockErc1155;
+    MockERC20 public mockErc20_2;
+    MockERC721 public mockErc721;
 
     address internal alice;
+    uint256 internal alicePk;
 
     address[] internal tokens;
 
@@ -36,7 +41,7 @@ contract WithdrawalTest is Test {
     /// -----------------------------------------------------------------------
 
     function setUp() public {
-        alice = makeAddr("alice");
+        (alice, alicePk) = makeAddrAndKey("alice");
 
         // Contracts used in tests
         forumGroup = new ForumGroup();
@@ -45,14 +50,17 @@ contract WithdrawalTest is Test {
         groupShareManager = new TestShareManager();
 
         mockErc20 = new MockERC20("MockERC20", "M20", 18);
-        mockErc1155 = new MockERC1155();
+        mockErc20_2 = new MockERC20("MockERC20_2", "M20_2", 18);
+        mockErc721 = new MockERC721("MockERC721", "M721");
 
         // Initialise Forum Group
         setupForumGroup();
 
         // Mint group some assets
+        vm.deal(address(forumGroup), 1 ether);
         mockErc20.mint(address(forumGroup), 1000);
-        mockErc1155.mint(address(forumGroup), 0, 1000, "");
+        mockErc20_2.mint(address(forumGroup), 1000);
+        mockErc721.mint(address(forumGroup), 1);
 
         // Set mock ERC20 as a withdrawal token
         tokens.push(address(mockErc20));
@@ -60,6 +68,10 @@ contract WithdrawalTest is Test {
         forumWithdrawal.setExtension(
             abi.encode(tokens, uint256(WITHDRAWAL_START))
         );
+
+        // Turn off commission manager for these tests
+        vm.prank(address(alice), address(alice));
+        commissionManager.setBaseCommission(0);
     }
 
     function setupForumGroup() internal {
@@ -116,24 +128,15 @@ contract WithdrawalTest is Test {
 
     function testSetExtension() public {
         // Set mock ERC20 as a withdrawal token
-        vm.startPrank(address(forumGroup), address(forumGroup));
+        vm.prank(address(forumGroup), address(forumGroup));
+        forumWithdrawal.setExtension(
+            abi.encode(tokens, uint256(WITHDRAWAL_START))
+        );
 
         // Check that the withdrawal token is set
         assertEq(
             forumWithdrawal.withdrawables(address(forumGroup), 0),
             address(mockErc20),
-            "Withdrawal token not set"
-        );
-
-        // Set mock ERC1155 as a withdrawal token - replacing the old tokens
-        tokens.pop();
-        tokens.push(address(mockErc1155));
-        forumWithdrawal.setExtension(abi.encode(tokens, WITHDRAWAL_START));
-
-        // Check that the withdrawal token is set
-        assertEq(
-            forumWithdrawal.withdrawables(address(forumGroup), 0),
-            address(mockErc1155),
             "Withdrawal token not set"
         );
     }
@@ -159,24 +162,63 @@ contract WithdrawalTest is Test {
         forumGroup.callExtension(address(forumWithdrawal), 100, "0x00");
         skip(1001);
         forumGroup.callExtension(address(forumWithdrawal), 1, "0x00");
-
-        rewind(1001);
     }
 
+    /// @dev covers case of non member trying to withdraw from group
     function testCannotWithdrawMoreThanGroupTokenBalance() public {
         // Approve extension to send erc20
         vm.prank(address(forumGroup), address(forumGroup));
         mockErc20.approve(address(forumWithdrawal), 1000);
 
         // Check that the withdrawal fails if not enough balance
-        vm.startPrank(alice, alice);
         vm.expectRevert(stdError.arithmeticError);
+        vm.startPrank(alice, alice);
         forumGroup.callExtension(address(forumWithdrawal), 1001, "0x00");
     }
 
-    function testCallExtensionBasic() public {
-        assertTrue(true);
+    function testAddTokenToWithdrawals() public {
+        // Check current withdrawal token
+        assertEq(
+            forumWithdrawal.withdrawables(address(forumGroup), 0),
+            address(mockErc20),
+            "Withdrawal token not set"
+        );
 
+        // Add new token to withdrawals
+        address[] memory newTokens = new address[](1);
+        newTokens[0] = address(mockErc20_2);
+        vm.prank(address(forumGroup), address(forumGroup));
+        forumWithdrawal.addTokens(newTokens);
+
+        // Check that the withdrawal token is set
+        assertEq(
+            forumWithdrawal.withdrawables(address(forumGroup), 1),
+            address(mockErc20_2),
+            "Withdrawal token not set"
+        );
+    }
+
+    function testRemoveTokenFromWithdrawals() public {
+        // Check current withdrawal token
+        assertEq(
+            forumWithdrawal.withdrawables(address(forumGroup), 0),
+            address(mockErc20),
+            "Withdrawal token not set"
+        );
+
+        // Remove token from withdrawals
+        uint256[] memory removalTokens = new uint256[](1);
+        removalTokens[0] = uint256(0);
+        vm.prank(address(forumGroup), address(forumGroup));
+        forumWithdrawal.removeTokens(removalTokens);
+
+        // Check that the withdrawal token is set
+        assert(
+            forumWithdrawal.getWithdrawables(address(forumGroup)).length == 0
+        );
+    }
+
+    function testCallExtensionBasicWithdrawal() public {
         // Check init balances
         assertEq(mockErc20.balanceOf(address(forumGroup)), 1000);
         assertEq(mockErc20.balanceOf(alice), 0);
@@ -193,10 +235,91 @@ contract WithdrawalTest is Test {
         assertEq(mockErc20.balanceOf(address(forumGroup)), 900);
         assertEq(mockErc20.balanceOf(alice), 100);
         assertEq(forumGroup.balanceOf(alice, TOKEN), 900);
+    }
 
-        // Test with erc1155 token
-        // called by member calling the callExtension function on the group contract
-        // only distributes a preset token
-        // check balance of group, member, and that tokens have been burned
+    function testCallExtensionBasicMultipleWithdrawalTokens() public {
+        // Check init balances
+        assertEq(mockErc20.balanceOf(address(forumGroup)), 1000);
+        assertEq(mockErc20_2.balanceOf(address(forumGroup)), 1000);
+        assertEq(mockErc20.balanceOf(alice), 0);
+        assertEq(forumGroup.balanceOf(alice, TOKEN), 1000);
+
+        // Add new token to withdrawals
+        address[] memory newTokens = new address[](1);
+        newTokens[0] = address(mockErc20_2);
+        vm.prank(address(forumGroup), address(forumGroup));
+        forumWithdrawal.addTokens(newTokens);
+
+        // Approve both tokens
+        vm.prank(address(forumGroup), address(forumGroup));
+        mockErc20.approve(address(forumWithdrawal), 1000);
+        vm.prank(address(forumGroup), address(forumGroup));
+        mockErc20_2.approve(address(forumWithdrawal), 1000);
+
+        vm.prank(alice, alice);
+        forumGroup.callExtension(address(forumWithdrawal), 100, "0x00");
+
+        // Check balances after erc20 withdrawal
+        assertEq(mockErc20.balanceOf(address(forumGroup)), 900);
+        assertEq(mockErc20_2.balanceOf(address(forumGroup)), 900);
+        assertEq(mockErc20.balanceOf(alice), 100);
+        assertEq(forumGroup.balanceOf(alice, TOKEN), 900);
+    }
+
+    // A withdrawal of a non approved token via a custom proposal
+    function testCallExtensionCustomWithdrawal() public {
+        // Check init balances
+        assertEq(mockErc20.balanceOf(address(forumGroup)), 1000);
+        assertEq(mockErc20.balanceOf(alice), 0);
+        assertEq(forumGroup.balanceOf(alice, TOKEN), 1000);
+
+        // Create payload for custom transfer of asset
+        bytes memory payloadTransfer = abi.encodeWithSignature(
+            "safeTransferFrom(address,address,uint256)",
+            address(forumGroup),
+            alice,
+            1
+        );
+
+        // Create payload for processing the withdrawal
+        bytes memory payloadBurn =
+            abi.encodeWithSignature("burnGroupShares(address,uint256)", alice, 100);
+
+        bytes[] memory payloads = new bytes[](2);
+        payloads[0] = payloadTransfer;
+        payloads[1] = payloadBurn;
+
+        address[] memory addresses = new address[](2);
+        addresses[0] = address(mockErc721);
+        addresses[1] = address(forumWithdrawal);
+
+        // Create custom withdrawal
+        vm.prank(alice, alice);
+        forumWithdrawal.submitWithdrawlProposal(
+            IForumGroup(address(forumGroup)),
+            addresses,
+            new uint256[](2),
+            payloads,
+            100
+        );
+
+        // Sign the proposal number 1 as alice and process
+        bytes32 digest = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                forumGroup.DOMAIN_SEPARATOR(),
+                keccak256(abi.encode(forumGroup.PROPOSAL_HASH(), 1))
+            )
+        );
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePk, digest);
+        IForumGroupTypes.Signature[] memory signatures =
+            new IForumGroupTypes.Signature[](1);
+        signatures[0] = IForumGroupTypes.Signature(v, r, s);
+        forumGroup.processProposal(1, signatures);
+
+        // Check balances after erc721 withdrawal
+        // assertEq(mockErc20.balanceOf(address(forumGroup)), 900);
+        assertEq(mockErc721.balanceOf(alice), 1);
+        assertEq(forumGroup.balanceOf(alice, TOKEN), 900);
     }
 }
