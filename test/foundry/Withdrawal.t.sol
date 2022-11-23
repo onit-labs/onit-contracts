@@ -119,12 +119,6 @@ contract WithdrawalTest is Test {
     }
 
     /// -----------------------------------------------------------------------
-    /// Test Logic
-    /// -----------------------------------------------------------------------
-
-    // some useful setup fns
-
-    /// -----------------------------------------------------------------------
     /// Setup Extension
     /// -----------------------------------------------------------------------
 
@@ -295,11 +289,15 @@ contract WithdrawalTest is Test {
             IForumGroup(address(forumGroup)), accounts, amounts, 100
         );
 
-        (address[] memory withdrawalAssets, uint256[] memory withdrawalAmounts)
-        = forumWithdrawal.getCustomWithdrawals(address(forumGroup), alice);
+        (
+            address[] memory withdrawalAssets,
+            uint256[] memory withdrawalAmounts,
+            uint256 amountToBurn
+        ) = forumWithdrawal.getCustomWithdrawals(address(forumGroup), alice);
 
         assertEq(withdrawalAssets, accounts);
         assertEq(withdrawalAmounts, amounts);
+        assertEq(amountToBurn, 100);
     }
 
     // A withdrawal of a non approved token via a custom proposal
@@ -346,4 +344,5 @@ contract WithdrawalTest is Test {
         assertEq(mockErc20.balanceOf(alice), 100);
         assertEq(forumGroup.balanceOf(alice, TOKEN), 900);
     }
+// Check tokens are not burned if the proposal is not processed
 }

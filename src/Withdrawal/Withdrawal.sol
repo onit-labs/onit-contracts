@@ -11,14 +11,12 @@ import {IWithdrawalTransferManager} from
 
 import {ReentrancyGuard} from "../utils/ReentrancyGuard.sol";
 
-import {console2} from "../../lib/forge-std/src/console2.sol";
-
 /// @notice Withdrawal contract that transfers registered tokens from Forum group in proportion to burnt DAO tokens.
 contract ForumWithdrawal is ReentrancyGuard {
     using SafeTransferLib for address;
 
     /// ----------------------------------------------------------------------------------------
-    /// Errors and Events
+    /// Events
     /// ----------------------------------------------------------------------------------------
 
     event ExtensionSet(
@@ -38,9 +36,17 @@ contract ForumWithdrawal is ReentrancyGuard {
         uint256 amount
     );
 
+    event CustomWithdrawalProcessed(
+        address indexed withdrawer, address indexed group, uint256 amount
+    );
+
     event TokensAdded(address indexed group, address[] tokens);
 
     event TokensRemoved(address indexed group, uint256[] tokenIndex);
+
+    /// ----------------------------------------------------------------------------------------
+    ///							ERRORS
+    /// ----------------------------------------------------------------------------------------
 
     error NullTokens();
 
@@ -48,7 +54,7 @@ contract ForumWithdrawal is ReentrancyGuard {
 
     error NotMember();
 
-    error IncorrectAmount();
+    error NoArrayParity();
 
     /// ----------------------------------------------------------------------------------------
     /// Withdrawl Storage
@@ -66,8 +72,6 @@ contract ForumWithdrawal is ReentrancyGuard {
     mapping(address => address[]) public withdrawables;
     // Start time for withdrawals
     mapping(address => uint256) public withdrawalStarts;
-    // Allowance the group can burn for a member in a custom withdrawal (group, member, amount))
-    mapping(address => mapping(address => uint256)) public allowances;
     // Custom withdrawals proposed to a group by a member (group, member, CustomWithdrawal)
     mapping(address => mapping(address => CustomWithdrawal)) private
         customWithdrawals;
@@ -99,10 +103,10 @@ contract ForumWithdrawal is ReentrancyGuard {
 
         if (tokens.length == 0) revert NullTokens();
 
-        // if withdrawables are already set, this call will be interpreted as reset
+        // If withdrawables are already set, this call will be interpreted as reset
         if (withdrawables[msg.sender].length != 0)
         delete withdrawables[msg.sender];
-        // cannot realistically overflow on human timescales
+        // Cannot realistically overflow on human timescales
         unchecked {
             for (uint256 i; i < tokens.length; i++) {
                 withdrawables[msg.sender].push(tokens[i]);
@@ -118,7 +122,7 @@ contract ForumWithdrawal is ReentrancyGuard {
      * @notice Withdraw tokens from a DAO. This will withdraw tokens in proportion to the amount of DAO tokens burned.
      * @param withdrawer address to withdraw tokens to
      * @param amount amount of DAO tokens burned
-     * @dev  bytes unused but conforms with standard interface for extension
+     * @dev bytes unused but conforms with standard interface for extension
      */
     function callExtension(address withdrawer, uint256 amount, bytes calldata)
         public
@@ -129,7 +133,7 @@ contract ForumWithdrawal is ReentrancyGuard {
         if (block.timestamp < withdrawalStarts[msg.sender]) revert NotStarted();
 
         for (uint256 i; i < withdrawables[msg.sender].length;) {
-            // calculate fair share of given token for withdrawal
+            // Calculate fair share of given token for withdrawal
             uint256 amountToRedeem = amount
                 * IERC20(withdrawables[msg.sender][i]).balanceOf(msg.sender)
                 / IERC20(msg.sender).totalSupply();
@@ -174,10 +178,9 @@ contract ForumWithdrawal is ReentrancyGuard {
         if (group.balanceOf(msg.sender, 0) == 0) revert NotMember();
 
         // Array lenghts must match
-        if (accounts.length != amounts.length) revert IncorrectAmount();
+        if (accounts.length != amounts.length) revert NoArrayParity();
 
         // Set allowance for DAO to burn members tokens
-        allowances[address(group)][msg.sender] += amount;
         customWithdrawals[address(group)][msg.sender].amountToBurn += amount;
 
         // +1 to include the call to processWithdrawalProposal function on this contract
@@ -201,12 +204,13 @@ contract ForumWithdrawal is ReentrancyGuard {
         // Create payloads based on input tokens and amounts
         bytes[] memory proposalPayloads = new bytes[](adjustedArrayLength);
 
-        // Loop the input asset accounts and create payloads
+        // Loop the input accounts and create payloads
         for (uint256 i; i < accounts.length;) {
             // Build the approval for the group to allow the asset to be transferred
             proposalPayloads[i] = withdrawalTransferManager
                 .buildApprovalPayloads(accounts[i], amounts[i]);
-            // Store the asset contract and amountOrId
+
+            // Store the account and amountOrId which can be withdrawn from it
             // This ensures that only this member from this group can withdraw the assets the group have approved
             customWithdrawals[address(group)][msg.sender].tokens.push(
                 accounts[i]
@@ -240,24 +244,17 @@ contract ForumWithdrawal is ReentrancyGuard {
 
     /**
      * @notice processWithdrawalProposal processes a proposal to withdraw an item not already set in the extension.
-     * @param withdrawer to take burn tokens for
+     * @param withdrawer to take assets and burn tokens for
      */
     function processWithdrawalProposal(address withdrawer)
         public
         virtual
         nonReentrant
     {
-        CustomWithdrawal storage withdrawal =
+        CustomWithdrawal memory withdrawal =
             customWithdrawals[msg.sender][withdrawer];
 
-        // Sender must have allowance to withdraw
-        if (allowances[msg.sender][withdrawer] < withdrawal.amountToBurn) revert
-            IncorrectAmount();
-
-        // Burn allowance
-        allowances[msg.sender][withdrawer] -= withdrawal.amountToBurn;
-
-        // Burn group tokens
+        // Burn group tokens (id=1)
         IForumGroup(msg.sender).burnShares(
             withdrawer, 1, withdrawal.amountToBurn
         );
@@ -276,19 +273,21 @@ contract ForumWithdrawal is ReentrancyGuard {
                 ++i;
             }
         }
+
+        emit CustomWithdrawalProcessed(
+            msg.sender, msg.sender, withdrawal.amountToBurn
+            );
+
+        // Delete the withdrawal
+        delete customWithdrawals[msg.sender][withdrawer];
     }
 
     /**
-     * @notice lets a member remove their burn allowance
+     * @notice lets a member remove their custom withdrawal request
      * @param group to remove allowance from
-     * @param amount to remove
      */
-    function removeAllowance(address group, uint256 amount)
-        public
-        virtual
-        nonReentrant
-    {
-        allowances[group][msg.sender] -= amount;
+    function removeAllowance(address group) public virtual nonReentrant {
+        delete customWithdrawals[group][msg.sender];
     }
 
     /**
@@ -344,9 +343,14 @@ contract ForumWithdrawal is ReentrancyGuard {
         public
         view
         virtual
-        returns (address[] memory tokens, uint256[] memory amounts)
+        returns (
+            address[] memory tokens,
+            uint256[] memory amounts,
+            uint256 amountToBurn
+        )
     {
         tokens = customWithdrawals[group][member].tokens;
         amounts = customWithdrawals[group][member].amountOrId;
+        amountToBurn = customWithdrawals[group][member].amountToBurn;
     }
 }
