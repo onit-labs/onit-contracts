@@ -2,20 +2,18 @@
 pragma solidity ^0.8.0;
 
 import {ERC165} from "@solbase/src/utils/ERC165.sol";
-import {ERC20} from "@solbase/src/tokens/ERC20/ERC20.sol";
-import {ERC721} from "@solbase/src/tokens/ERC721/ERC721.sol";
-import {ERC1155} from "@solbase/src/tokens/ERC1155/ERC1155.sol";
-
-import {console2} from "../../lib/forge-std/src/console2.sol";
 
 import {ReentrancyGuard} from "../utils/ReentrancyGuard.sol";
 
 /**
  * @title WithdrawalTransferManager
- * @notice It formats the payload needed to approve or transfer an asset for the ForumCrowdfund contract
- * @author Modified from LookRare 'https://github.com/LooksRare/contracts-exchange-v1/blob/master/contracts/TransferSelectorNFT.sol'
+ * @notice It formats the payload needed to approve or executes transfer of an asset for the ForumCrowdfund contract
  */
 contract WithdrawalTransferManager is ReentrancyGuard {
+    /// ----------------------------------------------------------------------------------------
+    /// Withdrawl Storage
+    /// ----------------------------------------------------------------------------------------
+
     error TransferFailed();
 
     // Token types
@@ -29,6 +27,10 @@ contract WithdrawalTransferManager is ReentrancyGuard {
     bytes4 public constant INTERFACE_ID_ERC721 = 0x80ac58cd;
     // ERC1155 interfaceID
     bytes4 public constant INTERFACE_ID_ERC1155 = 0xd9b67a26;
+
+    /// ----------------------------------------------------------------------------------------
+    /// Withdrawl Logic
+    /// ----------------------------------------------------------------------------------------
 
     /**
      * @notice Builds the approval to allow the Withdrawal contract (msg.sender) to transfer the asset
@@ -45,21 +47,27 @@ contract WithdrawalTransferManager is ReentrancyGuard {
         TokenType tokenType = determineTokenType(collection);
 
         if (tokenType == TokenType.ERC721) return abi.encodeWithSelector(
-            ERC721(collection).approve.selector, address(this), amountOrId
+            bytes4(keccak256("approve(address,uint256)")),
+            address(this),
+            amountOrId
         );
 
         if (tokenType == TokenType.ERC1155) return abi.encodeWithSelector(
-            ERC1155(collection).setApprovalForAll.selector, address(this), true
+            bytes4(keccak256("setApprovalForAll(address,bool)")),
+            address(this),
+            true
         );
 
         // If it is not an ERC721 or ERC1155, then assume it is an ERC20
         return abi.encodeWithSelector(
-            ERC20(collection).approve.selector, address(this), amountOrId
+            bytes4(keccak256("approve(address,uint256)")),
+            address(this),
+            amountOrId
         );
     }
 
     /**
-     * @notice Builds the transfer payload for the asset
+     * @notice Executes the transfer of the asset
      * @param collection collection address
      * @param amountOrId amount of token if erc20, id of token if erc721 or erc1155
      * @param to address to send the asset to
@@ -125,8 +133,9 @@ contract WithdrawalTransferManager is ReentrancyGuard {
      * @param collection collection address
      * @dev Defaults to erc20 if the other interfaces do not match.
      *      This is not perfect, but since the user will be selecting an asset which
-     *      they want to withdraw from the group, it is very likely that it will be
-     *      an erc20 token if neither of the others.
+     *      they want to withdraw from the group, it is very likely that it will be an
+     *      erc20 token if neither of the others. If it is not, then the call will fail
+     *      and the user will be able to cancel the withdrawal without losing any funds
      */
     function determineTokenType(address collection)
         internal
