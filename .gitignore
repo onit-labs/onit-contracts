@@ -7,6 +7,11 @@ typechain/factories
 #Hardhat files
 cache
 artifacts
+typechain
+
+#Foundry files
+out
+forge-cache
 
 #Deployment folder
 deployments/

@@ -1,0 +1,10 @@
+[profile.default]
+src = 'src'
+out = 'out'
+libs = ['lib']
+test = 'test'
+cache_path  = 'forge-cache'
+solc = '0.8.15'
+
+
+# See more config options https://github.com/foundry-rs/foundry/tree/master/config
