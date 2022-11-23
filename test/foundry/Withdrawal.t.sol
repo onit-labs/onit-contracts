@@ -167,16 +167,23 @@ contract WithdrawalTest is Test {
         forumGroup.callExtension(address(forumWithdrawal), 1, "0x00");
     }
 
-    /// @dev covers case of non member trying to withdraw from group
+    /// @dev Covers case of non member trying to withdraw from group
+    /// @dev We do not need to check for withdrawing an excess of erc20, since it can't
+    //       be done - a proportional amount is withdrawn based on what balance there is
     function testCannotWithdrawMoreThanGroupTokenBalance() public {
         // Approve extension to send erc20
         vm.prank(address(forumGroup), address(forumGroup));
         mockErc20.approve(address(forumWithdrawal), 1000);
 
-        // Check that the withdrawal fails if not enough balance
+        // Check that the withdrawal fails if not enough group balance
         vm.expectRevert(stdError.arithmeticError);
-        vm.startPrank(alice, alice);
+        vm.prank(alice, alice);
         forumGroup.callExtension(address(forumWithdrawal), 1001, "0x00");
+
+        // Check balances after failed attempt, all unchanged
+        assertEq(mockErc20.balanceOf(address(forumGroup)), 1000);
+        assertEq(mockErc20.balanceOf(alice), 0);
+        assertEq(forumGroup.balanceOf(alice, TOKEN), 1000);
     }
 
     function testAddTokenToWithdrawals() public {
@@ -269,6 +276,10 @@ contract WithdrawalTest is Test {
         assertEq(forumGroup.balanceOf(alice, TOKEN), 900);
     }
 
+    /// -----------------------------------------------------------------------
+    /// Custom Withdrawal
+    /// -----------------------------------------------------------------------
+
     // A withdrawal of a non approved token via a custom proposal
     function testSubmitCustomWithdrawal() public {
         // Set one of each type ot token to test
@@ -300,6 +311,48 @@ contract WithdrawalTest is Test {
         assertEq(amountToBurn, 100);
     }
 
+    function testCannotWithdrawMoreThanErc20Balance() public {
+        address[] memory accounts = new address[](1);
+        accounts[0] = address(mockErc20);
+
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = uint256(1001);
+
+        // Create custom withdrawal
+        vm.prank(alice, alice);
+        forumWithdrawal.submitWithdrawlProposal(
+            IForumGroup(address(forumGroup)), accounts, amounts, 100
+        );
+
+        processProposal(1, forumGroup, false);
+
+        // Check balances after fail, all unchanged
+        assertEq(mockErc20.balanceOf(address(forumGroup)), 1000);
+        assertEq(mockErc20.balanceOf(alice), 0);
+        assertEq(forumGroup.balanceOf(alice, TOKEN), 1000);
+    }
+
+    function testCannotWithdrawNonOwnedErc721() public {
+        address[] memory accounts = new address[](1);
+        accounts[0] = address(mockErc721);
+
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = uint256(2);
+
+        // Create custom withdrawal
+        vm.prank(alice, alice);
+        forumWithdrawal.submitWithdrawlProposal(
+            IForumGroup(address(forumGroup)), accounts, amounts, 100
+        );
+
+        processProposal(1, forumGroup, false);
+
+        // Check balances after erc721 withdrawal
+        assertEq(mockErc721.balanceOf(address(forumGroup)), 1);
+        assertEq(mockErc721.balanceOf(alice), 0);
+        assertEq(forumGroup.balanceOf(alice, TOKEN), 1000);
+    }
+
     // A withdrawal of a non approved token via a custom proposal
     function testProcessCustomWithdrawal() public {
         // Check init balances
@@ -323,19 +376,7 @@ contract WithdrawalTest is Test {
             IForumGroup(address(forumGroup)), accounts, amounts, 100
         );
 
-        // Sign the proposal number 1 as alice and process
-        bytes32 digest = keccak256(
-            abi.encodePacked(
-                "\x19\x01",
-                forumGroup.DOMAIN_SEPARATOR(),
-                keccak256(abi.encode(forumGroup.PROPOSAL_HASH(), 1))
-            )
-        );
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePk, digest);
-        IForumGroupTypes.Signature[] memory signatures =
-            new IForumGroupTypes.Signature[](1);
-        signatures[0] = IForumGroupTypes.Signature(v, r, s);
-        forumGroup.processProposal(1, signatures);
+        processProposal(1, forumGroup, true);
 
         // Check balances after erc721 withdrawal
         // assertEq(mockErc20.balanceOf(address(forumGroup)), 900);
@@ -344,5 +385,43 @@ contract WithdrawalTest is Test {
         assertEq(mockErc20.balanceOf(alice), 100);
         assertEq(forumGroup.balanceOf(alice, TOKEN), 900);
     }
-// Check tokens are not burned if the proposal is not processed
+
+    /// -----------------------------------------------------------------------
+    /// Utils
+    /// -----------------------------------------------------------------------
+
+    /**
+     * @notice Util to process a proposal with alice signing
+     * @param proposal The id of the proposal to process
+     * @param group The forum group to process the proposal for
+     * @param expectPass Whether the prop should pass, or we check for a revert
+     */
+    function processProposal(
+        uint256 proposal,
+        ForumGroup group,
+        bool expectPass
+    )
+        internal
+    {
+        // Sign the proposal number 1 as alice and process
+        bytes32 digest = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                group.DOMAIN_SEPARATOR(),
+                keccak256(abi.encode(group.PROPOSAL_HASH(), proposal))
+            )
+        );
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePk, digest);
+        IForumGroupTypes.Signature[] memory signatures =
+            new IForumGroupTypes.Signature[](1);
+        signatures[0] = IForumGroupTypes.Signature(v, r, s);
+
+        if (expectPass) {
+            group.processProposal(proposal, signatures);
+        } else {
+            vm.expectRevert();
+            group.processProposal(proposal, signatures);
+        }
+    }
 }
