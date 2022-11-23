@@ -80,7 +80,7 @@ const createCustomCrowdfundInput = (
 	}
 }
 
-describe.only('Crowdfund', function () {
+describe('Crowdfund', function () {
 	let forum: ForumGroup // ForumGroup contract instance
 	let forumFactory: ForumFactory // ForumFactory contract instance
 	let crowdfund: ForumCrowdfund // Crowdfund contract instance
