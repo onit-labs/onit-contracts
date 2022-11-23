@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {ERC165} from "@solbase/src/utils/ERC165.sol";
+import {IERC165} from "../interfaces/IERC165.sol";
 
 import {ReentrancyGuard} from "../utils/ReentrancyGuard.sol";
 
@@ -144,7 +144,7 @@ contract WithdrawalTransferManager is ReentrancyGuard {
     {
         // We static call and handle the response since supportsInterface will fail for contracts not implementing it
         (bool success, bytes memory result) = collection.staticcall(
-            abi.encodeWithSelector(ERC165.supportsInterface.selector, INTERFACE_ID_ERC721)
+            abi.encodeWithSelector(IERC165.supportsInterface.selector, INTERFACE_ID_ERC721)
         );
 
         // If successful and true, then it is an ERC721
@@ -153,7 +153,7 @@ contract WithdrawalTransferManager is ReentrancyGuard {
         }
 
         (success, result) = collection.staticcall(
-            abi.encodeWithSelector(ERC165.supportsInterface.selector, INTERFACE_ID_ERC1155)
+            abi.encodeWithSelector(IERC165.supportsInterface.selector, INTERFACE_ID_ERC1155)
         );
 
         // If successful and true, then it is an ERC1155

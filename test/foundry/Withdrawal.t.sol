@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import {ForumGroup} from "../../src/Forum/ForumGroup.sol";
 import {TestShareManager} from "../../src/Test/TestShareManager.sol";
-import {ForumWithdrawal} from "../../src/Withdrawal/Withdrawal.sol";
+import {ForumWithdrawal} from "../../src/Withdrawal/ForumWithdrawal.sol";
 import {WithdrawalTransferManager} from
     "../../src/Withdrawal/WithdrawalTransferManager.sol";
 import {CommissionManager} from
