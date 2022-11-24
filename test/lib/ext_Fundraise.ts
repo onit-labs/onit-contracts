@@ -3,10 +3,10 @@ import { expect } from '../utils/expect'
 import { TOKEN, ZERO_ADDRESS } from '../config'
 
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-import { BigNumber, Contract, ContractFactory, ethers, Signer } from 'ethers'
-import { parseEther } from 'ethers/lib/utils'
+import { BigNumber, Contract } from 'ethers'
 import { deployments, ethers as hardhatEthers } from 'hardhat'
 import { beforeEach, describe, it } from 'mocha'
+import { ForumGroupFundraise, ForumGroup } from '../../typechain'
 
 // Defaults to e18 using amount * 10^18
 function getBigNumber(amount: number, decimals = 18) {
@@ -14,8 +14,8 @@ function getBigNumber(amount: number, decimals = 18) {
 }
 
 describe('Fundraise', function () {
-	let forum: Contract // ForumGroup contract instance
-	let fundraise: Contract // Fundraise contract instance
+	let forum: ForumGroup // ForumGroup contract instance
+	let fundraise: ForumGroupFundraise // Fundraise contract instance
 	let proposer: SignerWithAddress // signerA
 	let alice: SignerWithAddress // signerB
 	let bob: SignerWithAddress // signerC
@@ -26,9 +26,13 @@ describe('Fundraise', function () {
 		// TODO implement non avax funding in version 2
 
 		// Similar to deploying the master forum multisig
-		await deployments.fixture(['Forum'])
+		await deployments.fixture(['Forum', 'ForumGroupFundraise'])
 		forum = await hardhatEthers.getContract('ForumGroup')
 		fundraise = await hardhatEthers.getContract('ForumGroupFundraise')
+
+		// fundraise = (await (
+		// 	await hardhatEthers.getContractFactory('ForumGroupFundraise')
+		// ).deploy()) as ForumGroupFundraise
 
 		await forum.init(
 			'FORUM',
@@ -129,7 +133,7 @@ describe('Fundraise', function () {
 		expect(await forum.balanceOf(proposer.address, TOKEN)).to.equal(getBigNumber(125))
 		expect(await forum.balanceOf(alice.address, TOKEN)).to.equal(getBigNumber(125))
 	})
-	it('Should revert if non member initiates funraise', async function () {
+	it('Should revert if non member initiates fundraise', async function () {
 		// Delete existing fundraise for test
 		await fundraise.cancelFundRound(forum.address)
 

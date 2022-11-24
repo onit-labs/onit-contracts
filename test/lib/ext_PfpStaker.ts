@@ -26,8 +26,9 @@ describe('PFP_Staking Module', () => {
 	beforeEach(async () => {
 		;[owner, founder, alice, bob, carol] = await hardhatEthers.getSigners()
 
-		await deployments.fixture(['Forum', 'Shields'])
+		await deployments.fixture(['Forum'])
 		forum = await hardhatEthers.getContract('ForumGroup')
+		pfpStaker = await hardhatEthers.getContract('PfpStaker')
 
 		// Test erc721, deploy a test 721 contract and mint a token for founder
 		test721 = (await (
@@ -40,11 +41,6 @@ describe('PFP_Staking Module', () => {
 			await hardhatEthers.getContractFactory('ERC1155Test')
 		).deploy('test', 'test')) as ERC1155Test
 		await test1155.mint(founder.address, 1, 1)
-
-		// Deploy PfpStaker with the test erc721 set as default (shield creator) address
-		pfpStaker = (await (
-			await hardhatEthers.getContractFactory('PfpStaker')
-		).deploy(owner.address)) as PfpStaker
 	})
 
 	describe('PFP Unit Tests', () => {
@@ -164,20 +160,10 @@ describe('PFP_Staking Module', () => {
 		let deployedForum: ForumGroup
 
 		beforeEach(async () => {
-			// Deploy master ForumGroup
-			masterForum = (await (
-				await hardhatEthers.getContractFactory('ForumGroup')
-			).deploy()) as ForumGroup
-
-			// Deploy the Forum Factory
-			forumFactory = (await (
-				await hardhatEthers.getContractFactory('ForumFactory')
-			).deploy(owner.address, masterForum.address, ZERO_ADDRESS)) as ForumFactory
-
-			// Deploy PfpStaker with the test erc721 set as default (shield creator) address. Update factory to take this address for pfpStaker
-			pfpStaker = (await (
-				await hardhatEthers.getContractFactory('PfpStaker')
-			).deploy(owner.address)) as PfpStaker
+			await deployments.fixture(['Forum', 'Shields'])
+			masterForum = await hardhatEthers.getContract('ForumGroup')
+			forumFactory = await hardhatEthers.getContract('ForumFactory')
+			pfpStaker = await hardhatEthers.getContract('PfpStaker')
 
 			await forumFactory.connect(owner).setPfpStaker(pfpStaker.address)
 

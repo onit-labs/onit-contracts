@@ -9,6 +9,7 @@ import {
 	ForumFactory,
 	ForumGroup,
 	JoepegsProposalHandler,
+	MockJoepegsExchange,
 	PfpStaker,
 	ERC721Test
 } from '../../typechain'
@@ -29,6 +30,7 @@ describe('Commission Manager', function () {
 	let forum: ForumGroup
 	let executionManager: CommissionManager
 	let joepegsHandler: JoepegsProposalHandler
+	let joepegsMarket: MockJoepegsExchange
 	let test721: ERC721Test // ERC721Test contract instance
 
 	beforeEach(async function () {
@@ -69,7 +71,6 @@ describe('Commission Manager', function () {
 		it('should take base commission if set, and not if unset', async function () {
 			//reset restricted mode from last test, expect commission to be >0
 			await executionManager.setBaseCommission(1)
-			console.log(await executionManager.manageCommission(testAddress2.address, 1, '0x00'))
 
 			expect(await executionManager.manageCommission(testAddress2.address, 1, '0x00')).gt(0)
 
@@ -85,7 +86,7 @@ describe('Commission Manager', function () {
 
 			// Deploy mock joepegs
 			const JoepegsMarket = await hardhatEthers.getContractFactory('MockJoepegsExchange')
-			const joepegsMarket = await JoepegsMarket.deploy(test721.address)
+			joepegsMarket = (await JoepegsMarket.deploy(test721.address)) as MockJoepegsExchange
 
 			// Deploy execution manager which will format proposals to specific contracts to extract commission
 			const CommissionManager = await hardhatEthers.getContractFactory('CommissionManager')
@@ -120,14 +121,13 @@ describe('Commission Manager', function () {
 
 			const payloadWithNoCommissionFunctionSelector =
 				COMMISSION_FREE_FUNCTIONS[0] + payload.substring(2)
-			console.log({ payloadWithNoCommissionFunctionSelector })
 
 			expect(await hardhatEthers.provider.getBalance(executionManager.address)).equal(0)
 			// Propose + process the taker order
 			await processProposal(forum, [sender], 1, {
 				type: CALL,
 				accounts: [joepegsMarket.address],
-				amounts: [getBigNumber(0)],
+				amounts: [0],
 				payloads: [payloadWithNoCommissionFunctionSelector]
 			})
 
@@ -152,14 +152,7 @@ describe('Commission Manager', function () {
 	})
 })
 
-const testTakerOrder = [
-	false,
-	ZERO_ADDRESS,
-	getBigNumber(1),
-	getBigNumber(1),
-	getBigNumber(9000),
-	'0x00'
-]
+const testTakerOrder = [false, ZERO_ADDRESS, getBigNumber(1), 1, getBigNumber(9000), '0x00']
 
 const testMakerOrder = [
 	false,

@@ -10,15 +10,12 @@ import {
 	ALLOW_CONTRACT_SIG,
 	BURN,
 	CALL,
-	ERC1271_MAGIC_VALUE,
 	EXTENSION,
 	MEMBER_LIMIT,
 	MEMBER,
 	MEMBERSHIP,
 	MINT,
-	MINT_FEE,
 	PAUSE,
-	ProposalVoteSig,
 	SIMPLE_MAJORITY,
 	TOKEN,
 	TOKEN_MAJORITY,
@@ -28,7 +25,6 @@ import {
 } from '../config'
 
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-import { Contract } from 'ethers'
 import { deployments, ethers, ethers as hardhatEthers } from 'hardhat'
 import { beforeEach, describe, it } from 'mocha'
 
@@ -36,7 +32,7 @@ import { beforeEach, describe, it } from 'mocha'
 ///			 set to [proposer.address]. This is to simplify minting tokens for that address since
 ///			 the mintShares function is modified with onlyExtension.
 
-describe.only('Forum Multisig Setup and Functions', function () {
+describe('Forum Multisig Setup and Functions', function () {
 	// let Forum: any // ForumGroup contract
 	let forum: ForumGroup // ForumGroup contract instance
 	let owner: SignerWithAddress // signer
