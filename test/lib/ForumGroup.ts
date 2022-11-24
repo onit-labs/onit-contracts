@@ -36,7 +36,7 @@ import { beforeEach, describe, it } from 'mocha'
 ///			 set to [proposer.address]. This is to simplify minting tokens for that address since
 ///			 the mintShares function is modified with onlyExtension.
 
-describe('Forum Multisig  Setup and Functions', function () {
+describe.only('Forum Multisig Setup and Functions', function () {
 	// let Forum: any // ForumGroup contract
 	let forum: ForumGroup // ForumGroup contract instance
 	let owner: SignerWithAddress // signer
@@ -47,9 +47,6 @@ describe('Forum Multisig  Setup and Functions', function () {
 
 	beforeEach(async () => {
 		;[owner, proposer, alice, bob] = await hardhatEthers.getSigners()
-
-		// TODO this is very slow, should find workaround for Initilized() error
-		await hardhatEthers.provider.send('hardhat_reset', [])
 
 		// Similar to deploying the master forum multisig
 		await deployments.fixture(['Forum'])
@@ -181,7 +178,6 @@ describe('Forum Multisig  Setup and Functions', function () {
 	})
 
 	describe('Proposals', function () {
-		// ! consider this check
 		it("Should revert if proposal arrays don't match", async function () {
 			await forum.init(
 				'FORUM',
@@ -324,10 +320,9 @@ describe('Forum Multisig  Setup and Functions', function () {
 				proposal: 1
 			})
 			await expect(forum.processProposal(1, [proposerSig, proposerSig])).revertedWith(
-				'InvalidSignature()'
+				'SignatureError()'
 			)
 		})
-		// ! consider this
 		it.skip('Should forbid voting after period ends - skipped, no hard deadline, instead encourage deletion of old proposals', async function () {
 			await forum.init(
 				'FORUM',
@@ -643,7 +638,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 			await processProposal(forum, [proposer], 1, {
 				type: CALL,
 				accounts: [test721.address],
-				amounts: [getBigNumber(0.5)],
+				amounts: [0],
 				payloads: [payload]
 			})
 			expect(await test721.balanceOf(alice.address)).equal(1)
@@ -1039,7 +1034,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 
 			// Revert if member has delegated to someone
 			await expect(
-				processProposal(forum, [alice, sender], 2, {
+				processProposal(forum, [receiver], 2, {
 					type: BURN,
 					accounts: [sender.address],
 					amounts: [0],
@@ -1049,7 +1044,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 
 			// Revert if member is delegated to
 			await expect(
-				processProposal(forum, [alice, receiver], 3, {
+				processProposal(forum, [receiver], 3, {
 					type: BURN,
 					accounts: [receiver.address],
 					amounts: [0],
@@ -1122,7 +1117,25 @@ describe('Forum Multisig  Setup and Functions', function () {
 			// Vote type has been updated back to member, meaning that tokenVoteThreshold vote worked
 			expect(await forum.proposalVoteTypes(TYPE)).equal(MEMBER)
 		})
-		it('should not count votes if member has delegated', async function () {})
+		it('should not count votes if member has delegated', async function () {
+			// Sender no longer has votes
+			await forum.connect(sender).delegate(receiver.address)
+
+			// Vote type is member
+			expect(await forum.proposalVoteTypes(TYPE)).equal(MEMBER)
+
+			// Pass a prop trying to chage type from member to simple majority
+			// This will not pass as sender has weight=0, alice has weight=1, and 2 are required
+			await processProposal(forum, [alice, sender], 2, {
+				type: TYPE,
+				accounts: [ZERO_ADDRESS, ZERO_ADDRESS],
+				amounts: [TYPE, SIMPLE_MAJORITY],
+				payloads: [0x00, 0x00]
+			})
+
+			// Vote type is still member, the vote did not work
+			expect(await forum.proposalVoteTypes(TYPE)).equal(MEMBER)
+		})
 		it('should forbid calling a non-whitelisted extension', async function () {
 			await expect(forum.callExtension(sender.address, 10, 0x0)).revertedWith(
 				'NotExtension()'
@@ -1177,34 +1190,23 @@ describe('Forum Multisig  Setup and Functions', function () {
 
 			// Propose another simple VPeriod proposal
 			forum.connect(proposer).propose(VPERIOD, [ZERO_ADDRESS], [200], [0x00])
-			await expect(forum.processProposal(3, [proposerSig2])).revertedWith(
-				'InvalidSignature()'
-			)
+			await expect(forum.processProposal(3, [proposerSig2])).revertedWith('SignatureError()')
 		})
-		// The below test is correctly reverting, but the expect is failing here
-		it.skip('should revert reentrant calls', async () => {
-			const [sender, receiver, extension, nonextension] = await hardhatEthers.getSigners()
-
+		it('should revert reentrant calls', async () => {
 			const ReentrantMock = await hardhatEthers.getContractFactory('ReentrantMock')
 			const reentrantMock = await ReentrantMock.deploy()
 			await reentrantMock.deployed()
 
-			// await forum.init(
-			// 	'FORUM',
-			// 	'FORUM',
-			// 	[sender.address, receiver.address],
-			// 	[ZERO_ADDRESS,ZERO_ADDRESS, ZERO_ADDRESS],
-			// 	[30, 12, 50, 60]
-			// )
-
-			await forum.connect(sender).propose(9, [reentrantMock.address], [1], [0x00])
-			await forum.connect(sender).vote(2)
-			await advanceTime(35)
-			await forum.processProposal(2)
+			await processProposal(forum, [receiver, sender], 2, {
+				type: EXTENSION,
+				accounts: [reentrantMock.address],
+				amounts: [1],
+				payloads: [0x00]
+			})
 
 			expect(await forum.extensions(reentrantMock.address)).equal(true)
 			await expect(forum.callExtension(reentrantMock.address, 0, '0x00')).revertedWith(
-				'Reentrancy()'
+				'Reentrancy'
 			)
 		})
 	})

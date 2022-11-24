@@ -71,7 +71,6 @@ export async function processProposal(
 
 	await advanceTime(35)
 	const tx = await (await forum.processProposal(propNumber, sigs)).wait()
-	//console.log(tx)
 
 	// Proposal info will always be the last event
 	const eventIndex = tx.events?.length - 1
