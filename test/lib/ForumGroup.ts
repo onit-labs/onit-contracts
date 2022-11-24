@@ -44,9 +44,6 @@ describe('Forum Multisig  Setup and Functions', function () {
 	beforeEach(async () => {
 		;[owner, proposer, alice, bob] = await hardhatEthers.getSigners()
 
-		// TODO this is very slow, should find workaround for Initilized() error
-		await hardhatEthers.provider.send('hardhat_reset', [])
-
 		// Similar to deploying the master forum multisig
 		await deployments.fixture(['Forum'])
 		forum = await hardhatEthers.getContract('ForumGroup')
@@ -90,7 +87,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 			expect(await forum.proposalVoteTypes(12)).equal(0)
 			expect(await forum.proposalVoteTypes(13)).equal(0)
 		})
-		it('distribute shield to new member on mint', async function () {
+		it('distribute membership to new member on mint', async function () {
 			await forum.init(
 				'FORUM',
 				'FORUM',
@@ -177,7 +174,6 @@ describe('Forum Multisig  Setup and Functions', function () {
 	})
 
 	describe('Proposals', function () {
-		// ! consider this check
 		it("Should revert if proposal arrays don't match", async function () {
 			await forum.init(
 				'FORUM',
@@ -323,7 +319,6 @@ describe('Forum Multisig  Setup and Functions', function () {
 				'SignatureError()'
 			)
 		})
-		// ! consider this
 		it.skip('Should forbid voting after period ends - skipped, no hard deadline, instead encourage deletion of old proposals', async function () {
 			await forum.init(
 				'FORUM',

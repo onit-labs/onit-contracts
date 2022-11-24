@@ -8,7 +8,9 @@ import {
 	CrowdfundExecutionManager,
 	JoepegsCrowdfundHandler,
 	ERC721,
-	ERC721Test
+	ERC721Test,
+	MockJoepegsExchange,
+	CommissionManager
 } from '../../typechain'
 
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
@@ -85,8 +87,9 @@ describe('Crowdfund', function () {
 	let forumFactory: ForumFactory // ForumFactory contract instance
 	let crowdfund: ForumCrowdfund // Crowdfund contract instance
 	let executionManager: CrowdfundExecutionManager // CrowdfundExecutionManager contract instance
+	let commissionManager: CommissionManager // CrowdfundHandler contract instance
 	let joepegsHandler: JoepegsCrowdfundHandler // CrowdfundExecutionManager contract instance
-	let joepegsMarket: Contract // CrowdfundExecutionManager contract instance
+	let joepegsMarket: MockJoepegsExchange // CrowdfundExecutionManager contract instance
 	let pfpStaker: Contract // pfpStaker contract instance
 	let test721: ERC721Test // test721 contract instance
 	let proposer: SignerWithAddress // signerA
@@ -100,6 +103,7 @@ describe('Crowdfund', function () {
 
 		// Deploy contracts used in tests
 		await deployments.fixture([
+			'Forum',
 			'ForumCrowdfund',
 			'PfpStaker',
 			'CrowdfundExecutionManager',
@@ -109,6 +113,7 @@ describe('Crowdfund', function () {
 		forumFactory = await hardhatEthers.getContract('ForumFactory')
 		crowdfund = await hardhatEthers.getContract('ForumCrowdfund')
 		executionManager = await hardhatEthers.getContract('CrowdfundExecutionManager')
+		commissionManager = await hardhatEthers.getContract('CommissionManager')
 		joepegsHandler = await hardhatEthers.getContract('JoepegsCrowdfundHandler')
 		pfpStaker = await hardhatEthers.getContract('PfpStaker')
 
@@ -117,10 +122,12 @@ describe('Crowdfund', function () {
 			await hardhatEthers.getContractFactory('ERC721Test')
 		).deploy('test', 'test')) as ERC721Test
 		const JoepegsMarket = await hardhatEthers.getContractFactory('MockJoepegsExchange')
-		joepegsMarket = await JoepegsMarket.deploy(test721.address)
+		joepegsMarket = (await JoepegsMarket.deploy(test721.address)) as MockJoepegsExchange
 
 		// Setp deployments with correct addresses
 		await forumFactory.setPfpStaker(pfpStaker.address)
+		await forumFactory.setForumMaster(forum.address)
+		await forumFactory.setCommissionManager(commissionManager.address)
 		await forumFactory.setFundraiseExtension(ZERO_ADDRESS)
 		await executionManager.addExecutionHandler(joepegsMarket.address, joepegsHandler.address)
 
@@ -139,7 +146,6 @@ describe('Crowdfund', function () {
 
 		// Initiate a fund used in tests below
 		await crowdfund.initiateCrowdfund(crowdfundInput, { value: getBigNumber(1) })
-		console.log('after: ')
 	})
 	it('Should initiate crowdfund and submit contribution', async function () {
 		const crowdfundDetails = await crowdfund.crowdfunds(testGroupNameHash)

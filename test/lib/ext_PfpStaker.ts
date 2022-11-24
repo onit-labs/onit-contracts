@@ -46,7 +46,7 @@ describe('PFP_Staking Module', () => {
 	describe('PFP Unit Tests', () => {
 		it('deploy the extension', async () => {
 			await snapshotGasCost(
-				await (await hardhatEthers.getContractFactory('PfpStaker')).deploy(owner.address)
+				await (await hardhatEthers.getContractFactory('PfpStaker')).deploy()
 			)
 		})
 		it('revert if sender is not from address', async () => {
@@ -164,8 +164,11 @@ describe('PFP_Staking Module', () => {
 			masterForum = await hardhatEthers.getContract('ForumGroup')
 			forumFactory = await hardhatEthers.getContract('ForumFactory')
 			pfpStaker = await hardhatEthers.getContract('PfpStaker')
+			const commissionManager = await hardhatEthers.getContract('CommissionManager')
 
 			await forumFactory.connect(owner).setPfpStaker(pfpStaker.address)
+			await forumFactory.connect(owner).setCommissionManager(commissionManager.address)
+			await forumFactory.connect(owner).setForumMaster(masterForum.address)
 
 			// Deploy a forum from factory and get its address
 			const tx = await (

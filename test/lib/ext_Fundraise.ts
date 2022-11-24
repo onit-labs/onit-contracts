@@ -26,9 +26,13 @@ describe('Fundraise', function () {
 		// TODO implement non avax funding in version 2
 
 		// Similar to deploying the master forum multisig
-		await deployments.fixture(['Forum', 'ForumGroupFundraise'])
-		forum = await hardhatEthers.getContract('ForumGroup')
+		await deployments.fixture(['ForumGroupFundraise'])
 		fundraise = await hardhatEthers.getContract('ForumGroupFundraise')
+
+		// Use seperate fixture to save 'init()' error
+		forum = (await (
+			await hardhatEthers.getContractFactory('ForumGroup')
+		).deploy()) as ForumGroup
 
 		await forum.init(
 			'FORUM',
@@ -59,11 +63,6 @@ describe('Fundraise', function () {
 			.submitFundContribution(forum.address, { value: getBigNumber(50) })
 
 		const deets = await fundraise.getFund(forum.address)
-
-		console.log(deets.individualContribution.toString())
-		console.log(deets.contributors)
-		console.log(deets.valueNumerator.toString())
-		console.log(deets.valueDenominator.toString())
 
 		// Check state after second contribution
 		expect((await fundraise.getFund(forum.address)).contributors.length).to.equal(2)
