@@ -32,7 +32,7 @@ import { beforeEach, describe, it } from 'mocha'
 ///			 set to [proposer.address]. This is to simplify minting tokens for that address since
 ///			 the mintShares function is modified with onlyExtension.
 
-describe('Forum Multisig Setup and Functions', function () {
+describe('Forum Multisig  Setup and Functions', function () {
 	// let Forum: any // ForumGroup contract
 	let forum: ForumGroup // ForumGroup contract instance
 	let owner: SignerWithAddress // signer
@@ -43,6 +43,9 @@ describe('Forum Multisig Setup and Functions', function () {
 
 	beforeEach(async () => {
 		;[owner, proposer, alice, bob] = await hardhatEthers.getSigners()
+
+		// TODO this is very slow, should find workaround for Initilized() error
+		await hardhatEthers.provider.send('hardhat_reset', [])
 
 		// Similar to deploying the master forum multisig
 		await deployments.fixture(['Forum'])
@@ -174,6 +177,7 @@ describe('Forum Multisig Setup and Functions', function () {
 	})
 
 	describe('Proposals', function () {
+		// ! consider this check
 		it("Should revert if proposal arrays don't match", async function () {
 			await forum.init(
 				'FORUM',
@@ -319,6 +323,7 @@ describe('Forum Multisig Setup and Functions', function () {
 				'SignatureError()'
 			)
 		})
+		// ! consider this
 		it.skip('Should forbid voting after period ends - skipped, no hard deadline, instead encourage deletion of old proposals', async function () {
 			await forum.init(
 				'FORUM',

@@ -5,14 +5,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deployer } = await hre.getNamedAccounts()
 	const { deterministic } = hre.deployments
 
-	const deterministicDeployment = await deterministic('PfpStaker', {
-		contract: 'PfpStaker',
+	const deterministicDeployment = await deterministic('CommissionManager', {
+		contract: 'CommissionManager',
 		from: deployer,
-<<<<<<< HEAD:deploy/run/deploy-ext-pfp.ts
-		args: [],
-=======
 		args: [deployer],
->>>>>>> main:deploy/run/12_deploy_ext_pfp.ts
 		log: true,
 		autoMine: true, // speed up deployment on local network (ganache, hardhat), no effect on live networks
 		maxFeePerGas: hre.ethers.BigNumber.from('95000000000'),
@@ -22,5 +18,5 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	await deterministicDeployment.deploy()
 }
 export default func
-func.id = 'deploy_PFP_Staker' // id required to prevent reexecution
-func.tags = ['PfpStaker', 'Extensions', 'Forum']
+func.id = 'deploy_ExecutionManager' // id required to prevent reexecution
+func.tags = ['CommissionManager', 'Forum']
