@@ -1,14 +1,15 @@
-import { ForumFactory, ForumGroup } from '../../typechain'
+import { CommissionManager, ForumFactory, ForumGroup } from '../../typechain'
 import { ZERO_ADDRESS } from '../config'
 
 import { ContractTransaction } from '@ethersproject/contracts'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { expect } from 'chai'
-import { ethers as hardhatEthers } from 'hardhat'
+import { ethers as hardhatEthers, deployments } from 'hardhat'
 import { beforeEach, describe, it } from 'mocha'
 
 let forumContract: ForumGroup
 let forumFactory: ForumFactory
+let commissionManager: CommissionManager
 let forumStandaloneGas: string
 let tableProxyGas: string
 
@@ -27,16 +28,15 @@ describe('Forum Factory', function () {
 	beforeEach(async function () {
 		;[owner, wallet, alice, bob, relay] = await hardhatEthers.getSigners()
 
-		// Deploy master ForumGroup
-		forumContract = (await (
-			await hardhatEthers.getContractFactory('ForumGroup')
-		).deploy()) as ForumGroup
+		// Similar to deploying the master forum multisig
+		await deployments.fixture(['Forum'])
+		forumContract = await hardhatEthers.getContract('ForumGroup')
+		forumFactory = await hardhatEthers.getContract('ForumFactory')
+		commissionManager = await hardhatEthers.getContract('CommissionManager')
 
-		// Deploy the Forum Factory
-		// We can use ZERO_ADDRESS for execution manager in these tests since we don't test any transaction executions here
-		forumFactory = (await (
-			await hardhatEthers.getContractFactory('ForumFactory')
-		).deploy(owner.address, forumContract.address, ZERO_ADDRESS)) as ForumFactory
+		// Set commission manager and master forum
+		await forumFactory.setCommissionManager(commissionManager.address)
+		await forumFactory.setForumMaster(forumContract.address)
 	})
 
 	it('Should deploy master forumContract', async function () {
@@ -48,9 +48,7 @@ describe('Forum Factory', function () {
 	})
 	// We can use ZERO_ADDRESS for execution manager in these tests since we don't test any transaction executions here
 	it('Should deploy forumFactory contract', async function () {
-		await (
-			await hardhatEthers.getContractFactory('ForumFactory')
-		).deploy(owner.address, forumContract.address, ZERO_ADDRESS)
+		await (await hardhatEthers.getContractFactory('ForumFactory')).deploy(owner.address)
 		expect(forumFactory.address).not.equal(0x0)
 	})
 	// eslint-disable-next-line jest/expect-expect

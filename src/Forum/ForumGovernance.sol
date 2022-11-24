@@ -50,8 +50,6 @@ abstract contract ForumGovernance {
 
 	error InvalidDelegate();
 
-	error InvalidSignature();
-
 	error Uint32max();
 
 	error Uint96max();
@@ -105,7 +103,7 @@ abstract contract ForumGovernance {
 	uint256 public memberCount;
 
 	// All delegators for a member -> default case is an empty array
-	mapping(address => EnumerableSet.AddressSet) memberDelegators;
+	mapping(address => EnumerableSet.AddressSet) internal memberDelegators;
 	// The current delegate of a member -> default is no delegation, ie address(0)
 	mapping(address => address) public memberDelegatee;
 
@@ -128,7 +126,6 @@ abstract contract ForumGovernance {
 
 		INITIAL_DOMAIN_SEPARATOR = _computeDomainSeparator();
 
-		// Voters limited to 12 by a check in the factory
 		unchecked {
 			uint256 votersLen = members_.length;
 
@@ -221,18 +218,21 @@ abstract contract ForumGovernance {
 		require(
 			to.code.length == 0
 				? to != address(0)
-				: ERC1155TokenReceiver(to).onERC1155BatchReceived(msg.sender, from, ids, amounts, data) ==
-					ERC1155TokenReceiver.onERC1155BatchReceived.selector,
+				: ERC1155TokenReceiver(to).onERC1155BatchReceived(
+					msg.sender,
+					from,
+					ids,
+					amounts,
+					data
+				) == ERC1155TokenReceiver.onERC1155BatchReceived.selector,
 			'UNSAFE_RECIPIENT'
 		);
 	}
 
-	function balanceOfBatch(address[] memory owners, uint256[] memory ids)
-		public
-		view
-		virtual
-		returns (uint256[] memory balances)
-	{
+	function balanceOfBatch(
+		address[] memory owners,
+		uint256[] memory ids
+	) public view virtual returns (uint256[] memory balances) {
 		uint256 ownersLength = owners.length; // Saves MLOADs.
 
 		require(ownersLength == ids.length, 'LENGTH_MISMATCH');
@@ -253,7 +253,10 @@ abstract contract ForumGovernance {
 	/// ----------------------------------------------------------------------------------------
 
 	function DOMAIN_SEPARATOR() public view virtual returns (bytes32) {
-		return block.chainid == INITIAL_CHAIN_ID ? INITIAL_DOMAIN_SEPARATOR : _computeDomainSeparator();
+		return
+			block.chainid == INITIAL_CHAIN_ID
+				? INITIAL_DOMAIN_SEPARATOR
+				: _computeDomainSeparator();
 	}
 
 	function _computeDomainSeparator() internal view virtual returns (bytes32) {
@@ -367,12 +370,7 @@ abstract contract ForumGovernance {
 	///						INTERNAL MINT/BURN  LOGIC
 	/// ----------------------------------------------------------------------------------------
 
-	function _mint(
-		address to,
-		uint256 id,
-		uint256 amount,
-		bytes memory data
-	) internal {
+	function _mint(address to, uint256 id, uint256 amount, bytes memory data) internal {
 		// Cannot overflow because the sum of all user
 		// balances can't exceed the max uint256 value
 		unchecked {
@@ -394,8 +392,13 @@ abstract contract ForumGovernance {
 		require(
 			to.code.length == 0
 				? to != address(0)
-				: ERC1155TokenReceiver(to).onERC1155Received(msg.sender, address(0), id, amount, data) ==
-					ERC1155TokenReceiver.onERC1155Received.selector,
+				: ERC1155TokenReceiver(to).onERC1155Received(
+					msg.sender,
+					address(0),
+					id,
+					amount,
+					data
+				) == ERC1155TokenReceiver.onERC1155Received.selector,
 			'UNSAFE_RECIPIENT'
 		);
 	}
@@ -446,11 +449,7 @@ abstract contract ForumGovernance {
 		);
 	}
 
-	function _batchBurn(
-		address from,
-		uint256[] memory ids,
-		uint256[] memory amounts
-	) internal {
+	function _batchBurn(address from, uint256[] memory ids, uint256[] memory amounts) internal {
 		uint256 idsLength = ids.length; // Saves MLOADs.
 
 		require(idsLength == amounts.length, 'LENGTH_MISMATCH');
@@ -482,18 +481,16 @@ abstract contract ForumGovernance {
 		emit TransferBatch(msg.sender, from, address(0), ids, amounts);
 	}
 
-	function _burn(
-		address from,
-		uint256 id,
-		uint256 amount
-	) internal {
+	function _burn(address from, uint256 id, uint256 amount) internal {
 		balanceOf[from][id] -= amount;
 
 		// If membership token is being updated, update member count
 		if (id == MEMBERSHIP) {
 			// Member can not leave while delegating / being delegated to
-			if (memberDelegatee[from] != address(0) || EnumerableSet.length(memberDelegators[from]) > 0)
-				revert InvalidDelegate();
+			if (
+				memberDelegatee[from] != address(0) ||
+				EnumerableSet.length(memberDelegators[from]) > 0
+			) revert InvalidDelegate();
 
 			--memberCount;
 		}

@@ -7,7 +7,7 @@ typechain/factories
 #Hardhat files
 cache
 artifacts
-typechain
+typechain/
 
 #Foundry files
 out

@@ -5,13 +5,13 @@ import { voteProposal } from '../utils/voteProposal'
 
 import { COMMISSION_BASED_FUNCTIONS, COMMISSION_FREE_FUNCTIONS } from '../../config'
 import {
-	AccessManager,
-	ExecutionManager,
+	CommissionManager,
 	ForumFactory,
-	ForumGroupV2,
+	ForumGroup,
 	JoepegsProposalHandler,
+	MockJoepegsExchange,
 	PfpStaker,
-	ShieldManager
+	ERC721Test
 } from '../../typechain'
 import { CALL, ZERO_ADDRESS } from '../config'
 
@@ -20,37 +20,44 @@ import { expect } from 'chai'
 import { deployments, ethers as hardhatEthers } from 'hardhat'
 import { beforeEach, describe, it } from 'mocha'
 
-describe('Extension Manager', function () {
+describe('Commission Manager', function () {
 	let owner: SignerWithAddress
 	let wallet: SignerWithAddress
 	let alice: SignerWithAddress
 	let bob: SignerWithAddress
 	let testAddress1: SignerWithAddress
 	let testAddress2: SignerWithAddress
-	let shieldManager: ShieldManager
-	let accessManager: AccessManager
-	let pfpStaker: PfpStaker
-	let forum: ForumGroupV2
-	let executionManager: ExecutionManager
+	let forum: ForumGroup
+	let executionManager: CommissionManager
 	let joepegsHandler: JoepegsProposalHandler
+	let joepegsMarket: MockJoepegsExchange
+	let test721: ERC721Test // ERC721Test contract instance
 
 	beforeEach(async function () {
 		;[owner, wallet, alice, bob, testAddress1, testAddress2] = await hardhatEthers.getSigners()
 
 		await deployments.fixture(['Forum', 'Shields'])
-		forum = await hardhatEthers.getContract('ForumGroupV2')
-		executionManager = await hardhatEthers.getContract('ExecutionManager')
+		forum = await hardhatEthers.getContract('ForumGroup')
+		executionManager = await hardhatEthers.getContract('CommissionManager')
 		joepegsHandler = await hardhatEthers.getContract('JoepegsProposalHandler')
-		shieldManager = await hardhatEthers.getContract('ShieldManager')
+
+		// Test erc721, deploy a test 721 contract and mint a token for founder
+		test721 = (await (
+			await hardhatEthers.getContractFactory('ERC721Test')
+		).deploy('test', 'test')) as ERC721Test
 	})
 
 	describe('general execution manager functions', function () {
 		it('should revert if non owner attempts to add a proposalHandler, or unset baseCommission', async function () {
 			await expect(
-				executionManager.connect(bob).addProposalHandler(testAddress1.address, testAddress2.address)
+				executionManager
+					.connect(bob)
+					.addProposalHandler(testAddress1.address, testAddress2.address)
 			).revertedWith('UNAUTHORIZED')
 
-			await expect(executionManager.connect(bob).setBaseCommission(0)).revertedWith('UNAUTHORIZED')
+			await expect(executionManager.connect(bob).setBaseCommission(0)).revertedWith(
+				'UNAUTHORIZED'
+			)
 		})
 		it('should allow owner to add a proposalHandler, then unset baseCommission', async function () {
 			await executionManager.addProposalHandler(testAddress1.address, testAddress2.address)
@@ -64,13 +71,12 @@ describe('Extension Manager', function () {
 		it('should take base commission if set, and not if unset', async function () {
 			//reset restricted mode from last test, expect commission to be >0
 			await executionManager.setBaseCommission(1)
-			console.log(await executionManager.manageExecution(testAddress2.address, 1, '0x00'))
 
-			expect(await executionManager.manageExecution(testAddress2.address, 1, '0x00')).gt(0)
+			expect(await executionManager.manageCommission(testAddress2.address, 1, '0x00')).gt(0)
 
 			//unset restricted mode, expect 0 commission
 			await executionManager.setBaseCommission(0)
-			expect(await executionManager.manageExecution(testAddress2.address, 1, '0x00')).eq(0)
+			expect(await executionManager.manageCommission(testAddress2.address, 1, '0x00')).eq(0)
 		})
 	})
 	describe('joepegs handler', function () {
@@ -80,11 +86,11 @@ describe('Extension Manager', function () {
 
 			// Deploy mock joepegs
 			const JoepegsMarket = await hardhatEthers.getContractFactory('MockJoepegsExchange')
-			const joepegsMarket = await JoepegsMarket.deploy()
+			joepegsMarket = (await JoepegsMarket.deploy(test721.address)) as MockJoepegsExchange
 
 			// Deploy execution manager which will format proposals to specific contracts to extract commission
-			const ExecutionManager = await hardhatEthers.getContractFactory('ExecutionManager')
-			const executionManager = await ExecutionManager.deploy(sender.address)
+			const CommissionManager = await hardhatEthers.getContractFactory('CommissionManager')
+			const executionManager = await CommissionManager.deploy(sender.address)
 
 			// Set the handler in the execution manager
 			await executionManager.addProposalHandler(joepegsMarket.address, joepegsHandler.address)
@@ -115,14 +121,13 @@ describe('Extension Manager', function () {
 
 			const payloadWithNoCommissionFunctionSelector =
 				COMMISSION_FREE_FUNCTIONS[0] + payload.substring(2)
-			console.log({ payloadWithNoCommissionFunctionSelector })
 
 			expect(await hardhatEthers.provider.getBalance(executionManager.address)).equal(0)
 			// Propose + process the taker order
 			await processProposal(forum, [sender], 1, {
 				type: CALL,
 				accounts: [joepegsMarket.address],
-				amounts: [getBigNumber(0)],
+				amounts: [0],
 				payloads: [payloadWithNoCommissionFunctionSelector]
 			})
 
@@ -147,14 +152,7 @@ describe('Extension Manager', function () {
 	})
 })
 
-const testTakerOrder = [
-	false,
-	ZERO_ADDRESS,
-	getBigNumber(1),
-	getBigNumber(1),
-	getBigNumber(9000),
-	'0x00'
-]
+const testTakerOrder = [false, ZERO_ADDRESS, getBigNumber(1), 1, getBigNumber(9000), '0x00']
 
 const testMakerOrder = [
 	false,
