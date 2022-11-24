@@ -740,7 +740,8 @@ describe.only('Forum Multisig Setup and Functions', function () {
 			// console.log(await forum.balanceOf(sender.address))
 			// console.log(await forum.balanceOf(receiver.address))
 		})
-		it.skip('Should not allow a member to transfer excess shares', async function () {
+		// Reverting which is expected, but can catch error in hardhat - checked on fuji
+		it.skip('Should not allow a member to transfer excess shares - checked on fuji', async function () {
 			await expect(
 				forum
 					.connect(receiver)
@@ -765,8 +766,8 @@ describe.only('Forum Multisig Setup and Functions', function () {
 			expect(await forum.balanceOf(sender.address, TOKEN)).equal(getBigNumber(0))
 			expect(await forum.balanceOf(receiver.address, TOKEN)).equal(getBigNumber(20))
 		})
-		// Reverting which is expected, but can catch error in hardhat - check in fuji
-		it.skip('Should not allow an account to transfer (safeTransferFrom) beyond approval', async function () {
+		// Reverting which is expected, but can catch error in hardhat - checked on fuji
+		it.skip('Should not allow an account to transfer (safeTransferFrom) beyond approval - checked on fuji', async function () {
 			await forum.setApprovalForAll(receiver.address, true)
 			await expect(
 				await forum
