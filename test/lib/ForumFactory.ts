@@ -1,4 +1,4 @@
-import { ForumFactory, ForumGroup } from '../../typechain'
+import { CommissionManager, ForumFactory, ForumGroup } from '../../typechain'
 import { ZERO_ADDRESS } from '../config'
 
 import { ContractTransaction } from '@ethersproject/contracts'
@@ -9,6 +9,7 @@ import { beforeEach, describe, it } from 'mocha'
 
 let forumContract: ForumGroup
 let forumFactory: ForumFactory
+let commissionManager: CommissionManager
 let forumStandaloneGas: string
 let tableProxyGas: string
 
@@ -31,6 +32,11 @@ describe('Forum Factory', function () {
 		await deployments.fixture(['Forum'])
 		forumContract = await hardhatEthers.getContract('ForumGroup')
 		forumFactory = await hardhatEthers.getContract('ForumFactory')
+		commissionManager = await hardhatEthers.getContract('CommissionManager')
+
+		// Set commission manager and master forum
+		await forumFactory.setCommissionManager(commissionManager.address)
+		await forumFactory.setForumMaster(forumContract.address)
 	})
 
 	it('Should deploy master forumContract', async function () {

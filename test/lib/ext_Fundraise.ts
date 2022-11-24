@@ -30,10 +30,6 @@ describe('Fundraise', function () {
 		forum = await hardhatEthers.getContract('ForumGroup')
 		fundraise = await hardhatEthers.getContract('ForumGroupFundraise')
 
-		// fundraise = (await (
-		// 	await hardhatEthers.getContractFactory('ForumGroupFundraise')
-		// ).deploy()) as ForumGroupFundraise
-
 		await forum.init(
 			'FORUM',
 			'FORUM',

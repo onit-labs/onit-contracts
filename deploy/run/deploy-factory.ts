@@ -1,12 +1,13 @@
 import { DeployFunction } from 'hardhat-deploy/types'
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
+import { ForumFactory, ForumGroup } from '../../typechain'
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deployer } = await hre.getNamedAccounts()
 	const { deterministic } = hre.deployments
 
-	const ForumGroup = await hre.ethers.getContract('ForumGroup')
-	const CommissionManager = await hre.ethers.getContract('CommissionManager')
+	// const ForumGroup = await hre.ethers.getContract('ForumGroup')
+	// const CommissionManager = await hre.ethers.getContract('CommissionManager')
 
 	const deterministicDeployment = await deterministic('ForumFactory', {
 		contract: 'ForumFactory',
@@ -18,12 +19,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		maxPriorityFeePerGas: hre.ethers.BigNumber.from('1')
 	})
 
-	// Set the ForumGroup and CommissionManager addresses
-	const factoryDeploy = await deterministicDeployment.deploy()
-	const factory = await hre.ethers.getContractAt('ForumFactory', factoryDeploy.address)
-
-	await factory.setForumMaster(ForumGroup.address)
-	await factory.setCommissionManager(CommissionManager.address)
+	await deterministicDeployment.deploy()
 }
 
 export default func
