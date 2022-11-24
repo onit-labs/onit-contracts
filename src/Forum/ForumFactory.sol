@@ -30,18 +30,14 @@ contract ForumFactory is Multicall, Owned {
 
 	address public forumMaster;
 	address public fundraiseExtension;
-	address public executionManager;
+	address public commissionManager;
 	address public pfpStaker;
 
 	/// ----------------------------------------------------------------------------------------
 	/// Constructor
 	/// ----------------------------------------------------------------------------------------
 
-	constructor(address deployer, address forumMaster_, address executionManager_) Owned(deployer) {
-		forumMaster = forumMaster_;
-
-		executionManager = executionManager_;
-	}
+	constructor(address deployer) Owned(deployer) {}
 
 	/// ----------------------------------------------------------------------------------------
 	/// Owner Interface
@@ -59,8 +55,8 @@ contract ForumFactory is Multicall, Owned {
 		fundraiseExtension = fundraiseExtension_;
 	}
 
-	function setExecutionManager(address executionManager_) external onlyOwner {
-		executionManager = executionManager_;
+	function setCommissionManager(address commissionManager_) external onlyOwner {
+		commissionManager = commissionManager_;
 	}
 
 	/// ----------------------------------------------------------------------------------------
@@ -84,7 +80,7 @@ contract ForumFactory is Multicall, Owned {
 		// Set the base Forum extensions
 		(initialExtensions[0], initialExtensions[1], initialExtensions[2]) = (
 			pfpStaker,
-			executionManager,
+			commissionManager,
 			fundraiseExtension
 		);
 
