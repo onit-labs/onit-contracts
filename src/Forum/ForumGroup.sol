@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.13;
 
-import {ForumGovernance} from './ForumGovernance.sol';
+import {ForumGovernance, EnumerableSet} from './ForumGovernance.sol';
 
 import {Multicall} from '../utils/Multicall.sol';
 import {NFTreceiver} from '../utils/NFTreceiver.sol';
@@ -13,10 +13,6 @@ import {IForumGroupExtension} from '../interfaces/IForumGroupExtension.sol';
 import {IPfpStaker} from '../interfaces/IPfpStaker.sol';
 import {IERC1271} from '../interfaces/IERC1271.sol';
 import {ICommissionManager} from '../interfaces/ICommissionManager.sol';
-
-import {EnumerableSet} from '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
-
-import 'hardhat/console.sol';
 
 /**
  * @title ForumGroup
@@ -67,8 +63,6 @@ contract ForumGroup is
 	error NoArrayParity();
 
 	error NotCurrentProposal();
-
-	error VotingNotEnded();
 
 	error NotExtension();
 
@@ -204,7 +198,7 @@ contract ForumGroup is
 		address[] calldata accounts,
 		uint256[] calldata amounts,
 		bytes[] calldata payloads
-	) public virtual nonReentrant returns (uint256 proposal) {
+	) public payable virtual nonReentrant returns (uint256 proposal) {
 		if (accounts.length != amounts.length || amounts.length != payloads.length)
 			revert NoArrayParity();
 
@@ -255,14 +249,12 @@ contract ForumGroup is
 	function processProposal(
 		uint256 proposal,
 		Signature[] calldata signatures
-	) public virtual nonReentrant returns (bool didProposalPass, bytes[] memory results) {
+	) public payable virtual nonReentrant returns (bool didProposalPass, bytes[] memory results) {
 		Proposal storage prop = proposals[proposal];
 
 		VoteType voteType = proposalVoteTypes[prop.proposalType];
 
 		if (prop.creationTime == 0) revert NotCurrentProposal();
-
-		// ! need to consider voting period here as grace period has been removed
 
 		uint256 votes;
 
@@ -289,24 +281,29 @@ contract ForumGroup is
 
 			// If not a member, or the signer is out of order (used to prevent duplicates), revert
 			if (balanceOf[recoveredSigner][MEMBERSHIP] == 0 || prevSigner >= recoveredSigner)
-				revert InvalidSignature();
+				revert SignatureError();
 
-			// If member vote we increment by 1 (for the signer) + the number of members who have delegated to the signer
-			if (voteType == VoteType.MEMBER)
-				votes += 1 + EnumerableSet.length(memberDelegators[recoveredSigner]); // Else we calculate the number of votes based on share of the treasury
-			else {
-				uint256 len = EnumerableSet.length(memberDelegators[recoveredSigner]);
-				// Add the number of votes the signer holds
-				votes += balanceOf[recoveredSigner][TOKEN];
-				// If the signer has been delegated too,check the balances of anyone who has delegated to the current signer
-				if (len != 0)
-					for (uint256 j; j < len; ) {
-						votes += balanceOf[EnumerableSet.at(memberDelegators[recoveredSigner], j)][
-							TOKEN
-						];
-						++j;
-					}
+			// If the signer has not delegated their vote, we count, otherwise we skip
+			if (memberDelegatee[recoveredSigner] == address(0)) {
+				// If member vote we increment by 1 (for the signer) + the number of members who have delegated to the signer
+				// Else we calculate the number of votes based on share of the treasury
+				if (voteType == VoteType.MEMBER)
+					votes += 1 + EnumerableSet.length(memberDelegators[recoveredSigner]);
+				else {
+					uint256 len = EnumerableSet.length(memberDelegators[recoveredSigner]);
+					// Add the number of votes the signer holds
+					votes += balanceOf[recoveredSigner][TOKEN];
+					// If the signer has been delegated too,check the balances of anyone who has delegated to the current signer
+					if (len != 0)
+						for (uint256 j; j < len; ) {
+							votes += balanceOf[
+								EnumerableSet.at(memberDelegators[recoveredSigner], j)
+							][TOKEN];
+							++j;
+						}
+				}
 			}
+
 			++i;
 			prevSigner = recoveredSigner;
 		}
@@ -482,11 +479,19 @@ contract ForumGroup is
 		}
 	}
 
-	function mintShares(address to, uint256 id, uint256 amount) public virtual onlyExtension {
+	function mintShares(
+		address to,
+		uint256 id,
+		uint256 amount
+	) public payable virtual onlyExtension {
 		_mint(to, id, amount, '');
 	}
 
-	function burnShares(address from, uint256 id, uint256 amount) public virtual onlyExtension {
+	function burnShares(
+		address from,
+		uint256 id,
+		uint256 amount
+	) public payable virtual onlyExtension {
 		_burn(from, id, amount);
 	}
 
