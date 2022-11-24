@@ -1,5 +1,3 @@
-import { ZERO_ADDRESS } from '../../config'
-
 import { DeployFunction } from 'hardhat-deploy/types'
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 
@@ -10,7 +8,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const deterministicDeployment = await deterministic('PfpStaker', {
 		contract: 'PfpStaker',
 		from: deployer,
-		args: [deployer],
+		args: [],
 		log: true,
 		autoMine: true, // speed up deployment on local network (ganache, hardhat), no effect on live networks
 		maxFeePerGas: hre.ethers.BigNumber.from('95000000000'),
