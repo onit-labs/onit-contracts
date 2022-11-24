@@ -11,15 +11,21 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const deterministicDeployment = await deterministic('ForumFactory', {
 		contract: 'ForumFactory',
 		from: deployer,
-		args: [deployer, ForumGroup.address, CommissionManager.address],
+		args: [deployer],
 		log: true,
 		autoMine: true, // speed up deployment on local network (ganache, hardhat), no effect on live networks
 		maxFeePerGas: hre.ethers.BigNumber.from('95000000000'),
 		maxPriorityFeePerGas: hre.ethers.BigNumber.from('1')
 	})
 
-	await deterministicDeployment.deploy()
+	// Set the ForumGroup and CommissionManager addresses
+	const factoryDeploy = await deterministicDeployment.deploy()
+	const factory = await hre.ethers.getContractAt('ForumFactory', factoryDeploy.address)
+
+	await factory.setForumMaster(ForumGroup.address)
+	await factory.setCommissionManager(CommissionManager.address)
 }
+
 export default func
 func.id = 'deploy_ForumFactory' // id required to prevent reexecution
 func.tags = ['ForumFactory', 'Multisig', 'Forum']
