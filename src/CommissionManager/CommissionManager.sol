@@ -19,8 +19,6 @@ contract CommissionManager is ICommissionManager, Owned {
 
 	error TransferFailed();
 
-	error UnapprovedContract();
-
 	event ProposalHandlerUpdated(
 		address indexed handledAddress,
 		address indexed newProposalHandler
@@ -28,22 +26,12 @@ contract CommissionManager is ICommissionManager, Owned {
 
 	event ProposalHandlerAdded(address indexed newHandledAddress, address indexed proposalHandler);
 
-	event BaseCommissionToggled(uint256 indexed newBaseCommission);
-
-	event NonCommissionContracts(address contractAddress, bool newCommissionSetting);
-
 	/// ----------------------------------------------------------------------------------------
 	///							CommissionManager Storage
 	/// ----------------------------------------------------------------------------------------
 
-	/// @notice If equal to 1 then only certain contracts can be called
-	uint256 public baseCommission = 1;
-
 	/// @notice Each proposalHandler is an address with logic to extract the details of the proposal to take commission fees from.
 	mapping(address => address) public proposalHandlers;
-
-	/// @notice A set of contracts for which no commission is taken
-	mapping(address => bool) public nonCommissionContracts;
 
 	/// ----------------------------------------------------------------------------------------
 	///							Constructor
@@ -60,10 +48,10 @@ contract CommissionManager is ICommissionManager, Owned {
 	 * @param newHandledAddress address of contract to handle proposals for
 	 * @param proposalHandler address of the proposalHandler
 	 */
-	function addProposalHandler(address newHandledAddress, address proposalHandler)
-		external
-		onlyOwner
-	{
+	function addProposalHandler(
+		address newHandledAddress,
+		address proposalHandler
+	) external onlyOwner {
 		proposalHandlers[newHandledAddress] = proposalHandler;
 		emit ProposalHandlerAdded(newHandledAddress, proposalHandler);
 	}
@@ -73,37 +61,13 @@ contract CommissionManager is ICommissionManager, Owned {
 	 * @param handledAddress address of the contract which we handle proposals for
 	 * @param newProposalHandler address of the updated handler
 	 */
-	function updateProposalHandler(address handledAddress, address newProposalHandler)
-		external
-		onlyOwner
-	{
+	function updateProposalHandler(
+		address handledAddress,
+		address newProposalHandler
+	) external onlyOwner {
 		proposalHandlers[handledAddress] = newProposalHandler;
 
 		emit ProposalHandlerUpdated(handledAddress, newProposalHandler);
-	}
-
-	/**
-	 * @notice Change the baseCommission setting
-	 * @param _baseCommission new base commission setting, used for non configured contracts (1 = on, 0 = off)
-	 */
-	function setBaseCommission(uint256 _baseCommission) external onlyOwner {
-		baseCommission = _baseCommission;
-
-		emit BaseCommissionToggled(_baseCommission);
-	}
-
-	/**
-	 * @notice Add/Remove a non-commission contract
-	 * @param nonCommissionContract address of contract to not charge commission on
-	 */
-	function toggleNonCommissionContract(address nonCommissionContract) external onlyOwner {
-		nonCommissionContracts[nonCommissionContract] = !nonCommissionContracts[
-			nonCommissionContract
-		];
-		emit NonCommissionContracts(
-			nonCommissionContract,
-			nonCommissionContracts[nonCommissionContract]
-		);
 	}
 
 	/**
@@ -141,12 +105,6 @@ contract CommissionManager is ICommissionManager, Owned {
 		// If the target has a handler, use it
 		if (proposalHandlers[target] != address(0))
 			return IProposalHandler(proposalHandlers[target]).handleProposal(value, payload);
-
-		// If baseCommission is off or the target is nonCommission return 0,
-		if (baseCommission == 0 || nonCommissionContracts[target]) return 0;
-
-		// else revert
-		if (baseCommission == 1) return gasleft();
 	}
 
 	receive() external payable virtual {}
