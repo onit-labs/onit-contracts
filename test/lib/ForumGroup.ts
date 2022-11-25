@@ -620,9 +620,6 @@ describe('Forum Multisig  Setup and Functions', function () {
 			const CommissionManager = await hardhatEthers.getContractFactory('CommissionManager')
 			const executionManager = await CommissionManager.deploy(proposer.address)
 
-			// Set the handler in the execution manager
-			await executionManager.connect(proposer).toggleNonCommissionContract(test721.address)
-
 			let payload = test721.interface.encodeFunctionData('mint', [alice.address, 1])
 			await forum.init(
 				'FORUM',
@@ -671,10 +668,6 @@ describe('Forum Multisig  Setup and Functions', function () {
 				1,
 				getBigNumber(5)
 			])
-
-			// Set the handler in the execution manager for both targets
-			await executionManager.connect(proposer).toggleNonCommissionContract(test721.address)
-			await executionManager.connect(proposer).toggleNonCommissionContract(test1155.address)
 
 			await processProposal(forum, [proposer], 1, {
 				type: CALL,
