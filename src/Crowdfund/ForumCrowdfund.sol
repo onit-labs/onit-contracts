@@ -98,9 +98,9 @@ contract ForumCrowdfund is ReentrancyGuard, Owned, NFTreceiver {
 		emit CommissionSet(_commission);
 	}
 
-	/// -----------------------------------------------------------------------
-	/// Fundraise Logic
-	/// -----------------------------------------------------------------------
+	/// ----------------------------------------------------------------------------------------
+	///							Crowdfund Interface
+	/// ----------------------------------------------------------------------------------------
 
 	/**
 	 * @notice Initiate a crowdfund to buy an asset
@@ -166,9 +166,9 @@ contract ForumCrowdfund is ReentrancyGuard, Owned, NFTreceiver {
 			}
 		}
 
-		delete crowdfunds[groupNameHash];
-
 		emit Cancelled(fund.parameters.groupName);
+
+		delete crowdfunds[groupNameHash];
 	}
 
 	/**
