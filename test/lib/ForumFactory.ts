@@ -59,8 +59,8 @@ describe('Forum Factory', function () {
 				.deployGroup(
 					'testTable',
 					'T',
-					['0xfF626F22D92506b74eeC6ccb15412E5a9D6A592D'],
 					[30, 12, 50, 60],
+					['0xfF626F22D92506b74eeC6ccb15412E5a9D6A592D'],
 					[],
 					{ value: 0 }
 				)
@@ -74,7 +74,7 @@ describe('Forum Factory', function () {
 		await expect(
 			forumFactory
 				.connect(wallet)
-				.deployGroup('testTable', 'T', beyondMemberLimit101, [60, 100, 50, 60], [], {
+				.deployGroup('testTable', 'T', [60, 100, 50, 60], beyondMemberLimit101, [], {
 					value: 0
 				})
 		).revertedWith('MemberLimitExceeded()')
@@ -85,8 +85,8 @@ describe('Forum Factory', function () {
 			.deployGroup(
 				'testTable',
 				'T',
-				['0xfF626F22D92506b74eeC6ccb15412E5a9D6A592D'],
 				[30, 12, 50, 60],
+				['0xfF626F22D92506b74eeC6ccb15412E5a9D6A592D'],
 				[],
 				{ value: 0 }
 			)

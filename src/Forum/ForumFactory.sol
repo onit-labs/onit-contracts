@@ -66,8 +66,8 @@ contract ForumFactory is Multicall, Owned {
 	function deployGroup(
 		string calldata name_,
 		string calldata symbol_,
-		address[] calldata voters_,
 		uint32[4] calldata govSettings_,
+		address[] calldata voters_,
 		address[] calldata customExtensions_
 	) public payable virtual returns (ForumGroup forumGroup) {
 		if (voters_.length > 100) revert MemberLimitExceeded();

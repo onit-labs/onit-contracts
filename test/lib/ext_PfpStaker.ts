@@ -175,8 +175,8 @@ describe('PFP_Staking Module', () => {
 				await forumFactory.deployGroup(
 					'FORUM',
 					'FORUM',
-					[founder.address, alice.address],
 					[30, 12, 50, 60],
+					[founder.address, alice.address],
 					[]
 				)
 			).wait()

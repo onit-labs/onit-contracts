@@ -189,8 +189,8 @@ contract ForumCrowdfund is ReentrancyGuard, Owned, NFTreceiver {
 		IForumGroup forumGroup = IForumGroupFactory(forumFactory).deployGroup(
 			fund.parameters.groupName,
 			fund.parameters.symbol,
-			fund.contributors,
 			[uint32(3 days), uint32(100), uint32(80), uint32(80)],
+			fund.contributors,
 			customExtensions
 		);
 
