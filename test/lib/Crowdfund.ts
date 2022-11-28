@@ -10,7 +10,8 @@ import {
 	ERC721,
 	ERC721Test,
 	MockJoepegsExchange,
-	CommissionManager
+	CommissionManager,
+	ForumWithdrawal
 } from '../../typechain'
 
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
@@ -87,6 +88,7 @@ describe('Crowdfund', function () {
 	let forumFactory: ForumFactory // ForumFactory contract instance
 	let crowdfund: ForumCrowdfund // Crowdfund contract instance
 	let executionManager: CrowdfundExecutionManager // CrowdfundExecutionManager contract instance
+	let withdrawal: ForumWithdrawal // ForumWithdrawal contract instance
 	let commissionManager: CommissionManager // CrowdfundHandler contract instance
 	let joepegsHandler: JoepegsCrowdfundHandler // CrowdfundExecutionManager contract instance
 	let joepegsMarket: MockJoepegsExchange // CrowdfundExecutionManager contract instance
@@ -112,6 +114,7 @@ describe('Crowdfund', function () {
 		forum = await hardhatEthers.getContract('ForumGroup')
 		forumFactory = await hardhatEthers.getContract('ForumFactory')
 		crowdfund = await hardhatEthers.getContract('ForumCrowdfund')
+		withdrawal = await hardhatEthers.getContract('ForumWithdrawal')
 		executionManager = await hardhatEthers.getContract('CrowdfundExecutionManager')
 		commissionManager = await hardhatEthers.getContract('CommissionManager')
 		joepegsHandler = await hardhatEthers.getContract('JoepegsCrowdfundHandler')
@@ -128,7 +131,8 @@ describe('Crowdfund', function () {
 		await forumFactory.setPfpStaker(pfpStaker.address)
 		await forumFactory.setForumMaster(forum.address)
 		await forumFactory.setCommissionManager(commissionManager.address)
-		await forumFactory.setFundraiseExtension(ZERO_ADDRESS)
+		await forumFactory.setFundraiseExtension(withdrawal.address) // exact address does not matter for this test
+		await forumFactory.setWithdrawalExtension(withdrawal.address)
 		await executionManager.addExecutionHandler(joepegsMarket.address, joepegsHandler.address)
 
 		crowdfundInput = createCustomCrowdfundInput(

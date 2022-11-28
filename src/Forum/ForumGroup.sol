@@ -139,15 +139,11 @@ contract ForumGroup is
 		// Set the commissionManager - handles routing of calls and commission
 		commissionManager = extensions_[1];
 
-		// Set the fundraise extension to true - allows it to mint shares
-		extensions[extensions_[2]] = true;
-
-		if (extensions_.length > 3) {
-			// cannot realistically overflow on human timescales
-			unchecked {
-				for (uint256 i = 3; i < extensions_.length; i++) {
-					extensions[extensions_[i]] = true;
-				}
+		// Set the remaining base extensions (fundriase, withdrawal, + any custom extensions beyond that)
+		// Cannot realistically overflow on human timescales
+		unchecked {
+			for (uint256 i = 2; i < extensions_.length; i++) {
+				extensions[extensions_[i]] = true;
 			}
 		}
 

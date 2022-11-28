@@ -160,7 +160,7 @@ contract ForumCrowdfund is ReentrancyGuard, Owned, NFTreceiver {
 			// Delete the contribution in the mapping
 			delete fund.contributions[fund.contributors[i]];
 
-			// Members can only be 12
+			// Members can only be max 100
 			unchecked {
 				++i;
 			}

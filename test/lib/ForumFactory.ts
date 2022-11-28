@@ -37,6 +37,9 @@ describe('Forum Factory', function () {
 		// Set commission manager and master forum
 		await forumFactory.setCommissionManager(commissionManager.address)
 		await forumFactory.setForumMaster(forumContract.address)
+		await forumFactory.setWithdrawalExtension(relay.address) // exact address does not matter for these tests
+		await forumFactory.setFundraiseExtension(relay.address)
+		await forumFactory.setPfpStaker(relay.address)
 	})
 
 	it('Should deploy master forumContract', async function () {

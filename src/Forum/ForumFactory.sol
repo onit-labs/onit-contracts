@@ -30,6 +30,7 @@ contract ForumFactory is Multicall, Owned {
 
 	address public forumMaster;
 	address public fundraiseExtension;
+	address public withdrawalExtension;
 	address public commissionManager;
 	address public pfpStaker;
 
@@ -55,6 +56,10 @@ contract ForumFactory is Multicall, Owned {
 		fundraiseExtension = fundraiseExtension_;
 	}
 
+	function setWithdrawalExtension(address withdrawalExtension_) external onlyOwner {
+		withdrawalExtension = withdrawalExtension_;
+	}
+
 	function setCommissionManager(address commissionManager_) external onlyOwner {
 		commissionManager = commissionManager_;
 	}
@@ -75,13 +80,14 @@ contract ForumFactory is Multicall, Owned {
 		forumGroup = ForumGroup(_cloneAsMinimalProxy(forumMaster, name_));
 
 		// Create initialExtensions array of correct length. 3 Forum set extensions + customExtensions
-		address[] memory initialExtensions = new address[](3 + customExtensions_.length);
+		address[] memory initialExtensions = new address[](4 + customExtensions_.length);
 
 		// Set the base Forum extensions
-		(initialExtensions[0], initialExtensions[1], initialExtensions[2]) = (
+		(initialExtensions[0], initialExtensions[1], initialExtensions[2], initialExtensions[3]) = (
 			pfpStaker,
 			commissionManager,
-			fundraiseExtension
+			fundraiseExtension,
+			withdrawalExtension
 		);
 
 		// Set the custom extensions
