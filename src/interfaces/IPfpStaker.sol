@@ -3,14 +3,9 @@ pragma solidity ^0.8.13;
 
 // PFP allows groups to stake an NFT to use as their pfp
 interface IPfpStaker {
-	struct StakedPFP {
-		address Nftcontract;
-		uint256 tokenId;
-	}
+	function stakeNft(address, uint256) external;
 
-	function stakeNFT(address, address, uint256) external;
+	function getUri(address, string calldata) external view returns (string memory nftURI);
 
-	function getURI(address, string calldata) external view returns (string memory nftURI);
-
-	function getStakedNFT(address) external view returns (address NftContract, uint256 tokenId);
+	function getStakedNft(address) external view returns (uint256 tokenId);
 }

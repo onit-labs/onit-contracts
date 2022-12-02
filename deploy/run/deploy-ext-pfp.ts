@@ -8,7 +8,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const deterministicDeployment = await deterministic('PfpStaker', {
 		contract: 'PfpStaker',
 		from: deployer,
-		args: [],
+		args: [deployer],
 		log: true,
 		autoMine: true, // speed up deployment on local network (ganache, hardhat), no effect on live networks
 		maxFeePerGas: hre.ethers.BigNumber.from('95000000000'),

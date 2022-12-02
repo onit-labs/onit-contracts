@@ -8,8 +8,8 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { deployments, ethers, ethers as hardhatEthers } from 'hardhat'
 import { beforeEach, describe, it } from 'mocha'
 
-// TODO create a delegator util to tidy code
-describe('PFP_Staking Module', () => {
+// Skipped as PfpStaker updated and tests moving to foundry
+describe.skip('PFP_Staking Module', () => {
 	let forum: ForumGroup
 	let pfpStaker: PfpStaker
 	let test721: ERC721Test
