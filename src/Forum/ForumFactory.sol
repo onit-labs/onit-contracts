@@ -79,7 +79,7 @@ contract ForumFactory is Multicall, Owned {
 
 		forumGroup = ForumGroup(_cloneAsMinimalProxy(forumMaster, name_));
 
-		// Create initialExtensions array of correct length. 3 Forum set extensions + customExtensions
+		// Create initialExtensions array of correct length. 4 Forum set extensions + customExtensions
 		address[] memory initialExtensions = new address[](4 + customExtensions_.length);
 
 		// Set the base Forum extensions
@@ -96,7 +96,7 @@ contract ForumFactory is Multicall, Owned {
 			unchecked {
 				for (uint256 i = 0; i < customExtensions_.length; i++) {
 					// +3 offsets the base Forum extensions
-					initialExtensions[i + 3] = customExtensions_[i];
+					initialExtensions[i + 4] = customExtensions_[i];
 				}
 			}
 		}
