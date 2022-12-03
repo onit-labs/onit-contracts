@@ -5,7 +5,7 @@ pragma solidity ^0.8.13;
 interface IPfpStaker {
 	function stakeNft(address, uint256) external;
 
-	function getUri(address, string calldata) external view returns (string memory nftURI);
+	function getUri(address, string calldata, uint256) external view returns (string memory nftURI);
 
 	function getStakedNft(address) external view returns (uint256 tokenId);
 }

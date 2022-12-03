@@ -102,7 +102,8 @@ contract PfpStaker is IPfpStaker, ReentrancyGuard, NFTreceiver, Owned {
 	 */
 	function getUri(
 		address staker,
-		string calldata groupName
+		string calldata groupName,
+		uint256 tokenId
 	) external view returns (string memory) {
 		uint256 stake = stakedNft[staker];
 
@@ -112,7 +113,7 @@ contract PfpStaker is IPfpStaker, ReentrancyGuard, NFTreceiver, Owned {
 		} else {
 			image = IERC1155MetadataURI(pfpStore).uri(stake);
 		}
-		return _buildURI(groupName, image);
+		return _buildURI(groupName, image, tokenId);
 	}
 
 	/**
@@ -129,12 +130,16 @@ contract PfpStaker is IPfpStaker, ReentrancyGuard, NFTreceiver, Owned {
 
 	function _buildURI(
 		string calldata groupName,
-		string memory image
+		string memory image,
+		uint256 tokenId
 	) private pure returns (string memory) {
 		return
 			JSON._formattedMetadata(
 				string.concat(groupName, ' Group Token'),
-				'Forum Group Membership Token',
+				string.concat(
+					'Forum Group',
+					tokenId == 0 ? ' - Membership Pass' : ' GovernanceToken'
+				),
 				string.concat(
 					'<svg width="300" height="300" fill="none" xmlns="http://www.w3.org/2000/svg"><filter id="filter" x="0" y="0" width="300" height="300" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feColorMatrix in="SourceAlpha" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/><feOffset dy="-80"/><feGaussianBlur stdDeviation="50"/><feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/><feColorMatrix values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0"/><feBlend in2="shape" result="effect1_innerShadow_2276_3624"/></filter><g filter="url(#filter)"><rect width="300" height="300" rx="11.078" fill="#37373D" fill-opacity=".5"/></g>',
 					SVG._el(
@@ -167,7 +172,7 @@ contract PfpStaker is IPfpStaker, ReentrancyGuard, NFTreceiver, Owned {
 							SVG._prop('font-size', '12'),
 							SVG._prop('fill', 'white')
 						),
-						SVG._cdata('Membership Pass')
+						SVG._cdata(tokenId == 0 ? 'Membership Pass' : 'GovernanceToken')
 					),
 					'</svg>'
 				)

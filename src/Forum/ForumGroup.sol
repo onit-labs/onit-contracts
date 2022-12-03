@@ -484,8 +484,8 @@ contract ForumGroup is
 	/// ----------------------------------------------------------------------------------------
 
 	// 'id' not used but included to keep function signature of ERC1155
-	function uri(uint256) public view override returns (string memory) {
-		return IPfpStaker(pfpExtension).getUri(address(this), name);
+	function uri(uint256 tokenId) public view override returns (string memory) {
+		return IPfpStaker(pfpExtension).getUri(address(this), name, tokenId);
 	}
 
 	function isValidSignature(
