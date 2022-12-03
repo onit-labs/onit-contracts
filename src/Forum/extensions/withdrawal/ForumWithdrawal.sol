@@ -4,7 +4,7 @@ pragma solidity ^0.8.15;
 
 import {SafeTransferLib} from '../../../libraries/SafeTransferLib.sol';
 
-import {IERC20} from '../../../interfaces/IERC20.sol'; // consider minimal version
+import {IERC20} from '../../../interfaces/IERC20.sol';
 import {IForumGroup, IForumGroupTypes} from '../../../interfaces/IForumGroup.sol';
 import {IWithdrawalTransferManager} from '../../../interfaces/IWithdrawalTransferManager.sol';
 
@@ -100,10 +100,13 @@ contract ForumWithdrawal is ReentrancyGuard {
 
 		// If withdrawables are already set, this call will be interpreted as reset
 		if (withdrawables[msg.sender].length != 0) delete withdrawables[msg.sender];
+
 		// Cannot realistically overflow on human timescales
 		unchecked {
-			for (uint256 i; i < tokens.length; i++) {
+			for (uint256 i; i < tokens.length; ) {
 				withdrawables[msg.sender].push(tokens[i]);
+
+				++i;
 			}
 		}
 

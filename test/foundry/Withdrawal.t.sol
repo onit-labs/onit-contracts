@@ -9,6 +9,7 @@ import {CommissionManager} from '../../src/CommissionManager/CommissionManager.s
 
 import {IForumGroupTypes} from '../../src/interfaces/IForumGroupTypes.sol';
 import {IForumGroup} from '../../src/interfaces/IForumGroup.sol';
+import {IForumGroupExtension} from '../../src/interfaces/IForumGroupExtension.sol';
 
 import {MockERC20} from '@solbase/test/utils/mocks/MockERC20.sol';
 import {MockERC721} from '@solbase/test/utils/mocks/MockERC721.sol';
@@ -71,7 +72,7 @@ contract WithdrawalTest is Test {
 		// Set mock ERC20 as a withdrawal token
 		tokens.push(address(mockErc20));
 		vm.prank(address(forumGroup), address(forumGroup));
-		forumWithdrawal.setExtension(abi.encode(tokens, uint256(WITHDRAWAL_START)));
+		//forumWithdrawal.setExtension(abi.encode(tokens, uint256(WITHDRAWAL_START)));
 	}
 
 	function setupForumGroup() internal {
