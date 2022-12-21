@@ -4,7 +4,7 @@
 
 | Contract     |                                                              Address                                                               | Description                                  |
 | :----------- | :--------------------------------------------------------------------------------------------------------------------------------: | :------------------------------------------- |
-| ForumGroup   |   [0xf25D6cE77cC58901E96909AbD22af0e2739dCd96](https://testnet.snowtrace.io/address/0xf25D6cE77cC58901E96909AbD22af0e2739dCd96)    | The group multisig with governance           |
+| ForumGroup   |   [0xDe497d34Fe6A731459Bd6aeFd943A2FD2D684eAC](https://testnet.snowtrace.io/address/0xDe497d34Fe6A731459Bd6aeFd943A2FD2D684eAC)    | The group multisig with governance           |
 | ForumFactory |   [0x2907657eD64b0127D29C0039013CD20cDDd370d3](https://testnet.snowtrace.io/address/0x2907657eD64b0127D29C0039013CD20cDDd370d3)    | Generates clones of the Forum group          |
 | PfpStaker    | [0x579b986a23393A0EA4D2981073b3c9b819c21643](https://testnet.snowtrace.io/address/0x579b986a23393A0EA4D2981073b3c9b819c21643#code) | Stakes pfp for group and generates token uri |
 
@@ -15,7 +15,7 @@
 | Contract   |                                                              Address                                                               | Description                                                                      |
 | :--------- | :--------------------------------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------- |
 | Fundraise  | [0x76cF12497A6d9b314149Eb8CceDbAF001cA9d1fd](https://testnet.snowtrace.io/address/0x76cF12497A6d9b314149Eb8CceDbAF001cA9d1fd#code) | Lets the group raise funds and distribute group tokens to contributors           |
-| Withdrawal | [0x1960F4c8652322bb0094e378d63C0c5d24C6d1DD](https://testnet.snowtrace.io/address/0x1960F4c8652322bb0094e378d63C0c5d24C6d1DD#code) | Lets members set basic withdrawal tokens, or create a custom withdrawal proposal |
+| Withdrawal | [0x601fB2a8e98411cc4cBA3663f4841A7E36455a34](https://testnet.snowtrace.io/address/0x601fB2a8e98411cc4cBA3663f4841A7E36455a34#code) | Lets members set basic withdrawal tokens, or create a custom withdrawal proposal |
 
 <br>
 
