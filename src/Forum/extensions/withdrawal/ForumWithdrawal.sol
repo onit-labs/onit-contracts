@@ -4,7 +4,9 @@ pragma solidity ^0.8.15;
 
 import {SafeTransferLib} from '../../../libraries/SafeTransferLib.sol';
 
-import {IERC20} from '../../../interfaces/IERC20.sol';
+import {IERC1155} from '@openzeppelin/contracts/interfaces/IERC1155.sol';
+import {IERC20} from '@openzeppelin/contracts/interfaces/IERC20.sol';
+
 import {IForumGroup, IForumGroupTypes} from '../../../interfaces/IForumGroup.sol';
 import {IWithdrawalTransferManager} from '../../../interfaces/IWithdrawalTransferManager.sol';
 
@@ -48,6 +50,8 @@ contract ForumWithdrawal is ReentrancyGuard {
 	/// ----------------------------------------------------------------------------------------
 
 	error NullTokens();
+
+	error IncorrectAmount();
 
 	error NotStarted();
 
@@ -118,7 +122,7 @@ contract ForumWithdrawal is ReentrancyGuard {
 	/**
 	 * @notice Withdraw tokens from a DAO. This will withdraw tokens in proportion to the amount of DAO tokens burned.
 	 * @param withdrawer address to withdraw tokens to
-	 * @param amount amount of DAO tokens burned
+	 * @param amount amount of DAO tokens burned - basis points, 10,000 = 100%
 	 * @dev bytes unused but conforms with standard interface for extension
 	 */
 	function callExtension(
@@ -128,9 +132,14 @@ contract ForumWithdrawal is ReentrancyGuard {
 	) public virtual nonReentrant returns (bool mint, uint256 amountOut) {
 		if (block.timestamp < withdrawalStarts[msg.sender]) revert NotStarted();
 
+		if (amount > 10000) revert IncorrectAmount();
+
+		// Token amount to be withdrawn, given the 'amount' (%) in basis points of 10000
+		uint256 tokenAmount = (amount * IForumGroup(msg.sender).balanceOf(withdrawer, 1)) / 10000;
+
 		for (uint256 i; i < withdrawables[msg.sender].length; ) {
 			// Calculate fair share of given token for withdrawal
-			uint256 amountToRedeem = (amount *
+			uint256 amountToRedeem = (tokenAmount *
 				IERC20(withdrawables[msg.sender][i]).balanceOf(msg.sender)) /
 				IERC20(msg.sender).totalSupply();
 
@@ -150,9 +159,9 @@ contract ForumWithdrawal is ReentrancyGuard {
 		}
 
 		// Values to conform to extension interface and burn group tokens of this amount
-		(mint, amountOut) = (false, amount);
+		(mint, amountOut) = (false, tokenAmount);
 
-		emit ExtensionCalled(msg.sender, withdrawer, amount);
+		emit ExtensionCalled(msg.sender, withdrawer, tokenAmount);
 	}
 
 	/**

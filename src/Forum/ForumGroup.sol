@@ -459,7 +459,7 @@ contract ForumGroup is
 		if (mint) {
 			if (amountOut != 0) _mint(msg.sender, TOKEN, amountOut, '');
 		} else {
-			if (amountOut != 0) _burn(msg.sender, TOKEN, amount);
+			if (amountOut != 0) _burn(msg.sender, TOKEN, amountOut);
 		}
 	}
 
