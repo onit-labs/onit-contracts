@@ -1,5 +1,3 @@
-import { ZERO_ADDRESS } from '../../config'
-
 import { DeployFunction } from 'hardhat-deploy/types'
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 

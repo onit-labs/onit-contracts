@@ -9,8 +9,8 @@ interface IForumGroupFactory {
 	function deployGroup(
 		string calldata name_,
 		string calldata symbol_,
-		address[] calldata voters_,
 		uint32[4] calldata govSettings_,
+		address[] calldata voters_,
 		address[] calldata customExtensions_
 	) external payable returns (IForumGroup);
 }

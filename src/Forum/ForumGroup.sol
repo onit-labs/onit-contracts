@@ -139,15 +139,11 @@ contract ForumGroup is
 		// Set the commissionManager - handles routing of calls and commission
 		commissionManager = extensions_[1];
 
-		// Set the fundraise extension to true - allows it to mint shares
-		extensions[extensions_[2]] = true;
-
-		if (extensions_.length > 3) {
-			// cannot realistically overflow on human timescales
-			unchecked {
-				for (uint256 i = 3; i < extensions_.length; i++) {
-					extensions[extensions_[i]] = true;
-				}
+		// Set the remaining base extensions (fundriase, withdrawal, + any custom extensions beyond that)
+		// Cannot realistically overflow on human timescales
+		unchecked {
+			for (uint256 i = 2; i < extensions_.length; i++) {
+				extensions[extensions_[i]] = true;
 			}
 		}
 
@@ -387,18 +383,6 @@ contract ForumGroup is
 
 				if (prop.proposalType == ProposalType.DOCS) docs = string(prop.payloads[0]);
 
-				if (prop.proposalType == ProposalType.PFP) {
-					// Call the NFTContract to approve the PfpStaker to transfer the token
-					(bool success, ) = prop.accounts[0].call(prop.payloads[0]);
-					if (!success) revert PFPFailed();
-
-					IPfpStaker(pfpExtension).stakeNFT(
-						address(this),
-						prop.accounts[0],
-						prop.amounts[0]
-					);
-				}
-
 				if (prop.proposalType == ProposalType.ALLOW_CONTRACT_SIG) {
 					// This sets the allowance for EIP-1271 contract signature transactions on marketplaces
 					for (uint256 i; i < prop.accounts.length; i++) {
@@ -475,7 +459,7 @@ contract ForumGroup is
 		if (mint) {
 			if (amountOut != 0) _mint(msg.sender, TOKEN, amountOut, '');
 		} else {
-			if (amountOut != 0) _burn(msg.sender, TOKEN, amount);
+			if (amountOut != 0) _burn(msg.sender, TOKEN, amountOut);
 		}
 	}
 
@@ -500,8 +484,8 @@ contract ForumGroup is
 	/// ----------------------------------------------------------------------------------------
 
 	// 'id' not used but included to keep function signature of ERC1155
-	function uri(uint256) public view override returns (string memory) {
-		return IPfpStaker(pfpExtension).getURI(address(this), name);
+	function uri(uint256 tokenId) public view override returns (string memory) {
+		return IPfpStaker(pfpExtension).getUri(address(this), name, tokenId);
 	}
 
 	function isValidSignature(

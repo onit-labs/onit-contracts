@@ -30,6 +30,7 @@ contract ForumFactory is Multicall, Owned {
 
 	address public forumMaster;
 	address public fundraiseExtension;
+	address public withdrawalExtension;
 	address public commissionManager;
 	address public pfpStaker;
 
@@ -55,6 +56,10 @@ contract ForumFactory is Multicall, Owned {
 		fundraiseExtension = fundraiseExtension_;
 	}
 
+	function setWithdrawalExtension(address withdrawalExtension_) external onlyOwner {
+		withdrawalExtension = withdrawalExtension_;
+	}
+
 	function setCommissionManager(address commissionManager_) external onlyOwner {
 		commissionManager = commissionManager_;
 	}
@@ -66,22 +71,23 @@ contract ForumFactory is Multicall, Owned {
 	function deployGroup(
 		string calldata name_,
 		string calldata symbol_,
-		address[] calldata voters_,
 		uint32[4] calldata govSettings_,
+		address[] calldata voters_,
 		address[] calldata customExtensions_
 	) public payable virtual returns (ForumGroup forumGroup) {
 		if (voters_.length > 100) revert MemberLimitExceeded();
 
 		forumGroup = ForumGroup(_cloneAsMinimalProxy(forumMaster, name_));
 
-		// Create initialExtensions array of correct length. 3 Forum set extensions + customExtensions
-		address[] memory initialExtensions = new address[](3 + customExtensions_.length);
+		// Create initialExtensions array of correct length. 4 Forum set extensions + customExtensions
+		address[] memory initialExtensions = new address[](4 + customExtensions_.length);
 
 		// Set the base Forum extensions
-		(initialExtensions[0], initialExtensions[1], initialExtensions[2]) = (
+		(initialExtensions[0], initialExtensions[1], initialExtensions[2], initialExtensions[3]) = (
 			pfpStaker,
 			commissionManager,
-			fundraiseExtension
+			fundraiseExtension,
+			withdrawalExtension
 		);
 
 		// Set the custom extensions
@@ -90,7 +96,7 @@ contract ForumFactory is Multicall, Owned {
 			unchecked {
 				for (uint256 i = 0; i < customExtensions_.length; i++) {
 					// +3 offsets the base Forum extensions
-					initialExtensions[i + 3] = customExtensions_[i];
+					initialExtensions[i + 4] = customExtensions_[i];
 				}
 			}
 		}

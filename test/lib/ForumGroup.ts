@@ -85,7 +85,6 @@ describe('Forum Multisig  Setup and Functions', function () {
 			expect(await forum.proposalVoteTypes(10)).equal(0)
 			expect(await forum.proposalVoteTypes(11)).equal(0)
 			expect(await forum.proposalVoteTypes(12)).equal(0)
-			expect(await forum.proposalVoteTypes(13)).equal(0)
 		})
 		it('distribute membership to new member on mint', async function () {
 			await forum.init(
@@ -102,7 +101,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: MINT,
 				accounts: [alice.address],
 				amounts: [getBigNumber(1000)],
-				payloads: [0x00]
+				payloads: ['0x00']
 			})
 			expect(await forum.balanceOf(alice.address, MEMBERSHIP)).equal(1)
 		})
@@ -185,7 +184,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 			await expect(
 				forum
 					.connect(proposer)
-					.propose(0, [bob.address, alice.address], [getBigNumber(1000)], [0x00])
+					.propose(0, [bob.address, alice.address], [getBigNumber(1000)], ['0x00'])
 			).revertedWith('NoArrayParity()')
 		})
 		it('Should revert if period proposal is for null or longer than year', async function () {
@@ -197,12 +196,12 @@ describe('Forum Multisig  Setup and Functions', function () {
 				[30, 12, 60, 52]
 			)
 			// normal
-			await forum.connect(proposer).propose(3, [bob.address], [9000], [0x00])
+			await forum.connect(proposer).propose(3, [bob.address], [9000], ['0x00'])
 			await expect(
-				forum.connect(proposer).propose(3, [bob.address], [0], [0x00])
+				forum.connect(proposer).propose(3, [bob.address], [0], ['0x00'])
 			).revertedWith('PeriodBounds()')
 			await expect(
-				forum.connect(proposer).propose(3, [bob.address], [31536001], [0x00])
+				forum.connect(proposer).propose(3, [bob.address], [31536001], ['0x00'])
 			).revertedWith('PeriodBounds()')
 		})
 		it('Should revert if membership vote proposal is for greater than 100 or 0', async function () {
@@ -214,12 +213,12 @@ describe('Forum Multisig  Setup and Functions', function () {
 				[30, 12, 50, 60]
 			)
 			// normal
-			await forum.connect(proposer).propose(5, [bob.address], [50], [0x00])
+			await forum.connect(proposer).propose(5, [bob.address], [50], ['0x00'])
 			await expect(
-				forum.connect(proposer).propose(5, [bob.address], [101], [0x00])
+				forum.connect(proposer).propose(5, [bob.address], [101], ['0x00'])
 			).revertedWith('VoteThresholdBounds()')
 			await expect(
-				forum.connect(proposer).propose(5, [bob.address], [0], [0x00])
+				forum.connect(proposer).propose(5, [bob.address], [0], ['0x00'])
 			).revertedWith('VoteThresholdBounds()')
 		})
 		it("Should revert if type proposal has proposal type greater than 13, vote type greater than 2, or setting length isn't 2", async function () {
@@ -233,16 +232,16 @@ describe('Forum Multisig  Setup and Functions', function () {
 			// normal
 			await forum
 				.connect(proposer)
-				.propose(7, [bob.address, alice.address], [0, 0], [0x00, 0x00])
+				.propose(7, [bob.address, alice.address], [0, 0], ['0x00', '0x00'])
 			await expect(
 				forum
 					.connect(proposer)
-					.propose(7, [bob.address, alice.address], [14, 2], [0x00, 0x00])
+					.propose(7, [bob.address, alice.address], [14, 2], ['0x00', '0x00'])
 			).revertedWith('TypeBounds()')
 			await expect(
 				forum
 					.connect(proposer)
-					.propose(7, [bob.address, alice.address], [0, 3], [0x00, 0x00])
+					.propose(7, [bob.address, alice.address], [0, 3], ['0x00', '0x00'])
 			).revertedWith('TypeBounds()')
 			await expect(
 				forum
@@ -251,7 +250,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 						7,
 						[proposer.address, bob.address, alice.address],
 						[0, 1, 0],
-						[0x00, 0x00, 0x00]
+						['0x00', '0x00', '0x00']
 					)
 			).revertedWith('TypeBounds()')
 		})
@@ -286,7 +285,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: MINT,
 				accounts: [alice.address],
 				amounts: [getBigNumber(1000)],
-				payloads: [0x00]
+				payloads: ['0x00']
 			})
 			await expect(
 				forum.processProposal(1, [
@@ -309,7 +308,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 
 			await forum
 				.connect(proposer)
-				.propose(MINT, [proposer.address], [getBigNumber(1000)], [0x00])
+				.propose(MINT, [proposer.address], [getBigNumber(1000)], ['0x00'])
 
 			// Submit the same sig multiple times and expect this to fail
 			const proposerSig = await createSignature(0, forum, proposer, {
@@ -329,7 +328,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 			)
 			await forum
 				.connect(proposer)
-				.propose(MINT, [proposer.address], [getBigNumber(1000)], [0x00])
+				.propose(MINT, [proposer.address], [getBigNumber(1000)], ['0x00'])
 			await advanceTime(35)
 			const proposerSig = await createSignature(0, forum, proposer, {
 				proposal: 1
@@ -348,7 +347,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 			// Add member so member count is 2
 			await forum
 				.connect(proposer)
-				.propose(MINT, [alice.address], [getBigNumber(1000)], [0x00])
+				.propose(MINT, [alice.address], [getBigNumber(1000)], ['0x00'])
 			const proposerSig = await createSignature(0, forum, proposer, {
 				proposal: 1
 			})
@@ -358,14 +357,14 @@ describe('Forum Multisig  Setup and Functions', function () {
 			await expect(
 				forum
 					.connect(proposer)
-					.propose(MEMBER_LIMIT, [ZERO_ADDRESS], [getBigNumber(1)], [0x00])
+					.propose(MEMBER_LIMIT, [ZERO_ADDRESS], [getBigNumber(1)], ['0x00'])
 			).revertedWith('MemberLimitExceeded()')
 
 			// Fail to change member limit to 101
 			await expect(
 				forum
 					.connect(proposer)
-					.propose(MEMBER_LIMIT, [ZERO_ADDRESS], [getBigNumber(101)], [0x00])
+					.propose(MEMBER_LIMIT, [ZERO_ADDRESS], [getBigNumber(101)], ['0x00'])
 			).revertedWith('MemberLimitExceeded()')
 		})
 		it('Should process membership proposal and revert if too many added', async function () {
@@ -380,14 +379,14 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: MINT,
 				accounts: [alice.address],
 				amounts: [getBigNumber(1000)],
-				payloads: [0x00]
+				payloads: ['0x00']
 			})
 			await expect(
 				processProposal(forum, [proposer], 1, {
 					type: MINT,
 					accounts: [bob.address],
 					amounts: [getBigNumber(1000)],
-					payloads: [0x00]
+					payloads: ['0x00']
 				})
 			).revertedWith('MemberLimitExceeded()')
 			expect(await forum.balanceOf(alice.address, TOKEN)).equal(getBigNumber(1000))
@@ -405,7 +404,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: 3,
 				accounts: [proposer.address],
 				amounts: [90],
-				payloads: [0x00]
+				payloads: ['0x00']
 			})
 			expect(await forum.votingPeriod()).equal(90)
 		})
@@ -422,7 +421,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: MEMBER_LIMIT,
 				accounts: [ZERO_ADDRESS],
 				amounts: [13],
-				payloads: [0x00]
+				payloads: ['0x00']
 			})
 			expect(await forum.memberLimit()).equal(13)
 		})
@@ -438,7 +437,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: 6,
 				accounts: [proposer.address],
 				amounts: [52],
-				payloads: [0x00]
+				payloads: ['0x00']
 			})
 			expect(await forum.tokenVoteThreshold()).equal(52)
 		})
@@ -454,7 +453,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: 7,
 				accounts: [proposer.address, proposer.address],
 				amounts: [0, 2],
-				payloads: [0x00, 0x00]
+				payloads: ['0x00', '0x00']
 			})
 			expect(await forum.proposalVoteTypes(0)).equal(2)
 		})
@@ -470,7 +469,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: 8,
 				accounts: [proposer.address],
 				amounts: [0],
-				payloads: [0x00]
+				payloads: ['0x00']
 			})
 
 			expect(await forum.paused()).equal(false)
@@ -488,7 +487,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: 9,
 				accounts: [alice.address],
 				amounts: [0],
-				payloads: [0x00]
+				payloads: ['0x00']
 			})
 			expect(await forum.extensions(alice.address)).equal(false)
 		})
@@ -505,7 +504,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: 9,
 				accounts: [alice.address],
 				amounts: [1],
-				payloads: [0x00]
+				payloads: ['0x00']
 			})
 			expect(await forum.extensions(alice.address)).equal(true)
 		})
@@ -519,20 +518,22 @@ describe('Forum Multisig  Setup and Functions', function () {
 			)
 			await forum
 				.connect(proposer)
-				.propose(0, [proposer.address], [getBigNumber(1000)], [0x00])
+				.propose(0, [proposer.address], [getBigNumber(1000)], ['0x00'])
 
-			await forum.connect(proposer).propose(0, [proposer.address], [getBigNumber(99)], [0x00])
+			await forum
+				.connect(proposer)
+				.propose(0, [proposer.address], [getBigNumber(99)], ['0x00'])
 			const proposerSig2 = await createSignature(0, forum, proposer, {
 				proposal: 2
 			})
 
-			await forum.connect(proposer).propose(10, [proposer.address], [2], [0x00])
+			await forum.connect(proposer).propose(10, [proposer.address], [2], ['0x00'])
 
 			await advanceTime(35)
 			await forum.processProposal(2, [proposerSig2])
 
 			// Proposal #1 remains intact
-			expect(await forum.proposals(1).creationTime).not.equal(0)
+			expect((await forum.proposals(1)).creationTime).not.equal(0)
 			// Proposal #2 deleted
 			expect((await forum.proposals(2)).creationTime).equal(0)
 			// Proposal #3 processed (deleted)
@@ -568,12 +569,14 @@ describe('Forum Multisig  Setup and Functions', function () {
 
 			await forum
 				.connect(proposer)
-				.propose(0, [proposer.address], [getBigNumber(1000)], [0x00])
+				.propose(0, [proposer.address], [getBigNumber(1000)], ['0x00'])
 			const proposerSig1 = await createSignature(0, forum, proposer, {
 				proposal: 1
 			})
 
-			await forum.connect(proposer).propose(0, [proposer.address], [getBigNumber(99)], [0x00])
+			await forum
+				.connect(proposer)
+				.propose(0, [proposer.address], [getBigNumber(99)], ['0x00'])
 			const proposerSig2 = await createSignature(0, forum, proposer, {
 				proposal: 2
 			})
@@ -582,7 +585,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 			expect(await forum.processProposal(1, [proposerSig1]))
 
 			// // setup 1
-			// await forum.connect(proposer).propose(0, [proposer.address], [getBigNumber(1000)], [0x00])
+			// await forum.connect(proposer).propose(0, [proposer.address], [getBigNumber(1000)], ['0x00'])
 			// await forum.connect(proposer).vote(1)
 			// await advanceTime(35)
 
@@ -591,7 +594,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 			// 	type: 0,
 			// 	accounts: [proposer.address],
 			// 	amounts: [getBigNumber(1000)],
-			// 	payloads: [0x00]
+			// 	payloads: ['0x00']
 			// })
 			// await forum.connect(proposer).vote(2)
 
@@ -611,7 +614,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: 1,
 				accounts: [proposer.address],
 				amounts: [0],
-				payloads: [0x00]
+				payloads: ['0x00']
 			})
 			expect(await forum.balanceOf(proposer.address, TOKEN)).equal(0)
 		})
@@ -619,9 +622,6 @@ describe('Forum Multisig  Setup and Functions', function () {
 			// Deploy execution manager which will format proposals to specific contracts to extract commission
 			const CommissionManager = await hardhatEthers.getContractFactory('CommissionManager')
 			const executionManager = await CommissionManager.deploy(proposer.address)
-
-			// Set the handler in the execution manager
-			await executionManager.connect(proposer).toggleNonCommissionContract(test721.address)
 
 			let payload = test721.interface.encodeFunctionData('mint', [alice.address, 1])
 			await forum.init(
@@ -672,10 +672,6 @@ describe('Forum Multisig  Setup and Functions', function () {
 				getBigNumber(5)
 			])
 
-			// Set the handler in the execution manager for both targets
-			await executionManager.connect(proposer).toggleNonCommissionContract(test721.address)
-			await executionManager.connect(proposer).toggleNonCommissionContract(test1155.address)
-
 			await processProposal(forum, [proposer], 1, {
 				type: CALL,
 				accounts: [test721.address, test1155.address],
@@ -707,7 +703,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: EXTENSION,
 				accounts: [extension.address],
 				amounts: [1],
-				payloads: [0x00]
+				payloads: ['0x00']
 			})
 
 			// Mint proposer and alice shares
@@ -719,7 +715,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: PAUSE,
 				accounts: [ZERO_ADDRESS],
 				amounts: [1],
-				payloads: [0x00]
+				payloads: ['0x00']
 			})
 		})
 
@@ -783,7 +779,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: PAUSE,
 				accounts: [ZERO_ADDRESS],
 				amounts: [1],
-				payloads: [0x00]
+				payloads: ['0x00']
 			})
 			await forum.connect(sender).setApprovalForAll(receiver.address, true)
 			await expect(
@@ -804,7 +800,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: PAUSE,
 				accounts: [ZERO_ADDRESS],
 				amounts: [1],
-				payloads: [0x00]
+				payloads: ['0x00']
 			})
 
 			await expect(
@@ -843,7 +839,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: EXTENSION,
 				accounts: [extension.address],
 				amounts: [1],
-				payloads: [0x00]
+				payloads: ['0x00']
 			})
 
 			// Mint sender and receiver shares (sender gets 11 to allow for majority vote)
@@ -861,7 +857,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: VPERIOD,
 				accounts: [ZERO_ADDRESS],
 				amounts: [100],
-				payloads: [0x00]
+				payloads: ['0x00']
 			})
 			expect(result.didProposalPass).equal(false)
 
@@ -870,7 +866,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: VPERIOD,
 				accounts: [ZERO_ADDRESS],
 				amounts: [100],
-				payloads: [0x00]
+				payloads: ['0x00']
 			})
 			expect(result.didProposalPass).equal(true)
 			expect(await forum.votingPeriod()).equal(100)
@@ -883,7 +879,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: TYPE,
 				accounts: [ZERO_ADDRESS, ZERO_ADDRESS],
 				amounts: [TYPE, SIMPLE_MAJORITY],
-				payloads: [0x00, 0x00]
+				payloads: ['0x00', '0x00']
 			})
 			expect(await forum.proposalVoteTypes(TYPE)).equal(SIMPLE_MAJORITY)
 
@@ -893,7 +889,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: VPERIOD,
 				accounts: [ZERO_ADDRESS],
 				amounts: [100],
-				payloads: [0x00]
+				payloads: ['0x00']
 			})
 			expect(result.didProposalPass).equal(false)
 
@@ -902,7 +898,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: VPERIOD,
 				accounts: [ZERO_ADDRESS],
 				amounts: [100],
-				payloads: [0x00]
+				payloads: ['0x00']
 			})
 			expect(result.didProposalPass).equal(true)
 			expect(await forum.votingPeriod()).equal(100)
@@ -915,7 +911,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: TYPE,
 				accounts: [ZERO_ADDRESS, ZERO_ADDRESS],
 				amounts: [TYPE, TOKEN_MAJORITY],
-				payloads: [0x00, 0x00]
+				payloads: ['0x00', '0x00']
 			})
 			expect(await forum.proposalVoteTypes(TYPE)).equal(TOKEN_MAJORITY)
 
@@ -925,7 +921,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: VPERIOD,
 				accounts: [ZERO_ADDRESS],
 				amounts: [100],
-				payloads: [0x00]
+				payloads: ['0x00']
 			})
 			expect(result.didProposalPass).equal(false)
 
@@ -934,7 +930,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: VPERIOD,
 				accounts: [ZERO_ADDRESS],
 				amounts: [100],
-				payloads: [0x00]
+				payloads: ['0x00']
 			})
 			expect(result.didProposalPass).equal(true)
 			expect(await forum.votingPeriod()).equal(100)
@@ -1001,7 +997,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: PAUSE,
 				accounts: [ZERO_ADDRESS],
 				amounts: [0],
-				payloads: [0x00]
+				payloads: ['0x00']
 			})
 
 			await forum.connect(sender).delegate(receiver.address)
@@ -1035,7 +1031,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 					type: BURN,
 					accounts: [sender.address],
 					amounts: [0],
-					payloads: [0x00]
+					payloads: ['0x00']
 				})
 			).revertedWith('InvalidDelegate()')
 
@@ -1045,7 +1041,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 					type: BURN,
 					accounts: [receiver.address],
 					amounts: [0],
-					payloads: [0x00]
+					payloads: ['0x00']
 				})
 			).revertedWith('InvalidDelegate()')
 		})
@@ -1084,7 +1080,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: TYPE,
 				accounts: [ZERO_ADDRESS, ZERO_ADDRESS],
 				amounts: [TYPE, SIMPLE_MAJORITY],
-				payloads: [0x00, 0x00]
+				payloads: ['0x00', '0x00']
 			})
 			// Receiver has senders delegation and the vote type has been updated to simple majority meaning member vote worked
 			expect(await forum.delegators(receiver.address)).deep.equal([sender.address])
@@ -1096,7 +1092,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: TYPE,
 				accounts: [ZERO_ADDRESS, ZERO_ADDRESS],
 				amounts: [TYPE, TOKEN_MAJORITY],
-				payloads: [0x00, 0x00]
+				payloads: ['0x00', '0x00']
 			})
 
 			// Vote type has been updated to tokenVoteThreshold - meaning the simple majority vote worked
@@ -1108,7 +1104,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: TYPE,
 				accounts: [ZERO_ADDRESS, ZERO_ADDRESS],
 				amounts: [TYPE, MEMBER],
-				payloads: [0x00, 0x00]
+				payloads: ['0x00', '0x00']
 			})
 
 			// Vote type has been updated back to member, meaning that tokenVoteThreshold vote worked
@@ -1127,20 +1123,20 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: TYPE,
 				accounts: [ZERO_ADDRESS, ZERO_ADDRESS],
 				amounts: [TYPE, SIMPLE_MAJORITY],
-				payloads: [0x00, 0x00]
+				payloads: ['0x00', '0x00']
 			})
 
 			// Vote type is still member, the vote did not work
 			expect(await forum.proposalVoteTypes(TYPE)).equal(MEMBER)
 		})
 		it('should forbid calling a non-whitelisted extension', async function () {
-			await expect(forum.callExtension(sender.address, 10, 0x0)).revertedWith(
+			await expect(forum.callExtension(sender.address, 10, '0x00')).revertedWith(
 				'NotExtension()'
 			)
 		})
 		it('should forbid non-whitelisted extension calling DAO', async function () {
 			await expect(
-				forum.connect(alice).callExtension(nonextension.address, 10, 0x0)
+				forum.connect(alice).callExtension(nonextension.address, 10, '0x00')
 			).revertedWith('NotExtension()')
 		})
 		it('should not call if null length payload', async () => {
@@ -1178,7 +1174,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 		})
 		it('should revert is signature replayed', async function () {
 			// Propose a simple VPeriod proposal
-			forum.connect(proposer).propose(VPERIOD, [ZERO_ADDRESS], [100], [0x00])
+			forum.connect(proposer).propose(VPERIOD, [ZERO_ADDRESS], [100], ['0x00'])
 
 			const proposerSig2 = await createSignature(0, forum, proposer, {
 				proposal: 2
@@ -1186,7 +1182,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 			await forum.processProposal(2, [proposerSig2])
 
 			// Propose another simple VPeriod proposal
-			forum.connect(proposer).propose(VPERIOD, [ZERO_ADDRESS], [200], [0x00])
+			forum.connect(proposer).propose(VPERIOD, [ZERO_ADDRESS], [200], ['0x00'])
 			await expect(forum.processProposal(3, [proposerSig2])).revertedWith('SignatureError()')
 		})
 		it('should revert reentrant calls', async () => {
@@ -1198,7 +1194,7 @@ describe('Forum Multisig  Setup and Functions', function () {
 				type: EXTENSION,
 				accounts: [reentrantMock.address],
 				amounts: [1],
-				payloads: [0x00]
+				payloads: ['0x00']
 			})
 
 			expect(await forum.extensions(reentrantMock.address)).equal(true)

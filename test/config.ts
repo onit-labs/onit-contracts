@@ -45,8 +45,7 @@ export const PAUSE = 8
 export const EXTENSION = 9
 export const ESCAPE = 10
 export const DOCS = 11
-export const PFP = 12
-export const ALLOW_CONTRACT_SIG = 13
+export const ALLOW_CONTRACT_SIG = 12
 
 // Vote Types
 export const MEMBER = 0

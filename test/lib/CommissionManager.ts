@@ -54,29 +54,12 @@ describe('Commission Manager', function () {
 					.connect(bob)
 					.addProposalHandler(testAddress1.address, testAddress2.address)
 			).revertedWith('UNAUTHORIZED')
-
-			await expect(executionManager.connect(bob).setBaseCommission(0)).revertedWith(
-				'UNAUTHORIZED'
-			)
 		})
-		it('should allow owner to add a proposalHandler, then unset baseCommission', async function () {
+		it('should allow owner to add a proposalHandler', async function () {
 			await executionManager.addProposalHandler(testAddress1.address, testAddress2.address)
 			expect(await executionManager.proposalHandlers(testAddress1.address)).equal(
 				testAddress2.address
 			)
-
-			await executionManager.setBaseCommission(0)
-			expect(await executionManager.baseCommission()).equal(0)
-		})
-		it('should take base commission if set, and not if unset', async function () {
-			//reset restricted mode from last test, expect commission to be >0
-			await executionManager.setBaseCommission(1)
-
-			expect(await executionManager.manageCommission(testAddress2.address, 1, '0x00')).gt(0)
-
-			//unset restricted mode, expect 0 commission
-			await executionManager.setBaseCommission(0)
-			expect(await executionManager.manageCommission(testAddress2.address, 1, '0x00')).eq(0)
 		})
 	})
 	describe('joepegs handler', function () {

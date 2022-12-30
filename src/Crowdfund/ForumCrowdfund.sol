@@ -98,9 +98,9 @@ contract ForumCrowdfund is ReentrancyGuard, Owned, NFTreceiver {
 		emit CommissionSet(_commission);
 	}
 
-	/// -----------------------------------------------------------------------
-	/// Fundraise Logic
-	/// -----------------------------------------------------------------------
+	/// ----------------------------------------------------------------------------------------
+	///							Crowdfund Interface
+	/// ----------------------------------------------------------------------------------------
 
 	/**
 	 * @notice Initiate a crowdfund to buy an asset
@@ -160,15 +160,15 @@ contract ForumCrowdfund is ReentrancyGuard, Owned, NFTreceiver {
 			// Delete the contribution in the mapping
 			delete fund.contributions[fund.contributors[i]];
 
-			// Members can only be 12
+			// Members can only be max 100
 			unchecked {
 				++i;
 			}
 		}
 
-		delete crowdfunds[groupNameHash];
-
 		emit Cancelled(fund.parameters.groupName);
+
+		delete crowdfunds[groupNameHash];
 	}
 
 	/**
@@ -189,8 +189,8 @@ contract ForumCrowdfund is ReentrancyGuard, Owned, NFTreceiver {
 		IForumGroup forumGroup = IForumGroupFactory(forumFactory).deployGroup(
 			fund.parameters.groupName,
 			fund.parameters.symbol,
-			fund.contributors,
 			[uint32(3 days), uint32(100), uint32(80), uint32(80)],
+			fund.contributors,
 			customExtensions
 		);
 

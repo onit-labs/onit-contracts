@@ -1,4 +1,11 @@
-import { CommissionManager, ForumFactory, ForumGroup } from '../../typechain'
+import {
+	CommissionManager,
+	ForumFactory,
+	ForumGroup,
+	ForumGroupFundraise,
+	ForumWithdrawal,
+	PfpStaker
+} from '../../typechain'
 import { ZERO_ADDRESS } from '../config'
 
 import { ContractTransaction } from '@ethersproject/contracts'
@@ -10,6 +17,9 @@ import { beforeEach, describe, it } from 'mocha'
 let forumContract: ForumGroup
 let forumFactory: ForumFactory
 let commissionManager: CommissionManager
+let withdrawalExt: ForumWithdrawal
+let fundraiseExt: ForumGroupFundraise
+let pfpStaker: PfpStaker
 let forumStandaloneGas: string
 let tableProxyGas: string
 
@@ -24,6 +34,7 @@ describe('Forum Factory', function () {
 	let alice: SignerWithAddress
 	let bob: SignerWithAddress
 	let relay: SignerWithAddress
+	let forumGroup: ForumGroup
 
 	beforeEach(async function () {
 		;[owner, wallet, alice, bob, relay] = await hardhatEthers.getSigners()
@@ -33,10 +44,16 @@ describe('Forum Factory', function () {
 		forumContract = await hardhatEthers.getContract('ForumGroup')
 		forumFactory = await hardhatEthers.getContract('ForumFactory')
 		commissionManager = await hardhatEthers.getContract('CommissionManager')
+		withdrawalExt = await hardhatEthers.getContract('ForumWithdrawal')
+		fundraiseExt = await hardhatEthers.getContract('ForumGroupFundraise')
+		pfpStaker = await hardhatEthers.getContract('PfpStaker')
 
 		// Set commission manager and master forum
 		await forumFactory.setCommissionManager(commissionManager.address)
 		await forumFactory.setForumMaster(forumContract.address)
+		await forumFactory.setWithdrawalExtension(withdrawalExt.address) // exact address does not matter for these tests
+		await forumFactory.setFundraiseExtension(fundraiseExt.address)
+		await forumFactory.setPfpStaker(pfpStaker.address)
 	})
 
 	it('Should deploy master forumContract', async function () {
@@ -52,15 +69,15 @@ describe('Forum Factory', function () {
 		expect(forumFactory.address).not.equal(0x0)
 	})
 	// eslint-disable-next-line jest/expect-expect
-	it('Should deploy forum via forumFactory contract', async function () {
+	it('Should deploy forum via forumFactory contract and check gas', async function () {
 		const tx = await (
 			await forumFactory
 				.connect(wallet)
 				.deployGroup(
 					'testTable',
 					'T',
-					['0xfF626F22D92506b74eeC6ccb15412E5a9D6A592D'],
 					[30, 12, 50, 60],
+					['0xfF626F22D92506b74eeC6ccb15412E5a9D6A592D'],
 					[],
 					{ value: 0 }
 				)
@@ -68,13 +85,19 @@ describe('Forum Factory', function () {
 
 		tableProxyGas = tx.gasUsed.toString()
 
-		// ! need to check for success
+		const groupAddress = `0x${tx.logs[1].topics[1].substring(26)}`
+		forumGroup = await hardhatEthers.getContractAt('ForumGroup', groupAddress)
+
+		// Correct name and extensions set
+		expect(await forumGroup.name()).to.equal('testTable')
+		expect(await forumGroup.extensions(withdrawalExt.address)).to.equal(true)
+		expect(await forumGroup.extensions(fundraiseExt.address)).to.equal(true)
 	})
 	it('Should revert if over 100 members added', async function () {
 		await expect(
 			forumFactory
 				.connect(wallet)
-				.deployGroup('testTable', 'T', beyondMemberLimit101, [60, 100, 50, 60], [], {
+				.deployGroup('testTable', 'T', [60, 100, 50, 60], beyondMemberLimit101, [], {
 					value: 0
 				})
 		).revertedWith('MemberLimitExceeded()')
@@ -85,8 +108,8 @@ describe('Forum Factory', function () {
 			.deployGroup(
 				'testTable',
 				'T',
-				['0xfF626F22D92506b74eeC6ccb15412E5a9D6A592D'],
 				[30, 12, 50, 60],
+				['0xfF626F22D92506b74eeC6ccb15412E5a9D6A592D'],
 				[],
 				{ value: 0 }
 			)
