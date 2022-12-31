@@ -2,9 +2,11 @@
 
 pragma solidity ^0.8.13;
 
+import '@zodiac/contracts/core/Module.sol';
+
 import {ForumGovernance, EnumerableSet} from './ForumSafeGovernance.sol';
 
-import {Multicall} from '../utils/Multicall.sol';
+// TODO consider need for NFTreceiver - does the module need to receive?
 import {NFTreceiver} from '../utils/NFTreceiver.sol';
 import {ReentrancyGuard} from '../utils/ReentrancyGuard.sol';
 
@@ -17,7 +19,13 @@ import {IPfpStaker} from '../interfaces/IPfpStaker.sol';
  * @notice Forum investment group governance extension for Gnosis Safe
  * @author Modified from KaliDAO (https://github.com/lexDAO/Kali/blob/main/contracts/KaliDAO.sol)
  */
-contract ForumGroup is IForumGroupTypes, ForumGovernance, ReentrancyGuard, Multicall, NFTreceiver {
+contract ForumSafeModule is
+	Module,
+	IForumGroupTypes,
+	ForumGovernance,
+	ReentrancyGuard,
+	NFTreceiver
+{
 	/// ----------------------------------------------------------------------------------------
 	///							EVENTS
 	/// ----------------------------------------------------------------------------------------
@@ -67,6 +75,10 @@ contract ForumGroup is IForumGroupTypes, ForumGovernance, ReentrancyGuard, Multi
 	///							DAO STORAGE
 	/// ----------------------------------------------------------------------------------------
 
+	// Gnosis multisendLibrary library contract // todo is this needed here?
+	//address public multisendLibrary;
+
+	// Contract generating uri for group tokens
 	address private pfpExtension;
 
 	uint256 public proposalCount;
@@ -112,6 +124,8 @@ contract ForumGroup is IForumGroupTypes, ForumGovernance, ReentrancyGuard, Multi
 	) public payable virtual nonReentrant {
 		if (votingPeriod != 0) revert Initialized();
 
+		// SETUP FORUM GOVERNANCE //
+
 		if (govSettings_[0] == 0 || govSettings_[0] > 365 days) revert PeriodBounds();
 
 		if (govSettings_[1] > 100 || govSettings_[1] < members_.length)
@@ -144,7 +158,14 @@ contract ForumGroup is IForumGroupTypes, ForumGovernance, ReentrancyGuard, Multi
 
 		tokenVoteThreshold = govSettings_[3];
 
-		/// ALL PROPOSAL TYPES DEFAULT TO MEMBER VOTES ///
+		// ALL PROPOSAL TYPES DEFAULT TO MEMBER VOTES //
+
+		/// SETUP GNOSIS MODULE ///
+
+		// Set the Gnosis safe address
+		avatar = _avatar;
+
+		target = _avatar; /*Set target to same address as avatar on setup - can be changed later via setTarget, though probably not a good idea*/
 	}
 
 	/// ----------------------------------------------------------------------------------------
