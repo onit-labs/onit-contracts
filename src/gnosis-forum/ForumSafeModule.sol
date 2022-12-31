@@ -11,22 +11,13 @@ import {ReentrancyGuard} from '../utils/ReentrancyGuard.sol';
 import {IForumGroupTypes} from '../interfaces/IForumGroupTypes.sol';
 import {IForumGroupExtension} from '../interfaces/IForumGroupExtension.sol';
 import {IPfpStaker} from '../interfaces/IPfpStaker.sol';
-import {IERC1271} from '../interfaces/IERC1271.sol';
-import {ICommissionManager} from '../interfaces/ICommissionManager.sol';
 
 /**
- * @title ForumGroup
- * @notice Forum investment group multisig wallet
+ * @title ForumSafeModule
+ * @notice Forum investment group governance extension for Gnosis Safe
  * @author Modified from KaliDAO (https://github.com/lexDAO/Kali/blob/main/contracts/KaliDAO.sol)
  */
-contract ForumGroup is
-	IForumGroupTypes,
-	ForumGovernance,
-	ReentrancyGuard,
-	Multicall,
-	NFTreceiver,
-	IERC1271
-{
+contract ForumGroup is IForumGroupTypes, ForumGovernance, ReentrancyGuard, Multicall, NFTreceiver {
 	/// ----------------------------------------------------------------------------------------
 	///							EVENTS
 	/// ----------------------------------------------------------------------------------------
@@ -77,7 +68,6 @@ contract ForumGroup is
 	/// ----------------------------------------------------------------------------------------
 
 	address private pfpExtension;
-	address private commissionManager;
 
 	uint256 public proposalCount;
 	uint32 public votingPeriod;
@@ -136,13 +126,10 @@ contract ForumGroup is
 		// Set the pfpSetter - determines uri of group token
 		pfpExtension = extensions_[0];
 
-		// Set the commissionManager - handles routing of calls and commission
-		commissionManager = extensions_[1];
-
 		// Set the remaining base extensions (fundriase, withdrawal, + any custom extensions beyond that)
 		// Cannot realistically overflow on human timescales
 		unchecked {
-			for (uint256 i = 2; i < extensions_.length; i++) {
+			for (uint256 i = 1; i < extensions_.length; i++) {
 				extensions[extensions_[i]] = true;
 			}
 		}
@@ -326,8 +313,6 @@ contract ForumGroup is
 					}
 
 				if (prop.proposalType == ProposalType.CALL) {
-					uint256 commissionValue;
-
 					for (uint256 i; i < prop.accounts.length; i++) {
 						results = new bytes[](prop.accounts.length);
 
@@ -335,20 +320,10 @@ contract ForumGroup is
 							value: prop.amounts[i]
 						}(prop.payloads[i]);
 
-						if (successCall)
-							commissionValue += ICommissionManager(commissionManager)
-								.manageCommission(
-									prop.accounts[i],
-									prop.amounts[i],
-									prop.payloads[i]
-								);
-						else revert CallError();
+						if (!successCall) revert CallError();
 
 						results[i] = result;
 					}
-					// Send the commission calculated in the executionManger
-					(bool successCommission, ) = commissionManager.call{value: commissionValue}('');
-					if (!successCommission) revert CallError();
 				}
 
 				// Governance settings
@@ -383,6 +358,7 @@ contract ForumGroup is
 
 				if (prop.proposalType == ProposalType.DOCS) docs = string(prop.payloads[0]);
 
+				// TODO should be converted to set hash on gnosis safe
 				if (prop.proposalType == ProposalType.ALLOW_CONTRACT_SIG) {
 					// This sets the allowance for EIP-1271 contract signature transactions on marketplaces
 					for (uint256 i; i < prop.accounts.length; i++) {
@@ -486,46 +462,6 @@ contract ForumGroup is
 	// 'id' not used but included to keep function signature of ERC1155
 	function uri(uint256 tokenId) public view override returns (string memory) {
 		return IPfpStaker(pfpExtension).getUri(address(this), name, tokenId);
-	}
-
-	function isValidSignature(
-		bytes32 hash,
-		bytes memory signature
-	) public view override returns (bytes4) {
-		// Decode signture
-		if (signature.length != 65) revert SignatureError();
-
-		uint8 v;
-		bytes32 r;
-		bytes32 s;
-
-		assembly {
-			r := mload(add(signature, 32))
-			s := mload(add(signature, 64))
-			v := and(mload(add(signature, 65)), 255)
-		}
-
-		if (uint256(s) > 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0)
-			revert SignatureError();
-
-		if (!(v == 27 || v == 28)) revert SignatureError();
-
-		// If the signature is valid (and not malleable), return the signer address
-		address signer = ecrecover(hash, v, r, s);
-
-		/**
-		 * The group must pass a proposal to allow the contract to be used to sign transactions
-		 * Once passed contractSignatureAllowance will be set to 1 for the exact transaction hash
-		 * Signer must also be a member
-		 */
-		//
-		if (
-			balanceOf[signer][MEMBERSHIP] != 0 && contractSignatureAllowance[msg.sender][hash] != 0
-		) {
-			return 0x1626ba7e;
-		} else {
-			return 0xffffffff;
-		}
 	}
 
 	receive() external payable virtual {}
