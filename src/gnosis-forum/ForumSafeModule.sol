@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.17;
 
-import '@zodiac/contracts/core/Module.sol';
+import '@gnosis.pm/zodiac/contracts/core/Module.sol';
 
 import {ForumGovernance, EnumerableSet} from './ForumSafeGovernance.sol';
 
@@ -109,20 +109,23 @@ contract ForumSafeModule is
 
 	/**
 	 * @notice init the group settings and mint membership for founders
-	 * @param name_ name of the group
-	 * @param symbol_ for the group token
-	 * @param members_ initial members
-	 * @param extensions_ initial extensions enabled
-	 * @param govSettings_ settings for voting, proposals, and group size
+	 * @param _initializationParams for the group, decoded to
+	 * name_ name of the group
+	 * symbol_ for the group token
+	 * members_ initial members
+	 * extensions_ initial extensions enabled
+	 * govSettings_ settings for voting, proposals, and group size
 	 */
-	function init(
-		string memory name_,
-		string memory symbol_,
-		address[] memory members_,
-		address[] memory extensions_,
-		uint32[4] memory govSettings_
-	) public payable virtual nonReentrant {
+	function setUp(bytes memory _initializationParams) public virtual override nonReentrant {
 		if (votingPeriod != 0) revert Initialized();
+
+		(
+			string memory name_,
+			string memory symbol_,
+			address[] memory members_,
+			address[] memory extensions_,
+			uint32[4] memory govSettings_
+		) = abi.decode(_initializationParams, (string, string, address[], address[], uint32[4]));
 
 		// SETUP FORUM GOVERNANCE //
 
@@ -162,10 +165,12 @@ contract ForumSafeModule is
 
 		/// SETUP GNOSIS MODULE ///
 
-		// Set the Gnosis safe address
-		avatar = _avatar;
+		// ! Set the Gnosis safe address
+		avatar = address(0);
 
-		target = _avatar; /*Set target to same address as avatar on setup - can be changed later via setTarget, though probably not a good idea*/
+		target = address(
+			0
+		); /*Set target to same address as avatar on setup - can be changed later via setTarget, though probably not a good idea*/
 	}
 
 	/// ----------------------------------------------------------------------------------------
