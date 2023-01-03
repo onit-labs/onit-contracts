@@ -31,13 +31,17 @@ contract ForumSafeFactory is Owned {
 	/// Factory Storage
 	/// ----------------------------------------------------------------------------------------
 
-	GnosisSafeProxyFactory gnosisSafeProxyFactory;
+	GnosisSafeProxyFactory public gnosisSafeProxyFactory;
 	// ModuleProxyFactory moduleProxyFactory;
 
 	// Template contract to use for new Gnosis safe proxies
 	address public immutable gnosisSingleton;
+	// Library to use for EIP1271 compatability
+	address public immutable gnosisFallbackLibrary;
+	// Library to use for all safe transaction executions
+	address public immutable gnosisMultisendLibrary;
 
-	address public forumMaster;
+	address public forumSafeSingleton;
 	address public fundraiseExtension;
 	address public withdrawalExtension;
 	address public pfpStaker;
@@ -46,28 +50,44 @@ contract ForumSafeFactory is Owned {
 	/// Constructor
 	/// ----------------------------------------------------------------------------------------
 
-	constructor(address deployer) Owned(deployer) {
-		gnosisSingleton = address(0);
+	constructor(
+		address deployer,
+		address payable _forumSafeSingleton,
+		address _gnosisSingleton,
+		address _gnosisFallbackLibrary,
+		address _gnosisMultisendLibrary,
+		address _gnosisSafeProxyFactory
+	)
+		payable
+		//address _moduleProxyFactory
+		Owned(deployer)
+	{
+		forumSafeSingleton = _forumSafeSingleton;
+		gnosisSingleton = _gnosisSingleton;
+		gnosisFallbackLibrary = _gnosisFallbackLibrary;
+		gnosisMultisendLibrary = _gnosisMultisendLibrary;
+		gnosisSafeProxyFactory = GnosisSafeProxyFactory(_gnosisSafeProxyFactory);
+		// _moduleProxyFactory
 	}
 
 	/// ----------------------------------------------------------------------------------------
 	/// Owner Interface
 	/// ----------------------------------------------------------------------------------------
 
-	function setForumMaster(address forumMaster_) external onlyOwner {
-		forumMaster = forumMaster_;
+	function setForumSafeSingleton(address _forumSafeSingleton) external onlyOwner {
+		forumSafeSingleton = _forumSafeSingleton;
 	}
 
-	function setPfpStaker(address pfpStaker_) external onlyOwner {
-		pfpStaker = pfpStaker_;
+	function setPfpStaker(address _pfpStaker) external onlyOwner {
+		pfpStaker = _pfpStaker;
 	}
 
-	function setFundraiseExtension(address fundraiseExtension_) external onlyOwner {
-		fundraiseExtension = fundraiseExtension_;
+	function setFundraiseExtension(address _fundraiseExtension) external onlyOwner {
+		fundraiseExtension = _fundraiseExtension;
 	}
 
-	function setWithdrawalExtension(address withdrawalExtension_) external onlyOwner {
-		withdrawalExtension = withdrawalExtension_;
+	function setWithdrawalExtension(address _withdrawalExtension) external onlyOwner {
+		withdrawalExtension = _withdrawalExtension;
 	}
 
 	/// ----------------------------------------------------------------------------------------
@@ -95,7 +115,7 @@ contract ForumSafeFactory is Owned {
 		);
 
 		// Deploy new Forum group but do not set it up yet
-		forumGroup = ForumSafeModule(_cloneAsMinimalProxy(forumMaster, name_));
+		forumGroup = ForumSafeModule(_cloneAsMinimalProxy(forumSafeSingleton, name_));
 
 		// Create initialExtensions array of correct length. 4 Forum set extensions + customExtensions
 		address[] memory initialExtensions = new address[](4 + customExtensions_.length);
@@ -113,6 +133,39 @@ contract ForumSafeFactory is Owned {
 				}
 			}
 		}
+
+		// Generate delegate calls so the safe calls enableModule on itself during setup
+		bytes memory _enableForumGroup = abi.encodeWithSignature(
+			'enableModule(address)',
+			address(forumGroup)
+		);
+		bytes memory _enableForumGroupMultisend = abi.encodePacked(
+			uint8(0),
+			address(_safe),
+			uint256(0),
+			uint256(_enableForumGroup.length),
+			bytes(_enableForumGroup)
+		);
+		bytes memory _multisendAction = abi.encodeWithSignature(
+			'multiSend(bytes)',
+			_enableForumGroupMultisend
+		);
+
+		// Workaround for solidity dynamic memory array
+		address[] memory _owners = new address[](1);
+		_owners[0] = address(forumGroup);
+
+		// Call setup on safe to enable our new module and set the module as the only signer
+		_safe.setup(
+			_owners,
+			1,
+			gnosisMultisendLibrary,
+			_multisendAction,
+			gnosisFallbackLibrary,
+			address(0),
+			0,
+			payable(address(0))
+		);
 
 		forumGroup.setUp('0x1234');
 
