@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.15;
 
 import '@gnosis.pm/zodiac/contracts/core/Module.sol';
 
@@ -49,7 +49,7 @@ contract ForumSafeModule is
 	///							ERRORS
 	/// ----------------------------------------------------------------------------------------
 
-	error Initialized();
+	error AlreadyInitialized();
 
 	error MemberLimitExceeded();
 
@@ -117,7 +117,7 @@ contract ForumSafeModule is
 	 * govSettings_ settings for voting, proposals, and group size
 	 */
 	function setUp(bytes memory _initializationParams) public virtual override nonReentrant {
-		if (votingPeriod != 0) revert Initialized();
+		if (votingPeriod != 0) revert AlreadyInitialized();
 
 		(
 			string memory name_,

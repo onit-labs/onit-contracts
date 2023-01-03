@@ -90,7 +90,7 @@ contract WithdrawalTest is Test {
 		vm.prank(alice, alice);
 		mockErc721.approve(address(pfpStaker), 1);
 
-		console.log(pfpStaker.getUri(alice, 'test'));
+		console.log(pfpStaker.getUri(alice, 'test', 0));
 	}
 
 	// When nft is staked
@@ -98,6 +98,6 @@ contract WithdrawalTest is Test {
 		vm.prank(alice, alice);
 		mockErc721.approve(address(pfpStaker), 1);
 
-		pfpStaker.getUri(alice, 'test');
+		pfpStaker.getUri(alice, 'test', 0);
 	}
 }

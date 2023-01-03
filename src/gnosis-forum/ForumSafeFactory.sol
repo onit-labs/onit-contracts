@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.15;
 
 import '@gnosis.pm/safe-contracts/contracts/GnosisSafe.sol';
 import '@gnosis.pm/safe-contracts/contracts/proxies/GnosisSafeProxyFactory.sol';
@@ -46,7 +46,9 @@ contract ForumSafeFactory is Owned {
 	/// Constructor
 	/// ----------------------------------------------------------------------------------------
 
-	constructor(address deployer) Owned(deployer) {}
+	constructor(address deployer) Owned(deployer) {
+		gnosisSingleton = address(0);
+	}
 
 	/// ----------------------------------------------------------------------------------------
 	/// Owner Interface
