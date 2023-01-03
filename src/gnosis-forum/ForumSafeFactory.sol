@@ -2,8 +2,10 @@
 
 pragma solidity ^0.8.15;
 
-import '@gnosis.pm/safe-contracts/contracts/GnosisSafe.sol';
-import '@gnosis.pm/safe-contracts/contracts/proxies/GnosisSafeProxyFactory.sol';
+import 'forge-std/console.sol';
+
+import '@gnosis/GnosisSafe.sol';
+import '@gnosis/proxies/GnosisSafeProxyFactory.sol';
 
 import {Owned} from '../utils/Owned.sol';
 
@@ -57,11 +59,7 @@ contract ForumSafeFactory is Owned {
 		address _gnosisFallbackLibrary,
 		address _gnosisMultisendLibrary,
 		address _gnosisSafeProxyFactory
-	)
-		payable
-		//address _moduleProxyFactory
-		Owned(deployer)
-	{
+	) Owned(deployer) {
 		forumSafeSingleton = _forumSafeSingleton;
 		gnosisSingleton = _gnosisSingleton;
 		gnosisFallbackLibrary = _gnosisFallbackLibrary;
@@ -100,11 +98,11 @@ contract ForumSafeFactory is Owned {
 		uint32[4] calldata govSettings_,
 		address[] calldata voters_,
 		address[] calldata customExtensions_
-	) public payable virtual returns (ForumSafeModule forumGroup) {
+	) public payable virtual returns (ForumSafeModule forumGroup, GnosisSafe _safe) {
 		if (voters_.length > 100) revert MemberLimitExceeded();
 
 		// Deploy new safe but do not set it up yet
-		GnosisSafe _safe = GnosisSafe(
+		_safe = GnosisSafe(
 			payable(
 				gnosisSafeProxyFactory.createProxy(
 					gnosisSingleton,
@@ -117,8 +115,8 @@ contract ForumSafeFactory is Owned {
 		// Deploy new Forum group but do not set it up yet
 		forumGroup = ForumSafeModule(_cloneAsMinimalProxy(forumSafeSingleton, name_));
 
-		// Create initialExtensions array of correct length. 4 Forum set extensions + customExtensions
-		address[] memory initialExtensions = new address[](4 + customExtensions_.length);
+		// Create initialExtensions array of correct length. 2 Forum set extensions + customExtensions
+		address[] memory initialExtensions = new address[](2 + customExtensions_.length);
 
 		// Set the base Forum extensions // todo add withdrawal extension as default
 		(initialExtensions[0], initialExtensions[1]) = (pfpStaker, fundraiseExtension);
@@ -167,7 +165,16 @@ contract ForumSafeFactory is Owned {
 			payable(address(0))
 		);
 
-		forumGroup.setUp('0x1234');
+		bytes memory init = abi.encode(
+			name_,
+			symbol_,
+			address(_safe),
+			voters_,
+			initialExtensions,
+			govSettings_
+		);
+
+		forumGroup.setUp(init);
 
 		emit GroupDeployed(forumGroup, name_, symbol_, voters_, govSettings_);
 	}

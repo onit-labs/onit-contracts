@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.15;
 
-import '@gnosis.pm/zodiac/contracts/core/Module.sol';
+import {Module} from '@zodiac/core/Module.sol';
 
 import {ForumGovernance, EnumerableSet} from './ForumSafeGovernance.sol';
 
@@ -49,8 +49,6 @@ contract ForumSafeModule is
 	///							ERRORS
 	/// ----------------------------------------------------------------------------------------
 
-	error AlreadyInitialized();
-
 	error MemberLimitExceeded();
 
 	error PeriodBounds();
@@ -75,8 +73,8 @@ contract ForumSafeModule is
 	///							DAO STORAGE
 	/// ----------------------------------------------------------------------------------------
 
-	// Gnosis multisendLibrary library contract // todo is this needed here?
-	//address public multisendLibrary;
+	// Gnosis multisendLibrary library contract
+	address public multisendLibrary;
 
 	// Contract generating uri for group tokens
 	address private pfpExtension;
@@ -107,70 +105,78 @@ contract ForumSafeModule is
 	///							CONSTRUCTOR
 	/// ----------------------------------------------------------------------------------------
 
+	/// @dev This constructor ensures that this contract can only be used as a master copy for Proxy contracts
+	constructor() initializer {
+		// By setting the owner it is not possible to call setUp
+		// This is an unusable Forum group, perfect for the singleton
+		__Ownable_init();
+		transferOwnership(address(0xdead));
+	}
+
 	/**
 	 * @notice init the group settings and mint membership for founders
-	 * @param _initializationParams for the group, decoded to
-	 * name_ name of the group
-	 * symbol_ for the group token
-	 * members_ initial members
-	 * extensions_ initial extensions enabled
-	 * govSettings_ settings for voting, proposals, and group size
+	 * @param _initializationParams for the group, decoded to:
+	 * 	(_name ,_symbol ,_members ,_extension ,_govSettings)
 	 */
-	function setUp(bytes memory _initializationParams) public virtual override nonReentrant {
-		if (votingPeriod != 0) revert AlreadyInitialized();
-
+	function setUp(
+		bytes memory _initializationParams
+	) public virtual override initializer nonReentrant {
 		(
-			string memory name_,
-			string memory symbol_,
-			address[] memory members_,
-			address[] memory extensions_,
-			uint32[4] memory govSettings_
-		) = abi.decode(_initializationParams, (string, string, address[], address[], uint32[4]));
+			string memory _name,
+			string memory _symbol,
+			address _safe,
+			address[] memory _members,
+			address[] memory _extensions,
+			uint32[4] memory _govSettings
+		) = abi.decode(
+				_initializationParams,
+				(string, string, address, address[], address[], uint32[4])
+			);
 
-		// SETUP FORUM GOVERNANCE //
+		// Initialize ownership and transfer immediately to avatar
+		// Ownable Init reverts if already initialized
+		// TODO consider owner being safe
+		__Ownable_init();
+		transferOwnership(_safe);
 
-		if (govSettings_[0] == 0 || govSettings_[0] > 365 days) revert PeriodBounds();
+		/// SETUP GNOSIS MODULE ///
+		avatar = _safe;
+		target = _safe; /*Set target to same address as avatar on setup - can be changed later via setTarget, though probably not a good idea*/
 
-		if (govSettings_[1] > 100 || govSettings_[1] < members_.length)
+		/// SETUP FORUM GOVERNANCE ///
+		if (_govSettings[0] == 0 || _govSettings[0] > 365 days) revert PeriodBounds();
+
+		if (_govSettings[1] > 100 || _govSettings[1] < _members.length)
 			revert MemberLimitExceeded();
 
-		if (govSettings_[2] < 1 || govSettings_[2] > 100) revert VoteThresholdBounds();
+		if (_govSettings[2] < 1 || _govSettings[2] > 100) revert VoteThresholdBounds();
 
-		if (govSettings_[3] < 1 || govSettings_[3] > 100) revert VoteThresholdBounds();
+		if (_govSettings[3] < 1 || _govSettings[3] > 100) revert VoteThresholdBounds();
 
-		ForumGovernance._init(name_, symbol_, members_);
+		ForumGovernance._init(_name, _symbol, _members);
 
 		// Set the pfpSetter - determines uri of group token
-		pfpExtension = extensions_[0];
+		pfpExtension = _extensions[0];
 
 		// Set the remaining base extensions (fundriase, withdrawal, + any custom extensions beyond that)
 		// Cannot realistically overflow on human timescales
 		unchecked {
-			for (uint256 i = 1; i < extensions_.length; i++) {
-				extensions[extensions_[i]] = true;
+			for (uint256 i = 1; i < _extensions.length; i++) {
+				extensions[_extensions[i]] = true;
 			}
 		}
 
-		memberCount = members_.length;
+		memberCount = _members.length;
 
-		votingPeriod = govSettings_[0];
+		votingPeriod = _govSettings[0];
 
-		memberLimit = govSettings_[1];
+		memberLimit = _govSettings[1];
 
-		memberVoteThreshold = govSettings_[2];
+		memberVoteThreshold = _govSettings[2];
 
-		tokenVoteThreshold = govSettings_[3];
+		tokenVoteThreshold = _govSettings[3];
 
-		// ALL PROPOSAL TYPES DEFAULT TO MEMBER VOTES //
-
-		/// SETUP GNOSIS MODULE ///
-
-		// ! Set the Gnosis safe address
-		avatar = address(0);
-
-		target = address(
-			0
-		); /*Set target to same address as avatar on setup - can be changed later via setTarget, though probably not a good idea*/
+		/// ALL PROPOSAL TYPES DEFAULT TO MEMBER VOTES ///
 	}
 
 	/// ----------------------------------------------------------------------------------------
@@ -338,6 +344,7 @@ contract ForumSafeModule is
 						++i;
 					}
 
+				// TODO route all calls through exec() to safe
 				if (prop.proposalType == ProposalType.CALL) {
 					for (uint256 i; i < prop.accounts.length; i++) {
 						results = new bytes[](prop.accounts.length);
@@ -388,7 +395,7 @@ contract ForumSafeModule is
 				if (prop.proposalType == ProposalType.ALLOW_CONTRACT_SIG) {
 					// This sets the allowance for EIP-1271 contract signature transactions on marketplaces
 					for (uint256 i; i < prop.accounts.length; i++) {
-						contractSignatureAllowance[prop.accounts[i]][bytes32(prop.payloads[i])] = 1;
+						// set the sig on the gnosis safe
 					}
 				}
 
@@ -485,7 +492,6 @@ contract ForumSafeModule is
 	///							UTILITIES
 	/// ----------------------------------------------------------------------------------------
 
-	// 'id' not used but included to keep function signature of ERC1155
 	function uri(uint256 tokenId) public view override returns (string memory) {
 		return IPfpStaker(pfpExtension).getUri(address(this), name, tokenId);
 	}

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {GnosisSafe} from '@gnosis.pm/safe-contracts/contracts/GnosisSafe.sol';
-import {CompatibilityFallbackHandler} from '@gnosis.pm/safe-contracts/contracts/handler/CompatibilityFallbackHandler.sol';
-import {MultiSend} from '@gnosis.pm/safe-contracts/contracts/libraries/MultiSend.sol';
-import {GnosisSafeProxyFactory} from '@gnosis.pm/safe-contracts/contracts/proxies/GnosisSafeProxyFactory.sol';
+import {GnosisSafe} from '@gnosis/GnosisSafe.sol';
+import {CompatibilityFallbackHandler} from '@gnosis/handler/CompatibilityFallbackHandler.sol';
+import {MultiSend} from '@gnosis/libraries/MultiSend.sol';
+import {GnosisSafeProxyFactory} from '@gnosis/proxies/GnosisSafeProxyFactory.sol';
 
 import {ForumSafeFactory} from '../../src/gnosis-forum/ForumSafeFactory.sol';
 import {ForumSafeModule} from '../../src/gnosis-forum/ForumSafeModule.sol';
@@ -31,6 +31,10 @@ contract ForumSafeFactoryTest is Test {
 	address internal alice;
 	uint256 internal alicePk;
 
+	// Declare arrys used to setup forum groups
+	address[] private voters = new address[](1);
+	address[] private initialExtensions = new address[](1);
+
 	/// -----------------------------------------------------------------------
 	/// Setup
 	/// -----------------------------------------------------------------------
@@ -38,11 +42,13 @@ contract ForumSafeFactoryTest is Test {
 	function setUp() public {
 		(alice, alicePk) = makeAddrAndKey('alice');
 
+		// Deploy Safe contracts
 		safeSingleton = new GnosisSafe();
 		multisend = new MultiSend();
 		handler = new CompatibilityFallbackHandler();
 		safeProxyFactory = new GnosisSafeProxyFactory();
 
+		// Deploy Forum contracts
 		forumSafeModule = new ForumSafeModule();
 		forumSafeFactory = new ForumSafeFactory(
 			alice,
@@ -55,10 +61,34 @@ contract ForumSafeFactoryTest is Test {
 	}
 
 	/// -----------------------------------------------------------------------
-	/// Test
+	/// Deploy Safe with Forum
 	/// -----------------------------------------------------------------------
 
-	function testChecSetup() public {
-		console.logString('hi');
+	function testDeployForumSafe() public {
+		voters[0] = alice;
+		initialExtensions[0] = address(0);
+
+		(ForumSafeModule deployedForumSafe, GnosisSafe deployedSafe) = forumSafeFactory
+			.deployForumSafe(
+				'test',
+				'T',
+				[uint32(60), uint32(12), uint32(50), uint32(80)],
+				voters,
+				initialExtensions
+			);
+
+		assertEq(deployedSafe.getOwners()[0], address(deployedForumSafe), 'forum not set as owner');
+		assertEq(deployedForumSafe.avatar(), address(deployedSafe), 'safe not set as avatar');
+		assertEq(deployedForumSafe.target(), address(deployedSafe), 'safe not set as target');
+		assertEq(deployedForumSafe.owner(), address(deployedSafe), 'safe not set as owner');
+		assertEq(deployedForumSafe.balanceOf(alice, 0), 1, 'alice not a member on forum group');
 	}
+
+	/// -----------------------------------------------------------------------
+	/// Attach Forum Module to Existing Safe
+	/// -----------------------------------------------------------------------
+
+	/// -----------------------------------------------------------------------
+	/// Utils
+	/// -----------------------------------------------------------------------
 }
