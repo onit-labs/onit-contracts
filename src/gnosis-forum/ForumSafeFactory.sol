@@ -2,10 +2,11 @@
 
 pragma solidity ^0.8.15;
 
-import 'forge-std/console.sol';
+//import 'forge-std/console.sol';
 
-import '@gnosis/GnosisSafe.sol';
-import '@gnosis/proxies/GnosisSafeProxyFactory.sol';
+// ! fix remappings failings with hardhat
+import {GnosisSafe} from '@gnosis.pm/safe-contracts/contracts/GnosisSafe.sol';
+import {GnosisSafeProxyFactory} from '@gnosis.pm/safe-contracts/contracts/proxies/GnosisSafeProxyFactory.sol';
 
 import {Owned} from '../utils/Owned.sol';
 

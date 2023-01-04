@@ -2,7 +2,8 @@
 
 pragma solidity ^0.8.15;
 
-import {Module} from '@zodiac/core/Module.sol';
+// ! fix remappings failings with hardhat
+import {Module} from '@gnosis.pm/zodiac/contracts/core/Module.sol';
 
 import {ForumGovernance, EnumerableSet} from './ForumSafeGovernance.sol';
 
