@@ -8,26 +8,7 @@ contract ForumSafeFactoryTest is ForumSafeTestConfig {
 	/// Setup
 	/// -----------------------------------------------------------------------
 
-	function setUp() public {
-		(alice, alicePk) = makeAddrAndKey('alice');
-
-		// Deploy Safe contracts
-		safeSingleton = new GnosisSafe();
-		multisend = new MultiSend();
-		handler = new CompatibilityFallbackHandler();
-		safeProxyFactory = new GnosisSafeProxyFactory();
-
-		// Deploy Forum contracts
-		forumSafeModule = new ForumSafeModule();
-		forumSafeFactory = new ForumSafeFactory(
-			alice,
-			payable(address(forumSafeModule)),
-			address(safeSingleton),
-			address(handler),
-			address(multisend),
-			address(safeProxyFactory)
-		);
-	}
+	function setUp() public {}
 
 	/// -----------------------------------------------------------------------
 	/// Deploy Safe with Forum
