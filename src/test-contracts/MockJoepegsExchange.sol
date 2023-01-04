@@ -7,7 +7,7 @@ import {OrderTypes} from '../libraries/OrderTypes.sol';
 
 import {ICrowdfundExecutionHandler} from '../interfaces/ICrowdfundExecutionHandler.sol';
 import {IJoepegsExchange} from '../interfaces/IJoepegsExchange.sol';
-import {ERC721Test} from '../Test/ERC721Test.sol';
+import {ERC721Test} from '../test-contracts/ERC721Test.sol';
 
 /// @dev THIS IS A TESTING CONTRACT ONLY
 /// We simiulate a buy on joepegs by minting a token and sending it to the buyer
