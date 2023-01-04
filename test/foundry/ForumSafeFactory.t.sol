@@ -1,40 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {GnosisSafe} from '@gnosis/GnosisSafe.sol';
-import {CompatibilityFallbackHandler} from '@gnosis/handler/CompatibilityFallbackHandler.sol';
-import {MultiSend} from '@gnosis/libraries/MultiSend.sol';
-import {GnosisSafeProxyFactory} from '@gnosis/proxies/GnosisSafeProxyFactory.sol';
+import './helpers/ForumSafeTestConfig.t.sol';
 
-import {ForumSafeFactory} from '../../src/gnosis-forum/ForumSafeFactory.sol';
-import {ForumSafeModule} from '../../src/gnosis-forum/ForumSafeModule.sol';
-
-import {ERC721Test} from '../../src/Test/ERC721Test.sol';
-import {ERC1155Test} from '../../src/Test/ERC1155Test.sol';
-
-import 'forge-std/Test.sol';
-import 'forge-std/StdCheats.sol';
-import 'forge-std/console.sol';
-
-contract ForumSafeFactoryTest is Test {
-	// Safe contract types
-	GnosisSafe private safeSingleton;
-	MultiSend private multisend;
-	CompatibilityFallbackHandler private handler;
-	GnosisSafeProxyFactory private safeProxyFactory;
-	// sigMessageLib -> get when needed for 1271 tests
-
-	// Forum contract types
-	ForumSafeFactory private forumSafeFactory;
-	ForumSafeModule private forumSafeModule;
-
-	address internal alice;
-	uint256 internal alicePk;
-
-	// Declare arrys used to setup forum groups
-	address[] private voters = new address[](1);
-	address[] private initialExtensions = new address[](1);
-
+contract ForumSafeFactoryTest is ForumSafeTestConfig {
 	/// -----------------------------------------------------------------------
 	/// Setup
 	/// -----------------------------------------------------------------------
@@ -65,6 +34,7 @@ contract ForumSafeFactoryTest is Test {
 	/// -----------------------------------------------------------------------
 
 	function testDeployForumSafe() public {
+		// Build arrays used to seup forum module
 		voters[0] = alice;
 		initialExtensions[0] = address(0);
 
