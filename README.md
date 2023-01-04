@@ -2,11 +2,13 @@
 
 ## Core Contracts
 
-| Contract     |                                                              Address                                                               | Description                                  |
-| :----------- | :--------------------------------------------------------------------------------------------------------------------------------: | :------------------------------------------- |
-| ForumGroup   |   [0xDe497d34Fe6A731459Bd6aeFd943A2FD2D684eAC](https://testnet.snowtrace.io/address/0xDe497d34Fe6A731459Bd6aeFd943A2FD2D684eAC)    | The group multisig with governance           |
-| ForumFactory |   [0x2907657eD64b0127D29C0039013CD20cDDd370d3](https://testnet.snowtrace.io/address/0x2907657eD64b0127D29C0039013CD20cDDd370d3)    | Generates clones of the Forum group          |
-| PfpStaker    | [0x579b986a23393A0EA4D2981073b3c9b819c21643](https://testnet.snowtrace.io/address/0x579b986a23393A0EA4D2981073b3c9b819c21643#code) | Stakes pfp for group and generates token uri |
+| Contract           |                                                              Address                                                               | Description                                                 |
+| :----------------- | :--------------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------- |
+| ForumGroup         |   [0xDe497d34Fe6A731459Bd6aeFd943A2FD2D684eAC](https://testnet.snowtrace.io/address/0xDe497d34Fe6A731459Bd6aeFd943A2FD2D684eAC)    | The group multisig with governance                          |
+| ForumFactory       |   [0x2907657eD64b0127D29C0039013CD20cDDd370d3](https://testnet.snowtrace.io/address/0x2907657eD64b0127D29C0039013CD20cDDd370d3)    | Generates clones of the Forum group                         |
+| PfpStaker          | [0x579b986a23393A0EA4D2981073b3c9b819c21643](https://testnet.snowtrace.io/address/0x579b986a23393A0EA4D2981073b3c9b819c21643#code) | Stakes pfp for group and generates token uri                |
+| Forum Safe Module  | [0x85B202bb2d68dC24b31faF06F6895Cc71C5F4b5A](https://testnet.snowtrace.io/address/0x85B202bb2d68dC24b31faF06F6895Cc71C5F4b5A#code) | Gnosis Safe module with Forum governance and token tracking |
+| Forum Safe Factory | [0x652B0E6B8C1fD7519152F233e125213a64d8125c](https://testnet.snowtrace.io/address/0x652B0E6B8C1fD7519152F233e125213a64d8125c#code) | Factory for Gnosis Safe Forum module                        |
 
 <br>
 
