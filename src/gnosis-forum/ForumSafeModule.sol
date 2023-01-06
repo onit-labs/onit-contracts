@@ -3,7 +3,7 @@
 pragma solidity ^0.8.15;
 
 // ! fix remappings failings with hardhat
-import {Module} from '@gnosis.pm/zodiac/contracts/core/Module.sol';
+import {Module, Enum} from '@gnosis.pm/zodiac/contracts/core/Module.sol';
 
 import {ForumGovernance, EnumerableSet} from './ForumSafeGovernance.sol';
 
@@ -350,9 +350,16 @@ contract ForumSafeModule is
 					for (uint256 i; i < prop.accounts.length; i++) {
 						results = new bytes[](prop.accounts.length);
 
-						(bool successCall, bytes memory result) = prop.accounts[i].call{
-							value: prop.amounts[i]
-						}(prop.payloads[i]);
+						// ! check if delegate call is always ok
+						(bool successCall, bytes memory result) = execAndReturnData(
+							prop.accounts[i],
+							prop.amounts[i],
+							prop.payloads[i],
+							Enum.Operation.DelegateCall
+						);
+						// (bool successCall, bytes memory result) = prop.accounts[i].call{
+						// 	value: prop.amounts[i]
+						// }(prop.payloads[i]);
 
 						if (!successCall) revert CallError();
 

@@ -9,8 +9,8 @@ import {GnosisSafeProxyFactory} from '@gnosis/proxies/GnosisSafeProxyFactory.sol
 import {ForumSafeFactory} from '../../../src/gnosis-forum/ForumSafeFactory.sol';
 import {ForumSafeModule} from '../../../src/gnosis-forum/ForumSafeModule.sol';
 
-import {ERC721Test} from '../../../src/Test/ERC721Test.sol';
-import {ERC1155Test} from '../../../src/Test/ERC1155Test.sol';
+import {ERC721Test} from '../../../src/test-contracts/ERC721Test.sol';
+import {ERC1155Test} from '../../../src/test-contracts/ERC1155Test.sol';
 
 import {IForumGroupTypes} from '../../../src/interfaces/IForumGroupTypes.sol';
 
@@ -27,7 +27,7 @@ abstract contract ForumSafeTestConfig is Test {
 	// sigMessageLib -> get when needed for 1271 tests
 
 	// Forum contract types
-	ForumSafeModule internal forumSafeModule;
+	ForumSafeModule internal forumSafeModuleSingleton;
 	ForumSafeFactory internal forumSafeFactory;
 
 	address internal alice;
@@ -49,15 +49,17 @@ abstract contract ForumSafeTestConfig is Test {
 		handler = new CompatibilityFallbackHandler();
 		safeProxyFactory = new GnosisSafeProxyFactory();
 
-		forumSafeModule = new ForumSafeModule();
+		forumSafeModuleSingleton = new ForumSafeModule();
 		forumSafeFactory = new ForumSafeFactory(
 			alice,
-			payable(address(forumSafeModule)),
+			payable(address(forumSafeModuleSingleton)),
 			address(safeSingleton),
 			address(handler),
 			address(multisend),
 			address(safeProxyFactory)
 		);
+
+		voters[0] = alice;
 	}
 
 	/// -----------------------------------------------------------------------
@@ -90,5 +92,42 @@ abstract contract ForumSafeTestConfig is Test {
 			vm.expectRevert();
 			group.processProposal(proposal, signatures);
 		}
+	}
+
+	function buildDynamicArraysForProposal(
+		address[1] memory _accounts,
+		uint256[1] memory _amounts,
+		bytes[1] memory _payloads
+	)
+		internal
+		pure
+		returns (address[] memory accounts, uint256[] memory amounts, bytes[] memory payloads)
+	{
+		accounts = new address[](_accounts.length);
+		amounts = new uint256[](_amounts.length);
+		payloads = new bytes[](_payloads.length);
+
+		for (uint256 i = 0; i < _accounts.length; i++) {
+			accounts[i] = _accounts[i];
+			amounts[i] = _amounts[i];
+			payloads[i] = _payloads[i];
+		}
+	}
+
+	// For now this works for simple, 1 account, 1 amount, 1 payload peoposals
+	function proposeToForum(
+		ForumSafeModule group,
+		IForumGroupTypes.ProposalType proposalType,
+		address[1] memory accounts,
+		uint256[1] memory amounts,
+		bytes[1] memory payloads
+	) internal returns (uint256) {
+		(
+			address[] memory _accounts,
+			uint256[] memory _amounts,
+			bytes[] memory _payloads
+		) = buildDynamicArraysForProposal(accounts, amounts, payloads);
+
+		return group.propose(proposalType, _accounts, _amounts, _payloads);
 	}
 }
