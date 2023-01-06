@@ -2,10 +2,10 @@
 pragma solidity ^0.8.13;
 
 import {ForumGroup} from '../../src/Forum/ForumGroup.sol';
-import {TestShareManager} from '../../src/Test/TestShareManager.sol';
+import {TestShareManager} from '../../src/test-contracts/TestShareManager.sol';
 import {ForumWithdrawal} from '../../src/forum/extensions/withdrawal/ForumWithdrawal.sol';
 import {WithdrawalTransferManager} from '../../src/forum/extensions/withdrawal/WithdrawalTransferManager.sol';
-import {CommissionManager} from '../../src/CommissionManager/CommissionManager.sol';
+import {CommissionManager} from '../../src/commission-manager/CommissionManager.sol';
 
 import {IForumGroupTypes} from '../../src/interfaces/IForumGroupTypes.sol';
 import {IForumGroup} from '../../src/interfaces/IForumGroup.sol';
