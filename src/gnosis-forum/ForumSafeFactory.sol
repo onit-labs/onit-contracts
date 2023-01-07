@@ -107,7 +107,7 @@ contract ForumSafeFactory is Owned {
 			payable(
 				gnosisSafeProxyFactory.createProxy(
 					gnosisSingleton,
-					abi.encodePacked(address(0), '0x1234')
+					abi.encodePacked(name_)
 					//abi.encodePacked(_moloch, _saltNonce)
 				)
 			)
@@ -116,67 +116,73 @@ contract ForumSafeFactory is Owned {
 		// Deploy new Forum group but do not set it up yet
 		forumGroup = ForumSafeModule(_cloneAsMinimalProxy(forumSafeSingleton, name_));
 
-		// Create initialExtensions array of correct length. 2 Forum set extensions + customExtensions
-		address[] memory initialExtensions = new address[](2 + customExtensions_.length);
+		{
+			// Generate delegate calls so the safe calls enableModule on itself during setup
+			bytes memory _enableForumGroup = abi.encodeWithSignature(
+				'enableModule(address)',
+				address(forumGroup)
+			);
+			bytes memory _enableForumGroupMultisend = abi.encodePacked(
+				uint8(0),
+				address(_safe),
+				uint256(0),
+				uint256(_enableForumGroup.length),
+				bytes(_enableForumGroup)
+			);
+			bytes memory _multisendAction = abi.encodeWithSignature(
+				'multiSend(bytes)',
+				_enableForumGroupMultisend
+			);
 
-		// Set the base Forum extensions // todo add withdrawal extension as default
-		(initialExtensions[0], initialExtensions[1]) = (pfpStaker, fundraiseExtension);
+			// Workaround for solidity dynamic memory array
+			address[] memory _owners = new address[](1);
+			_owners[0] = address(forumGroup);
 
-		// Set the custom extensions
-		if (customExtensions_.length != 0) {
-			// Cannot realistically overflow on human timescales
-			unchecked {
-				for (uint256 i = 0; i < customExtensions_.length; i++) {
-					// +2 offsets the base Forum extensions
-					initialExtensions[i + 2] = customExtensions_[i];
-				}
-			}
+			// Call setup on safe to enable our new module and set the module as the only signer
+			_safe.setup(
+				_owners,
+				1,
+				gnosisMultisendLibrary,
+				_multisendAction,
+				gnosisFallbackLibrary,
+				address(0),
+				0,
+				payable(address(0))
+			);
 		}
 
-		// Generate delegate calls so the safe calls enableModule on itself during setup
-		bytes memory _enableForumGroup = abi.encodeWithSignature(
-			'enableModule(address)',
-			address(forumGroup)
-		);
-		bytes memory _enableForumGroupMultisend = abi.encodePacked(
-			uint8(0),
-			address(_safe),
-			uint256(0),
-			uint256(_enableForumGroup.length),
-			bytes(_enableForumGroup)
-		);
-		bytes memory _multisendAction = abi.encodeWithSignature(
-			'multiSend(bytes)',
-			_enableForumGroupMultisend
-		);
+		{
+			// Create initialExtensions array of correct length. 2 Forum set extensions + customExtensions
+			address[] memory initialExtensions = new address[](2 + customExtensions_.length);
 
-		// Workaround for solidity dynamic memory array
-		address[] memory _owners = new address[](1);
-		_owners[0] = address(forumGroup);
+			// Set the base Forum extensions // todo add withdrawal extension as default
+			(initialExtensions[0], initialExtensions[1]) = (pfpStaker, fundraiseExtension);
 
-		// Call setup on safe to enable our new module and set the module as the only signer
-		_safe.setup(
-			_owners,
-			1,
-			gnosisMultisendLibrary,
-			_multisendAction,
-			gnosisFallbackLibrary,
-			address(0),
-			0,
-			payable(address(0))
-		);
+			// Set the custom extensions
+			if (customExtensions_.length != 0) {
+				// Cannot realistically overflow on human timescales
+				unchecked {
+					for (uint256 i; i < customExtensions_.length; ) {
+						// +2 offsets the base Forum extensions
+						initialExtensions[i + 2] = customExtensions_[i];
 
-		bytes memory init = abi.encode(
-			name_,
-			symbol_,
-			address(_safe),
-			voters_,
-			initialExtensions,
-			govSettings_
-		);
+						++i;
+					}
+				}
+			}
 
-		forumGroup.setUp(init);
+			//!!!!! remove hardcoding after testing (used to speed up compile without needing via-ir)
+			bytes memory init = abi.encode(
+				'test',
+				symbol_,
+				address(_safe),
+				voters_,
+				initialExtensions,
+				govSettings_
+			);
 
+			forumGroup.setUp(init);
+		}
 		emit GroupDeployed(forumGroup, name_, symbol_, voters_, govSettings_);
 	}
 
