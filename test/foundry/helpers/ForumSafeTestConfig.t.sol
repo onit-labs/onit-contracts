@@ -9,9 +9,6 @@ import {GnosisSafeProxyFactory} from '@gnosis/proxies/GnosisSafeProxyFactory.sol
 import {ForumSafeFactory} from '../../../src/gnosis-forum/ForumSafeFactory.sol';
 import {ForumSafeModule} from '../../../src/gnosis-forum/ForumSafeModule.sol';
 
-import {ERC721Test} from '../../../src/test-contracts/ERC721Test.sol';
-import {ERC1155Test} from '../../../src/test-contracts/ERC1155Test.sol';
-
 import {IForumGroupTypes} from '../../../src/interfaces/IForumGroupTypes.sol';
 
 import 'forge-std/Test.sol';
@@ -36,6 +33,12 @@ abstract contract ForumSafeTestConfig is Test {
 	// Declare arrys used to setup forum groups
 	address[] internal voters = new address[](1);
 	address[] internal initialExtensions = new address[](1);
+
+	enum Operation {
+		CALL,
+		DELEGATECALL,
+		STATICCALL
+	}
 
 	/// -----------------------------------------------------------------------
 	/// Setup
@@ -74,6 +77,28 @@ abstract contract ForumSafeTestConfig is Test {
 	 */
 	function processProposal(uint256 proposal, ForumSafeModule group, bool expectPass) internal {
 		// Sign the proposal number 1 as alice and process
+		IForumGroupTypes.Signature[] memory signatures = signProposal(proposal, group, alicePk);
+
+		if (expectPass) {
+			group.processProposal(proposal, signatures);
+		} else {
+			vm.expectRevert();
+			group.processProposal(proposal, signatures);
+		}
+	}
+
+	/**
+	 * @notice Sign proposal
+	 * @param proposal The id of the proposal to sign
+	 * @param group The forum group to sign the proposal for
+	 * @param signerPk The address of the signer
+	 * @return The signatures
+	 */
+	function signProposal(
+		uint256 proposal,
+		ForumSafeModule group,
+		uint256 signerPk
+	) internal view returns (IForumGroupTypes.Signature[] memory) {
 		bytes32 digest = keccak256(
 			abi.encodePacked(
 				'\x19\x01',
@@ -82,16 +107,10 @@ abstract contract ForumSafeTestConfig is Test {
 			)
 		);
 
-		(uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePk, digest);
+		(uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, digest);
 		IForumGroupTypes.Signature[] memory signatures = new IForumGroupTypes.Signature[](1);
 		signatures[0] = IForumGroupTypes.Signature(v, r, s);
-
-		if (expectPass) {
-			group.processProposal(proposal, signatures);
-		} else {
-			vm.expectRevert();
-			group.processProposal(proposal, signatures);
-		}
+		return signatures;
 	}
 
 	function buildDynamicArraysForProposal(
@@ -129,5 +148,19 @@ abstract contract ForumSafeTestConfig is Test {
 		) = buildDynamicArraysForProposal(accounts, amounts, payloads);
 
 		return group.propose(proposalType, _accounts, _amounts, _payloads);
+	}
+
+	function buildSafeMultisend(
+		Operation operation,
+		address to,
+		uint256 value,
+		bytes memory data
+	) internal pure returns (bytes memory) {
+		// Encode the multisend transaction
+		// (needed to delegate call from the safe as addModule is 'authorised')
+		bytes memory tmp = abi.encodePacked(operation, to, value, uint256(data.length), data);
+
+		// Create multisend payload
+		return abi.encodeWithSignature('multiSend(bytes)', tmp);
 	}
 }
