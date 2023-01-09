@@ -8,7 +8,6 @@ import 'forge-std/console.sol';
 
 // ! Consider
 // Other interactions which can happen between module and safe?
-// removing multicall from module if not used
 
 contract ForumSafeModuleTest is ForumSafeTestConfig, TokenTestConfig {
 	ForumSafeModule private forumSafeModule;
@@ -198,6 +197,24 @@ contract ForumSafeModuleTest is ForumSafeTestConfig, TokenTestConfig {
 
 		// Check module is enabled on safe
 		assertTrue(safe.isModuleEnabled(address(this)));
+	}
+
+	function testAddingMemberToModuleAddsToSafe() public {
+		assertFalse(safe.isOwner(bob));
+
+		// Create MINT proposal to forum module
+		uint256 prop = proposeToForum(
+			forumSafeModule,
+			IForumGroupTypes.ProposalType.MINT,
+			[bob],
+			[uint256(0)],
+			[bytes('')]
+		);
+
+		processProposal(prop, forumSafeModule, true);
+
+		// Check owner is added to safe
+		assertTrue(safe.isOwner(bob));
 	}
 
 	function testRevertsIfExternalCallReverts() public {

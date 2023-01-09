@@ -28,7 +28,7 @@ contract ForumSafeFactoryTest is ForumSafeTestConfig {
 				initialExtensions
 			);
 
-		assertEq(deployedSafe.getOwners()[0], address(deployedForumSafe), 'forum not set as owner');
+		assertEq(deployedSafe.getOwners()[0], address(alice), 'alice not set as owner');
 		assertEq(deployedForumSafe.avatar(), address(deployedSafe), 'safe not set as avatar');
 		assertEq(deployedForumSafe.target(), address(deployedSafe), 'safe not set as target');
 		assertEq(deployedForumSafe.owner(), address(deployedSafe), 'safe not set as owner');

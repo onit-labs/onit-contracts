@@ -7,13 +7,13 @@ import {Module, Enum} from '@gnosis.pm/zodiac/contracts/core/Module.sol';
 
 import {ForumGovernance, EnumerableSet} from './ForumSafeGovernance.sol';
 
-// TODO consider need for NFTreceiver - does the module need to receive?
 import {NFTreceiver} from '../utils/NFTreceiver.sol';
 import {ReentrancyGuard} from '../utils/ReentrancyGuard.sol';
+import {SafeHelper} from '../utils/SafeHelper.sol';
 
 import {IForumGroupTypes} from '../interfaces/IForumGroupTypes.sol';
 import {IForumGroupExtension} from '../interfaces/IForumGroupExtension.sol';
-import {IPfpStaker} from '../interfaces/IPfpStaker.sol';
+import {IPfpStaker} from '../interfaces/IPfpStaker.sol'; // ! remove this
 
 /**
  * @title ForumSafeModule
@@ -22,6 +22,7 @@ import {IPfpStaker} from '../interfaces/IPfpStaker.sol';
  */
 contract ForumSafeModule is
 	Module,
+	SafeHelper,
 	IForumGroupTypes,
 	ForumGovernance,
 	ReentrancyGuard,
@@ -73,9 +74,6 @@ contract ForumSafeModule is
 	/// ----------------------------------------------------------------------------------------
 	///							DAO STORAGE
 	/// ----------------------------------------------------------------------------------------
-
-	// Gnosis multisendLibrary library contract
-	address public multisendLibrary;
 
 	// Contract generating uri for group tokens
 	address private pfpExtension;
@@ -332,8 +330,10 @@ contract ForumSafeModule is
 				if (prop.proposalType == ProposalType.MINT)
 					for (uint256 i; i < prop.accounts.length; ) {
 						// Only mint membership token if the account is not already a member
-						if (balanceOf[prop.accounts[i]][MEMBERSHIP] == 0)
+						if (balanceOf[prop.accounts[i]][MEMBERSHIP] == 0) {
 							_mint(prop.accounts[i], MEMBERSHIP, 1, '');
+							addMemberToSafe(avatar, prop.accounts[i]);
+						}
 						_mint(prop.accounts[i], TOKEN, prop.amounts[i], '');
 						++i;
 					}

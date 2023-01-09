@@ -29,6 +29,8 @@ abstract contract ForumSafeTestConfig is Test {
 
 	address internal alice;
 	uint256 internal alicePk;
+	address internal bob;
+	uint256 internal bobPk;
 
 	// Declare arrys used to setup forum groups
 	address[] internal voters = new address[](1);
@@ -46,6 +48,7 @@ abstract contract ForumSafeTestConfig is Test {
 
 	constructor() {
 		(alice, alicePk) = makeAddrAndKey('alice');
+		(bob, bobPk) = makeAddrAndKey('bob');
 
 		safeSingleton = new GnosisSafe();
 		multisend = new MultiSend();

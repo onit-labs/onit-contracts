@@ -134,14 +134,10 @@ contract ForumSafeFactory is Owned {
 				_enableForumGroupMultisend
 			);
 
-			// Workaround for solidity dynamic memory array
-			address[] memory _owners = new address[](1);
-			_owners[0] = address(forumGroup);
-
 			// Call setup on safe to enable our new module and set the module as the only signer
 			_safe.setup(
-				_owners,
-				1,
+				voters_,
+				voters_.length,
 				gnosisMultisendLibrary,
 				_multisendAction,
 				gnosisFallbackLibrary,
