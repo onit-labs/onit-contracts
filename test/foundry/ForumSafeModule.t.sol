@@ -7,7 +7,6 @@ import './helpers/TokenTestConfig.t.sol';
 import 'forge-std/console.sol';
 
 // ! Consider
-// Test for handling assets sent to group directly
 // Other interactions which can happen between module and safe?
 // removing multicall from module if not used
 
@@ -15,8 +14,8 @@ contract ForumSafeModuleTest is ForumSafeTestConfig, TokenTestConfig {
 	ForumSafeModule private forumSafeModule;
 	GnosisSafe private safe;
 
-	address safeAddress;
-	address moduleAddress;
+	address private safeAddress;
+	address private moduleAddress;
 
 	/// -----------------------------------------------------------------------
 	/// Setup
@@ -201,8 +200,6 @@ contract ForumSafeModuleTest is ForumSafeTestConfig, TokenTestConfig {
 		assertTrue(safe.isModuleEnabled(address(this)));
 	}
 
-	function testEnablesSafeToRescueTokensOnModule() public {} // todo is this needed? (taken from minion)
-
 	function testRevertsIfExternalCallReverts() public {
 		// Create failing payload for execution
 		bytes memory wrongPayload = abi.encodeWithSignature('thisWillFail(address)', address(this));
@@ -221,6 +218,35 @@ contract ForumSafeModuleTest is ForumSafeTestConfig, TokenTestConfig {
 
 		// Check module is not enabled on safe
 		assertTrue(!safe.isModuleEnabled(address(this)));
+	}
+
+	function testEnablesSafeToRescueTokensOnModule() public {
+		// Mint tokens to module, and create Transfer payload
+		mockErc20.mint(moduleAddress, 100);
+		bytes memory transferPayload = abi.encodeWithSignature(
+			'transfer(address,uint256)',
+			alice,
+			100
+		);
+
+		// ExecuteFromModule payload for module to call on safe
+		bytes memory executeAsModulePayload = abi.encodeWithSignature(
+			'executeAsModule(address,uint256,bytes)',
+			address(mockErc20),
+			uint256(0),
+			transferPayload
+		);
+
+		// Propose transfer from module
+		uint256 prop = proposeToForum(
+			forumSafeModule,
+			IForumGroupTypes.ProposalType.CALL,
+			[moduleAddress],
+			[uint256(0)],
+			[executeAsModulePayload]
+		);
+
+		processProposal(prop, forumSafeModule, true);
 	}
 
 	// Prevents a user making calls from the module
@@ -250,11 +276,146 @@ contract ForumSafeModuleTest is ForumSafeTestConfig, TokenTestConfig {
 
 	function testAdds1271SigToSafe() public {}
 
-	function testMultisendProposalViaSafe() public {}
+	function testSingleProposalViaSafe() public {
+		// Create transfer proposal
+		bytes memory transferPayload = abi.encodeWithSignature(
+			'transfer(address,uint256)',
+			alice,
+			0.5 ether
+		);
 
-	function testCannotExecMultisendIfPartFails() public {}
+		// Create proposal with transfer payload to erc20
+		uint256 prop = proposeToForum(
+			forumSafeModule,
+			IForumGroupTypes.ProposalType.CALL,
+			[address(mockErc20)],
+			[uint256(0)],
+			[transferPayload]
+		);
 
-	function testCannotExecuteDifferentActionFromProposal() public {}
+		// Execute proposal
+		processProposal(prop, forumSafeModule, true);
+
+		// Check balance of alice and safe
+		assertEq(mockErc20.balanceOf(alice), 0.5 ether);
+		assertEq(mockErc20.balanceOf(safeAddress), 0.5 ether);
+	}
+
+	function testMultisendProposalViaSafe() public {
+		// Create erc20 transfer proposal
+		bytes memory transferPayload = abi.encodeWithSignature(
+			'transfer(address,uint256)',
+			alice,
+			0.5 ether
+		);
+
+		// Create erc1155 transfer proposal
+		bytes memory transfer1155Payload = abi.encodeWithSignature(
+			'safeTransferFrom(address,address,uint256,uint256,bytes)',
+			safeAddress,
+			alice,
+			0,
+			1,
+			''
+		);
+
+		// Create multisend payload
+		bytes memory multisendPayload = abi.encodeWithSignature(
+			'multiSend(bytes)',
+			bytes.concat(
+				abi.encodePacked(
+					Operation.CALL,
+					address(mockErc20),
+					uint256(0),
+					uint256(transferPayload.length),
+					transferPayload
+				),
+				abi.encodePacked(
+					Operation.CALL,
+					address(mockErc1155),
+					uint256(0),
+					uint256(transfer1155Payload.length),
+					transfer1155Payload
+				)
+			)
+		);
+
+		// Create proposal with multisend payload
+		uint256 prop = proposeToForum(
+			forumSafeModule,
+			IForumGroupTypes.ProposalType.CALL,
+			[address(multisend)],
+			[uint256(0)],
+			[multisendPayload]
+		);
+
+		// Execute proposal
+		processProposal(prop, forumSafeModule, true);
+
+		// Check balance of alice and safe
+		assertEq(mockErc20.balanceOf(alice), 0.5 ether);
+		assertEq(mockErc20.balanceOf(safeAddress), 0.5 ether);
+		assertEq(mockErc1155.balanceOf(alice, 0), 1);
+		assertEq(mockErc1155.balanceOf(safeAddress, 0), 0);
+	}
+
+	function testCannotExecMultisendIfPartFails() public {
+		// Create erc20 transfer proposal to fail (not enough balance for 5 eth)
+		bytes memory transferPayload = abi.encodeWithSignature(
+			'transfer(address,uint256)',
+			alice,
+			5 ether
+		);
+
+		// Create erc1155 transfer proposal
+		bytes memory transfer1155Payload = abi.encodeWithSignature(
+			'safeTransferFrom(address,address,uint256,uint256,bytes)',
+			safeAddress,
+			alice,
+			0,
+			1,
+			''
+		);
+
+		// Create multisend payload
+		bytes memory multisendPayload = abi.encodeWithSignature(
+			'multiSend(bytes)',
+			bytes.concat(
+				abi.encodePacked(
+					Operation.CALL,
+					address(mockErc20),
+					uint256(0),
+					uint256(transferPayload.length),
+					transferPayload
+				),
+				abi.encodePacked(
+					Operation.CALL,
+					address(mockErc1155),
+					uint256(0),
+					uint256(transfer1155Payload.length),
+					transfer1155Payload
+				)
+			)
+		);
+
+		// Create proposal with multisend payload
+		uint256 prop = proposeToForum(
+			forumSafeModule,
+			IForumGroupTypes.ProposalType.CALL,
+			[address(multisend)],
+			[uint256(0)],
+			[multisendPayload]
+		);
+
+		// Execute proposal, should revert
+		processProposal(prop, forumSafeModule, false);
+
+		// Check balance of alice and safe, should not change
+		assertEq(mockErc20.balanceOf(alice), 0);
+		assertEq(mockErc20.balanceOf(safeAddress), 1 ether);
+		assertEq(mockErc1155.balanceOf(alice, 0), 0);
+		assertEq(mockErc1155.balanceOf(safeAddress, 0), 1);
+	}
 
 	/// -----------------------------------------------------------------------
 	/// Utils
