@@ -43,6 +43,7 @@ contract ForumSafeModuleTest is ForumSafeTestConfig, TokenTestConfig {
 	/// Admin operations on Safe and Module
 	/// -----------------------------------------------------------------------
 
+	// ! consider manual setting of threshold
 	function testModuleAddsOwnerToSafe() public {
 		assertFalse(safe.isOwner(address(this)));
 
@@ -55,9 +56,8 @@ contract ForumSafeModuleTest is ForumSafeTestConfig, TokenTestConfig {
 
 		// Multicall is delegate called by the safe
 		// This lets it be used to call any function on any contract, where the call must come from owner
-		// Consider additional input field in proposal to specify operation
 		bytes memory multisendPayload = buildSafeMultisend(
-			Operation.CALL,
+			Enum.Operation.DelegateCall,
 			safeAddress,
 			0,
 			addOwnerPayload
@@ -66,7 +66,8 @@ contract ForumSafeModuleTest is ForumSafeTestConfig, TokenTestConfig {
 		// Create proposal to add owner to safe
 		uint256 prop = proposeToForum(
 			forumSafeModule,
-			IForumGroupTypes.ProposalType.CALL,
+			IForumSafeModuleTypes.ProposalType.CALL,
+			Enum.Operation.DelegateCall,
 			[address(multisend)],
 			[uint256(0)],
 			[multisendPayload]
@@ -87,20 +88,14 @@ contract ForumSafeModuleTest is ForumSafeTestConfig, TokenTestConfig {
 			alice
 		);
 
-		bytes memory multisendPayload = buildSafeMultisend(
-			Operation.CALL,
-			moduleAddress,
-			0,
-			changeOwnerPayload
-		);
-
 		// Create proposal to update owner on module
 		uint256 prop = proposeToForum(
 			forumSafeModule,
-			IForumGroupTypes.ProposalType.CALL,
-			[address(multisend)],
+			IForumSafeModuleTypes.ProposalType.CALL,
+			Enum.Operation.Call,
+			[address(forumSafeModule)],
 			[uint256(0)],
-			[multisendPayload]
+			[changeOwnerPayload]
 		);
 
 		processProposal(prop, forumSafeModule, true);
@@ -115,20 +110,14 @@ contract ForumSafeModuleTest is ForumSafeTestConfig, TokenTestConfig {
 		// Create payload to update avatar on module
 		bytes memory changeAvatarPayload = abi.encodeWithSignature('setAvatar(address)', alice);
 
-		bytes memory multisendPayload = buildSafeMultisend(
-			Operation.CALL,
-			moduleAddress,
-			0,
-			changeAvatarPayload
-		);
-
 		// Create proposal to update avatar on module
 		uint256 prop = proposeToForum(
 			forumSafeModule,
-			IForumGroupTypes.ProposalType.CALL,
-			[address(multisend)],
+			IForumSafeModuleTypes.ProposalType.CALL,
+			Enum.Operation.Call,
+			[moduleAddress],
 			[uint256(0)],
-			[multisendPayload]
+			[changeAvatarPayload]
 		);
 
 		processProposal(prop, forumSafeModule, true);
@@ -143,20 +132,14 @@ contract ForumSafeModuleTest is ForumSafeTestConfig, TokenTestConfig {
 		// Create payload to update target on module
 		bytes memory changeTargetPayload = abi.encodeWithSignature('setTarget(address)', alice);
 
-		bytes memory multisendPayload = buildSafeMultisend(
-			Operation.CALL,
-			moduleAddress,
-			0,
-			changeTargetPayload
-		);
-
 		// Create proposal to update target on module
 		uint256 prop = proposeToForum(
 			forumSafeModule,
-			IForumGroupTypes.ProposalType.CALL,
-			[address(multisend)],
+			IForumSafeModuleTypes.ProposalType.CALL,
+			Enum.Operation.Call,
+			[moduleAddress],
 			[uint256(0)],
-			[multisendPayload]
+			[changeTargetPayload]
 		);
 
 		processProposal(prop, forumSafeModule, true);
@@ -169,8 +152,9 @@ contract ForumSafeModuleTest is ForumSafeTestConfig, TokenTestConfig {
 	/// Module execution on safe
 	/// -----------------------------------------------------------------------
 
-	// ! check flow of call here (module -> multisend -> safe.. but admin op should be self called by safe)
 	function testModuleAddsOtherModuleToSafe() public {
+		assertFalse(safe.isModuleEnabled(address(this)));
+
 		// Create payload to enable module (any address will do for example) on safe
 		bytes memory enableModulePayload = abi.encodeWithSignature(
 			'enableModule(address)',
@@ -178,7 +162,7 @@ contract ForumSafeModuleTest is ForumSafeTestConfig, TokenTestConfig {
 		);
 
 		bytes memory multisendPayload = buildSafeMultisend(
-			Operation.CALL,
+			Enum.Operation.Call,
 			safeAddress,
 			0,
 			enableModulePayload
@@ -187,7 +171,8 @@ contract ForumSafeModuleTest is ForumSafeTestConfig, TokenTestConfig {
 		// Create proposal to enable module on safe
 		uint256 prop = proposeToForum(
 			forumSafeModule,
-			IForumGroupTypes.ProposalType.CALL,
+			IForumSafeModuleTypes.ProposalType.CALL,
+			Enum.Operation.DelegateCall,
 			[address(multisend)],
 			[uint256(0)],
 			[multisendPayload]
@@ -199,32 +184,17 @@ contract ForumSafeModuleTest is ForumSafeTestConfig, TokenTestConfig {
 		assertTrue(safe.isModuleEnabled(address(this)));
 	}
 
-	function testAddingMemberToModuleAddsToSafe() public {
-		assertFalse(safe.isOwner(bob));
-
-		// Create MINT proposal to forum module
-		uint256 prop = proposeToForum(
-			forumSafeModule,
-			IForumGroupTypes.ProposalType.MINT,
-			[bob],
-			[uint256(0)],
-			[bytes('')]
-		);
-
-		processProposal(prop, forumSafeModule, true);
-
-		// Check owner is added to safe
-		assertTrue(safe.isOwner(bob));
-	}
-
 	function testRevertsIfExternalCallReverts() public {
+		assertTrue(!safe.isModuleEnabled(address(this)));
+
 		// Create failing payload for execution
 		bytes memory wrongPayload = abi.encodeWithSignature('thisWillFail(address)', address(this));
 
 		// Create proposal to enable module on safe
 		uint256 prop = proposeToForum(
 			forumSafeModule,
-			IForumGroupTypes.ProposalType.CALL,
+			IForumSafeModuleTypes.ProposalType.CALL,
+			Enum.Operation.Call,
 			[safeAddress],
 			[uint256(0)],
 			[wrongPayload]
@@ -257,7 +227,8 @@ contract ForumSafeModuleTest is ForumSafeTestConfig, TokenTestConfig {
 		// Propose transfer from module
 		uint256 prop = proposeToForum(
 			forumSafeModule,
-			IForumGroupTypes.ProposalType.CALL,
+			IForumSafeModuleTypes.ProposalType.CALL,
+			Enum.Operation.Call,
 			[moduleAddress],
 			[uint256(0)],
 			[executeAsModulePayload]
@@ -281,17 +252,25 @@ contract ForumSafeModuleTest is ForumSafeTestConfig, TokenTestConfig {
 			address(mockErc20),
 			uint256(0),
 			transferPayload,
-			Operation.DELEGATECALL
+			Enum.Operation.Call
 		);
 
 		vm.expectRevert(bytes4(keccak256('AvatarOnly()')));
 		forumSafeModule.executeAsModule(safeAddress, uint256(0), executeAsModulePayload);
 
+		// Check balances
+		assertEq(mockErc20.balanceOf(safeAddress), 1 ether);
+		assertEq(mockErc20.balanceOf(alice), 0);
+
 		vm.prank(safeAddress, safeAddress);
 		forumSafeModule.executeAsModule(safeAddress, uint256(0), executeAsModulePayload);
+
+		// Check balances
+		assertEq(mockErc20.balanceOf(safeAddress), 1 ether - 100);
+		assertEq(mockErc20.balanceOf(alice), 100);
 	}
 
-	function testAdds1271SigToSafe() public {}
+	// function testAdds1271SigToSafe() public {}
 
 	function testSingleProposalViaSafe() public {
 		// Create transfer proposal
@@ -304,7 +283,8 @@ contract ForumSafeModuleTest is ForumSafeTestConfig, TokenTestConfig {
 		// Create proposal with transfer payload to erc20
 		uint256 prop = proposeToForum(
 			forumSafeModule,
-			IForumGroupTypes.ProposalType.CALL,
+			IForumSafeModuleTypes.ProposalType.CALL,
+			Enum.Operation.Call,
 			[address(mockErc20)],
 			[uint256(0)],
 			[transferPayload]
@@ -341,14 +321,14 @@ contract ForumSafeModuleTest is ForumSafeTestConfig, TokenTestConfig {
 			'multiSend(bytes)',
 			bytes.concat(
 				abi.encodePacked(
-					Operation.CALL,
+					Enum.Operation.Call,
 					address(mockErc20),
 					uint256(0),
 					uint256(transferPayload.length),
 					transferPayload
 				),
 				abi.encodePacked(
-					Operation.CALL,
+					Enum.Operation.Call,
 					address(mockErc1155),
 					uint256(0),
 					uint256(transfer1155Payload.length),
@@ -360,7 +340,8 @@ contract ForumSafeModuleTest is ForumSafeTestConfig, TokenTestConfig {
 		// Create proposal with multisend payload
 		uint256 prop = proposeToForum(
 			forumSafeModule,
-			IForumGroupTypes.ProposalType.CALL,
+			IForumSafeModuleTypes.ProposalType.CALL,
+			Enum.Operation.DelegateCall,
 			[address(multisend)],
 			[uint256(0)],
 			[multisendPayload]
@@ -399,14 +380,14 @@ contract ForumSafeModuleTest is ForumSafeTestConfig, TokenTestConfig {
 			'multiSend(bytes)',
 			bytes.concat(
 				abi.encodePacked(
-					Operation.CALL,
+					Enum.Operation.Call,
 					address(mockErc20),
 					uint256(0),
 					uint256(transferPayload.length),
 					transferPayload
 				),
 				abi.encodePacked(
-					Operation.CALL,
+					Enum.Operation.Call,
 					address(mockErc1155),
 					uint256(0),
 					uint256(transfer1155Payload.length),
@@ -418,7 +399,8 @@ contract ForumSafeModuleTest is ForumSafeTestConfig, TokenTestConfig {
 		// Create proposal with multisend payload
 		uint256 prop = proposeToForum(
 			forumSafeModule,
-			IForumGroupTypes.ProposalType.CALL,
+			IForumSafeModuleTypes.ProposalType.CALL,
+			Enum.Operation.DelegateCall,
 			[address(multisend)],
 			[uint256(0)],
 			[multisendPayload]
@@ -433,8 +415,4 @@ contract ForumSafeModuleTest is ForumSafeTestConfig, TokenTestConfig {
 		assertEq(mockErc1155.balanceOf(alice, 0), 0);
 		assertEq(mockErc1155.balanceOf(safeAddress, 0), 1);
 	}
-
-	/// -----------------------------------------------------------------------
-	/// Utils
-	/// -----------------------------------------------------------------------
 }

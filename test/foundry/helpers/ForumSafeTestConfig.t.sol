@@ -38,12 +38,6 @@ abstract contract ForumSafeTestConfig is Test {
 	address[] internal voters = new address[](1);
 	address[] internal initialExtensions = new address[](1);
 
-	enum Operation {
-		CALL,
-		DELEGATECALL,
-		STATICCALL
-	}
-
 	/// -----------------------------------------------------------------------
 	/// Setup
 	/// -----------------------------------------------------------------------
@@ -169,7 +163,7 @@ abstract contract ForumSafeTestConfig is Test {
 	}
 
 	function buildSafeMultisend(
-		Operation operation,
+		Enum.Operation operation,
 		address to,
 		uint256 value,
 		bytes memory data

@@ -19,16 +19,9 @@ contract SafeHelper {
 	///							GNOSIS SAFE STORAGE
 	/// ----------------------------------------------------------------------------------------
 
-	function addMemberToSafe(address _safe, address _member) internal {
+	function getThreshold(address _safe) public view returns (uint256) {
 		(, bytes memory threshold) = _safe.staticcall(GET_THRESHOLD);
 
-		(bool _success, bytes memory _result) = _safe.call{value: msg.value}(
-			abi.encodePacked(
-				ADD_OWNER_WITH_THRESHOLD_SIG,
-				abi.encode(_member, uint256(bytes32(threshold)))
-			)
-		);
-
-		require(_success, string(_result));
+		return uint256(bytes32(threshold));
 	}
 }
