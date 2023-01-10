@@ -11,7 +11,7 @@ import {NFTreceiver} from '../utils/NFTreceiver.sol';
 import {ReentrancyGuard} from '../utils/ReentrancyGuard.sol';
 import {SafeHelper} from '../utils/SafeHelper.sol';
 
-import {IForumGroupTypes} from '../interfaces/IForumGroupTypes.sol';
+import {IForumSafeModuleTypes} from '../interfaces/IForumSafeModuleTypes.sol';
 import {IForumGroupExtension} from '../interfaces/IForumGroupExtension.sol';
 import {IPfpStaker} from '../interfaces/IPfpStaker.sol'; // ! remove this
 
@@ -23,7 +23,7 @@ import {IPfpStaker} from '../interfaces/IPfpStaker.sol'; // ! remove this
 contract ForumSafeModule is
 	Module,
 	SafeHelper,
-	IForumGroupTypes,
+	IForumSafeModuleTypes,
 	ForumGovernance,
 	ReentrancyGuard,
 	NFTreceiver
@@ -201,20 +201,22 @@ contract ForumSafeModule is
 
 	/**
 	 * @notice Make a proposal to the group
-	 * @param proposalType type of proposal
+	 * @param proposalDetails type of proposal
 	 * @param accounts target accounts
 	 * @param amounts to be sent
 	 * @param payloads for target accounts
 	 * @return proposal index of the created proposal
 	 */
 	function propose(
-		ProposalType proposalType,
+		uint56 proposalDetails,
 		address[] calldata accounts,
 		uint256[] calldata amounts,
 		bytes[] calldata payloads
 	) public payable virtual nonReentrant returns (uint256 proposal) {
 		if (accounts.length != amounts.length || amounts.length != payloads.length)
 			revert NoArrayParity();
+
+		(, ProposalType proposalType, ) = unpackProposal(proposalDetails);
 
 		if (proposalType == ProposalType.VPERIOD)
 			if (amounts[0] == 0 || amounts[0] > 365 days) revert PeriodBounds();
@@ -242,11 +244,10 @@ contract ForumSafeModule is
 		proposal = proposalCount;
 
 		proposals[proposal] = Proposal({
-			proposalType: proposalType,
+			proposalDetails: proposalDetails,
 			accounts: accounts,
 			amounts: amounts,
-			payloads: payloads,
-			creationTime: _safeCastTo32(block.timestamp)
+			payloads: payloads
 		});
 
 		emit NewProposal(msg.sender, proposal, proposalType, accounts, amounts, payloads);
@@ -266,11 +267,13 @@ contract ForumSafeModule is
 	) public payable virtual nonReentrant returns (bool didProposalPass, bytes[] memory results) {
 		Proposal storage prop = proposals[proposal];
 
-		VoteType voteType = proposalVoteTypes[prop.proposalType];
+		(uint32 creationTime, ProposalType proposalType, Enum.Operation operation) = unpackProposal(
+			prop.proposalDetails
+		);
 
-		if (prop.creationTime == 0) revert NotCurrentProposal();
+		VoteType voteType = proposalVoteTypes[ProposalType(2)];
 
-		uint256 votes;
+		if (creationTime == 0) revert NotCurrentProposal();
 
 		bytes32 digest = keccak256(
 			abi.encodePacked(
@@ -280,86 +283,24 @@ contract ForumSafeModule is
 			)
 		);
 
-		// We keep track of the previous signer in the array to ensure there are no duplicates
-		address prevSigner;
-
-		// For each sig we check the recovered signer is a valid member and count thier vote
-		for (uint256 i; i < signatures.length; ) {
-			// Recover the signer
-			address recoveredSigner = ecrecover(
-				digest,
-				signatures[i].v,
-				signatures[i].r,
-				signatures[i].s
-			);
-
-			// If not a member, or the signer is out of order (used to prevent duplicates), revert
-			if (balanceOf[recoveredSigner][MEMBERSHIP] == 0 || prevSigner >= recoveredSigner)
-				revert SignatureError();
-
-			// If the signer has not delegated their vote, we count, otherwise we skip
-			if (memberDelegatee[recoveredSigner] == address(0)) {
-				// If member vote we increment by 1 (for the signer) + the number of members who have delegated to the signer
-				// Else we calculate the number of votes based on share of the treasury
-				if (voteType == VoteType.MEMBER)
-					votes += 1 + EnumerableSet.length(memberDelegators[recoveredSigner]);
-				else {
-					uint256 len = EnumerableSet.length(memberDelegators[recoveredSigner]);
-					// Add the number of votes the signer holds
-					votes += balanceOf[recoveredSigner][TOKEN];
-					// If the signer has been delegated too,check the balances of anyone who has delegated to the current signer
-					if (len != 0)
-						for (uint256 j; j < len; ) {
-							votes += balanceOf[
-								EnumerableSet.at(memberDelegators[recoveredSigner], j)
-							][TOKEN];
-							++j;
-						}
-				}
-			}
-
-			++i;
-			prevSigner = recoveredSigner;
-		}
+		uint256 votes = getVotes(signatures, digest, voteType);
 
 		didProposalPass = _countVotes(voteType, votes);
 
 		if (didProposalPass) {
 			// Cannot realistically overflow on human timescales
 			unchecked {
-				if (prop.proposalType == ProposalType.MINT)
-					for (uint256 i; i < prop.accounts.length; ) {
-						// Only mint membership token if the account is not already a member
-						if (balanceOf[prop.accounts[i]][MEMBERSHIP] == 0) {
-							_mint(prop.accounts[i], MEMBERSHIP, 1, '');
-							addMemberToSafe(avatar, prop.accounts[i]);
-						}
-						_mint(prop.accounts[i], TOKEN, prop.amounts[i], '');
-						++i;
-					}
-
-				if (prop.proposalType == ProposalType.BURN)
-					for (uint256 i; i < prop.accounts.length; ) {
-						_burn(prop.accounts[i], MEMBERSHIP, 1);
-						_burn(prop.accounts[i], TOKEN, prop.amounts[i]);
-						++i;
-					}
-
-				// TODO route all calls through exec() to safe
-				if (prop.proposalType == ProposalType.CALL) {
+				if (proposalType == ProposalType.CALL) {
 					for (uint256 i; i < prop.accounts.length; i++) {
 						results = new bytes[](prop.accounts.length);
 
-						// ! check if delegate call is always ok
+						// ! convert to take optional operation param
 						(bool successCall, bytes memory result) = execAndReturnData(
 							prop.accounts[i],
 							prop.amounts[i],
 							prop.payloads[i],
-							Enum.Operation.DelegateCall
+							operation
 						);
-						// (bool successCall, bytes memory result) = prop.accounts[i].call{
-						// 	value: prop.amounts[i]
-						// }(prop.payloads[i]);
 
 						if (!successCall) revert CallError();
 
@@ -368,24 +309,24 @@ contract ForumSafeModule is
 				}
 
 				// Governance settings
-				if (prop.proposalType == ProposalType.VPERIOD)
-					votingPeriod = uint32(prop.amounts[0]);
+				if (proposalType == ProposalType.VPERIOD) votingPeriod = uint32(prop.amounts[0]);
 
-				if (prop.proposalType == ProposalType.MEMBER_LIMIT)
+				// ! consider member limit when owners are on safe
+				if (proposalType == ProposalType.MEMBER_LIMIT)
 					memberLimit = uint32(prop.amounts[0]);
 
-				if (prop.proposalType == ProposalType.MEMBER_THRESHOLD)
+				if (proposalType == ProposalType.MEMBER_THRESHOLD)
 					memberVoteThreshold = uint32(prop.amounts[0]);
 
-				if (prop.proposalType == ProposalType.TOKEN_THRESHOLD)
+				if (proposalType == ProposalType.TOKEN_THRESHOLD)
 					tokenVoteThreshold = uint32(prop.amounts[0]);
 
-				if (prop.proposalType == ProposalType.TYPE)
+				if (proposalType == ProposalType.TYPE)
 					proposalVoteTypes[ProposalType(prop.amounts[0])] = VoteType(prop.amounts[1]);
 
-				if (prop.proposalType == ProposalType.PAUSE) _flipPause();
+				if (proposalType == ProposalType.PAUSE) _flipPause();
 
-				if (prop.proposalType == ProposalType.EXTENSION)
+				if (proposalType == ProposalType.EXTENSION)
 					for (uint256 i; i < prop.accounts.length; i++) {
 						if (prop.amounts[i] != 0)
 							extensions[prop.accounts[i]] = !extensions[prop.accounts[i]];
@@ -395,19 +336,19 @@ contract ForumSafeModule is
 						}
 					}
 
-				if (prop.proposalType == ProposalType.ESCAPE) delete proposals[prop.amounts[0]];
+				if (proposalType == ProposalType.ESCAPE) delete proposals[prop.amounts[0]];
 
-				if (prop.proposalType == ProposalType.DOCS) docs = string(prop.payloads[0]);
+				if (proposalType == ProposalType.DOCS) docs = string(prop.payloads[0]);
 
 				// TODO should be converted to set hash on gnosis safe
-				if (prop.proposalType == ProposalType.ALLOW_CONTRACT_SIG) {
+				if (proposalType == ProposalType.ALLOW_CONTRACT_SIG) {
 					// This sets the allowance for EIP-1271 contract signature transactions on marketplaces
 					for (uint256 i; i < prop.accounts.length; i++) {
 						// set the sig on the gnosis safe
 					}
 				}
 
-				emit ProposalProcessed(prop.proposalType, proposal, didProposalPass);
+				emit ProposalProcessed(proposalType, proposal, didProposalPass);
 
 				// Delete proposal now that it has been processed
 				delete proposals[proposal];
@@ -415,8 +356,8 @@ contract ForumSafeModule is
 		} else {
 			// Only delete and update the proposal settings if there are not enough votes AND the time limit has passed
 			// This prevents deleting proposals unfairly
-			if (block.timestamp > prop.creationTime + votingPeriod) {
-				emit ProposalProcessed(prop.proposalType, proposal, didProposalPass);
+			if (block.timestamp > creationTime + votingPeriod) {
+				emit ProposalProcessed(proposalType, proposal, didProposalPass);
 
 				delete proposals[proposal];
 			}
@@ -523,6 +464,88 @@ contract ForumSafeModule is
 	) external avatarOnly {
 		(bool success, ) = _to.call{value: _value}(_data);
 		if (!success) revert CallError();
+	}
+
+	/**
+	 * @notice packs proposaltype, creationtime, and operation type into a single uint256
+	 * @param creationTime creation time
+	 * @param proposalType proposal type
+	 * @param operationType operation type
+	 */
+	function packProposal(
+		uint32 creationTime,
+		ProposalType proposalType,
+		Enum.Operation operationType
+	) external pure returns (uint56) {
+		return (uint56(creationTime) << 32) | (uint56(proposalType) << 8) | uint56(operationType);
+	}
+
+	/**
+	 * @notice unpacks proposaltype, creationtime, and operation type from a single uint256
+	 * @param proposal packed proposal
+	 * @return creationTime creation time
+	 * @return proposalType proposal type
+	 * @return operationType operation type
+	 */
+	function unpackProposal(
+		uint56 proposal
+	)
+		internal
+		pure
+		returns (uint32 creationTime, ProposalType proposalType, Enum.Operation operationType)
+	{
+		creationTime = uint32(proposal >> 32);
+		proposalType = ProposalType(uint8(proposal >> 8));
+		operationType = Enum.Operation(uint8(proposal));
+	}
+
+	function getVotes(
+		IForumSafeModuleTypes.Signature[] memory signatures,
+		bytes32 digest,
+		IForumSafeModuleTypes.VoteType voteType
+	) internal view returns (uint256 votes) {
+		// We keep track of the previous signer in the array to ensure there are no duplicates
+		address prevSigner;
+
+		// For each sig we check the recovered signer is a valid member and count thier vote
+		for (uint256 i; i < signatures.length; ) {
+			// Recover the signer
+			address recoveredSigner = ecrecover(
+				digest,
+				signatures[i].v,
+				signatures[i].r,
+				signatures[i].s
+			);
+
+			// If not a member, or the signer is out of order (used to prevent duplicates), revert
+			if (balanceOf[recoveredSigner][MEMBERSHIP] == 0 || prevSigner >= recoveredSigner)
+				revert SignatureError();
+
+			// If the signer has not delegated their vote, we count, otherwise we skip
+			if (memberDelegatee[recoveredSigner] == address(0)) {
+				// If member vote we increment by 1 (for the signer) + the number of members who have delegated to the signer
+				// Else we calculate the number of votes based on share of the treasury
+				if (voteType == VoteType.MEMBER)
+					votes += 1 + EnumerableSet.length(memberDelegators[recoveredSigner]);
+				else {
+					uint256 len = EnumerableSet.length(memberDelegators[recoveredSigner]);
+					// Add the number of votes the signer holds
+					votes += balanceOf[recoveredSigner][TOKEN];
+					// If the signer has been delegated too,check the balances of anyone who has delegated to the current signer
+					if (len != 0)
+						for (uint256 j; j < len; ) {
+							votes += balanceOf[
+								EnumerableSet.at(memberDelegators[recoveredSigner], j)
+							][TOKEN];
+							++j;
+						}
+				}
+			}
+
+			// Increment the index and set the previous signer
+			++i;
+			prevSigner = recoveredSigner;
+		}
 	}
 
 	receive() external payable virtual {}

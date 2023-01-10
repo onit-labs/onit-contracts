@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
+import {Module, Enum} from '@gnosis.pm/zodiac/contracts/core/Module.sol';
+
 import {GnosisSafe} from '@gnosis/GnosisSafe.sol';
 import {CompatibilityFallbackHandler} from '@gnosis/handler/CompatibilityFallbackHandler.sol';
 import {MultiSend} from '@gnosis/libraries/MultiSend.sol';
@@ -9,7 +11,7 @@ import {GnosisSafeProxyFactory} from '@gnosis/proxies/GnosisSafeProxyFactory.sol
 import {ForumSafeFactory} from '../../../src/gnosis-forum/ForumSafeFactory.sol';
 import {ForumSafeModule} from '../../../src/gnosis-forum/ForumSafeModule.sol';
 
-import {IForumGroupTypes} from '../../../src/interfaces/IForumGroupTypes.sol';
+import {IForumSafeModuleTypes} from '../../../src/interfaces/IForumSafeModuleTypes.sol';
 
 import 'forge-std/Test.sol';
 import 'forge-std/StdCheats.sol';
@@ -80,7 +82,11 @@ abstract contract ForumSafeTestConfig is Test {
 	 */
 	function processProposal(uint256 proposal, ForumSafeModule group, bool expectPass) internal {
 		// Sign the proposal number 1 as alice and process
-		IForumGroupTypes.Signature[] memory signatures = signProposal(proposal, group, alicePk);
+		IForumSafeModuleTypes.Signature[] memory signatures = signProposal(
+			proposal,
+			group,
+			alicePk
+		);
 
 		if (expectPass) {
 			group.processProposal(proposal, signatures);
@@ -101,7 +107,7 @@ abstract contract ForumSafeTestConfig is Test {
 		uint256 proposal,
 		ForumSafeModule group,
 		uint256 signerPk
-	) internal view returns (IForumGroupTypes.Signature[] memory) {
+	) internal view returns (IForumSafeModuleTypes.Signature[] memory) {
 		bytes32 digest = keccak256(
 			abi.encodePacked(
 				'\x19\x01',
@@ -111,8 +117,10 @@ abstract contract ForumSafeTestConfig is Test {
 		);
 
 		(uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, digest);
-		IForumGroupTypes.Signature[] memory signatures = new IForumGroupTypes.Signature[](1);
-		signatures[0] = IForumGroupTypes.Signature(v, r, s);
+		IForumSafeModuleTypes.Signature[] memory signatures = new IForumSafeModuleTypes.Signature[](
+			1
+		);
+		signatures[0] = IForumSafeModuleTypes.Signature(v, r, s);
 		return signatures;
 	}
 
@@ -139,7 +147,8 @@ abstract contract ForumSafeTestConfig is Test {
 	// For now this works for simple, 1 account, 1 amount, 1 payload peoposals
 	function proposeToForum(
 		ForumSafeModule group,
-		IForumGroupTypes.ProposalType proposalType,
+		IForumSafeModuleTypes.ProposalType proposalType,
+		Enum.Operation operationType,
 		address[1] memory accounts,
 		uint256[1] memory amounts,
 		bytes[1] memory payloads
@@ -150,7 +159,13 @@ abstract contract ForumSafeTestConfig is Test {
 			bytes[] memory _payloads
 		) = buildDynamicArraysForProposal(accounts, amounts, payloads);
 
-		return group.propose(proposalType, _accounts, _amounts, _payloads);
+		return
+			group.propose(
+				group.packProposal(uint32(block.timestamp), proposalType, operationType),
+				_accounts,
+				_amounts,
+				_payloads
+			);
 	}
 
 	function buildSafeMultisend(
