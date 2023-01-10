@@ -154,8 +154,6 @@ contract ForumSafeModule is IForumSafeModuleTypes, ForumGovernance, ReentrancyGu
 			}
 		}
 
-		memberCount = _members.length;
-
 		votingPeriod = _govSettings[0];
 
 		memberLimit = _govSettings[1];
@@ -211,7 +209,7 @@ contract ForumSafeModule is IForumSafeModuleTypes, ForumGovernance, ReentrancyGu
 			if (amounts[0] == 0 || amounts[0] > 365 days) revert PeriodBounds();
 
 		if (proposalType == ProposalType.MEMBER_LIMIT)
-			if (amounts[0] > 100 || amounts[0] < memberCount) revert MemberLimitExceeded();
+			if (amounts[0] > 100 || amounts[0] < getOwners().length) revert MemberLimitExceeded();
 
 		if (
 			proposalType == ProposalType.MEMBER_THRESHOLD ||
@@ -352,7 +350,7 @@ contract ForumSafeModule is IForumSafeModuleTypes, ForumGovernance, ReentrancyGu
 	 */
 	function _countVotes(VoteType voteType, uint256 yesVotes) internal view virtual returns (bool) {
 		if (voteType == VoteType.MEMBER)
-			if ((yesVotes * 100) / memberCount >= memberVoteThreshold) return true;
+			if ((yesVotes * 100) / getOwners().length >= memberVoteThreshold) return true;
 
 		if (voteType == VoteType.SIMPLE_MAJORITY)
 			if (yesVotes > ((totalSupply * 50) / 100)) return true;
@@ -506,8 +504,7 @@ contract ForumSafeModule is IForumSafeModuleTypes, ForumGovernance, ReentrancyGu
 			);
 
 			// If not a member, or the signer is out of order (used to prevent duplicates), revert
-			if (balanceOf[recoveredSigner][MEMBERSHIP] == 0 || prevSigner >= recoveredSigner)
-				revert SignatureError();
+			if (!isOwner(recoveredSigner) || prevSigner >= recoveredSigner) revert SignatureError();
 
 			// If the signer has not delegated their vote, we count, otherwise we skip
 			if (memberDelegatee[recoveredSigner] == address(0)) {

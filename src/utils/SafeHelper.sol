@@ -15,11 +15,14 @@ abstract contract SafeHelper is Module {
 	// Used in staticcall to ganosis safe - bytes4(keccak256('getThreshold()'))
 	bytes internal constant GET_THRESHOLD = abi.encodeWithSelector(0xe75235b8);
 
+	//  Used in staticcall to ganosis safe - bytes4(keccak256('getOwners()'))
+	bytes internal constant GET_OWNERS = abi.encodeWithSelector(0xa0e67e2b);
+
 	// Function sig for isOwner - bytes4(keccak256('isOwner(address)'))
 	bytes4 internal constant IS_OWNER_SIG = 0x2f54bf6e;
 
 	/// ----------------------------------------------------------------------------------------
-	///							GNOSIS SAFE STORAGE
+	///							GNOSIS SAFE LOGIC
 	/// ----------------------------------------------------------------------------------------
 
 	/**
@@ -41,5 +44,15 @@ abstract contract SafeHelper is Module {
 		(, bytes memory _isOwner) = target.staticcall(abi.encodeWithSelector(IS_OWNER_SIG, owner));
 
 		return bytes32(_isOwner) == bytes32(uint256(1));
+	}
+
+	/**
+	 * @notice Gets all owners on the safe
+	 * @return owners on the safe
+	 */
+	function getOwners() public view returns (address[] memory) {
+		(, bytes memory _owners) = target.staticcall(GET_OWNERS);
+
+		return abi.decode(_owners, (address[]));
 	}
 }
