@@ -2,14 +2,10 @@
 
 pragma solidity ^0.8.15;
 
-// ! fix remappings failings with hardhat
-import {Module, Enum} from '@gnosis.pm/zodiac/contracts/core/Module.sol';
-
-import {ForumGovernance, EnumerableSet} from './ForumSafeGovernance.sol';
+import {ForumGovernance, EnumerableSet, Enum} from './ForumSafeGovernance.sol';
 
 import {NFTreceiver} from '../utils/NFTreceiver.sol';
 import {ReentrancyGuard} from '../utils/ReentrancyGuard.sol';
-import {SafeHelper} from '../utils/SafeHelper.sol';
 
 import {IForumSafeModuleTypes} from '../interfaces/IForumSafeModuleTypes.sol';
 import {IForumGroupExtension} from '../interfaces/IForumGroupExtension.sol';
@@ -20,14 +16,7 @@ import {IPfpStaker} from '../interfaces/IPfpStaker.sol'; // ! remove this
  * @notice Forum investment group governance extension for Gnosis Safe
  * @author Modified from KaliDAO (https://github.com/lexDAO/Kali/blob/main/contracts/KaliDAO.sol)
  */
-contract ForumSafeModule is
-	Module,
-	SafeHelper,
-	IForumSafeModuleTypes,
-	ForumGovernance,
-	ReentrancyGuard,
-	NFTreceiver
-{
+contract ForumSafeModule is IForumSafeModuleTypes, ForumGovernance, ReentrancyGuard, NFTreceiver {
 	/// ----------------------------------------------------------------------------------------
 	///							EVENTS
 	/// ----------------------------------------------------------------------------------------
@@ -152,7 +141,7 @@ contract ForumSafeModule is
 
 		if (_govSettings[3] < 1 || _govSettings[3] > 100) revert VoteThresholdBounds();
 
-		ForumGovernance._init(_name, _symbol, _members);
+		ForumGovernance._init(_name, _symbol);
 
 		// Set the pfpSetter - determines uri of group token
 		pfpExtension = _extensions[0];
@@ -233,9 +222,6 @@ contract ForumSafeModule is
 		if (proposalType == ProposalType.TYPE)
 			if (amounts[0] > 13 || amounts[1] > 2 || amounts.length != 2) revert TypeBounds();
 
-		if (proposalType == ProposalType.MINT)
-			if ((memberCount + accounts.length) > memberLimit) revert MemberLimitExceeded();
-
 		// Cannot realistically overflow on human timescales
 		unchecked {
 			++proposalCount;
@@ -275,15 +261,7 @@ contract ForumSafeModule is
 
 		if (creationTime == 0) revert NotCurrentProposal();
 
-		bytes32 digest = keccak256(
-			abi.encodePacked(
-				'\x19\x01',
-				DOMAIN_SEPARATOR(),
-				keccak256(abi.encode(PROPOSAL_HASH, proposal))
-			)
-		);
-
-		uint256 votes = getVotes(signatures, digest, voteType);
+		uint256 votes = getVotes(proposal, signatures, voteType);
 
 		didProposalPass = _countVotes(voteType, votes);
 
@@ -294,7 +272,6 @@ contract ForumSafeModule is
 					for (uint256 i; i < prop.accounts.length; i++) {
 						results = new bytes[](prop.accounts.length);
 
-						// ! convert to take optional operation param
 						(bool successCall, bytes memory result) = execAndReturnData(
 							prop.accounts[i],
 							prop.amounts[i],
@@ -306,6 +283,9 @@ contract ForumSafeModule is
 
 						results[i] = result;
 					}
+
+					// If member limit is exceeed, revert
+					if (getThreshold() > memberLimit) revert MemberLimitExceeded();
 				}
 
 				// Governance settings
@@ -500,12 +480,20 @@ contract ForumSafeModule is
 	}
 
 	function getVotes(
+		uint256 proposal,
 		IForumSafeModuleTypes.Signature[] memory signatures,
-		bytes32 digest,
 		IForumSafeModuleTypes.VoteType voteType
 	) internal view returns (uint256 votes) {
 		// We keep track of the previous signer in the array to ensure there are no duplicates
 		address prevSigner;
+
+		bytes32 digest = keccak256(
+			abi.encodePacked(
+				'\x19\x01',
+				DOMAIN_SEPARATOR(),
+				keccak256(abi.encode(PROPOSAL_HASH, proposal))
+			)
+		);
 
 		// For each sig we check the recovered signer is a valid member and count thier vote
 		for (uint256 i; i < signatures.length; ) {

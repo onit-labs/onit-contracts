@@ -415,4 +415,13 @@ contract ForumSafeModuleTest is ForumSafeTestConfig, TokenTestConfig {
 		assertEq(mockErc1155.balanceOf(alice, 0), 0);
 		assertEq(mockErc1155.balanceOf(safeAddress, 0), 1);
 	}
+
+	/// -----------------------------------------------------------------------
+	/// Module functions
+	/// -----------------------------------------------------------------------
+
+	function testIsOwner() public {
+		assertTrue(forumSafeModule.isOwner2(alice));
+		assertTrue(forumSafeModule.isOwner(alice));
+	}
 }

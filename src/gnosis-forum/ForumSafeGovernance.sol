@@ -3,9 +3,12 @@ pragma solidity ^0.8.15;
 
 import {EnumerableSet} from '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
+import {SafeHelper, Enum} from '../utils/SafeHelper.sol';
+
 /// @notice Minimalist and gas efficient ERC1155 based DAO implementation with governance.
 /// @author Modified from KaliDAO (https://github.com/kalidao/kali-contracts/blob/main/contracts/KaliDAOtoken.sol)
-abstract contract ForumGovernance {
+
+abstract contract ForumGovernance is SafeHelper {
 	using EnumerableSet for EnumerableSet.AddressSet;
 
 	/// ----------------------------------------------------------------------------------------
@@ -64,7 +67,7 @@ abstract contract ForumGovernance {
 
 	string public symbol;
 
-	uint8 public constant decimals = 18;
+	uint8 public constant DECIMALS = 18;
 
 	/// ----------------------------------------------------------------------------------------
 	///							ERC1155 STORAGE
@@ -95,12 +98,8 @@ abstract contract ForumGovernance {
 	bytes32 public constant DELEGATION_TYPEHASH =
 		keccak256('Delegation(address delegatee,uint256 nonce,uint256 deadline)');
 
-	// Membership NFT
-	uint256 internal constant MEMBERSHIP = 0;
 	// DAO token representing voting share of treasury
-	uint256 internal constant TOKEN = 1;
-
-	uint256 public memberCount;
+	uint256 internal constant TOKEN = 0;
 
 	// All delegators for a member -> default case is an empty array
 	mapping(address => EnumerableSet.AddressSet) internal memberDelegators;
@@ -111,11 +110,7 @@ abstract contract ForumGovernance {
 	///							CONSTRUCTOR
 	/// ----------------------------------------------------------------------------------------
 
-	function _init(
-		string memory name_,
-		string memory symbol_,
-		address[] memory members_
-	) internal virtual {
+	function _init(string memory name_, string memory symbol_) internal virtual {
 		name = name_;
 
 		symbol = symbol_;
@@ -125,16 +120,6 @@ abstract contract ForumGovernance {
 		INITIAL_CHAIN_ID = block.chainid;
 
 		INITIAL_DOMAIN_SEPARATOR = _computeDomainSeparator();
-
-		unchecked {
-			uint256 votersLen = members_.length;
-
-			// Mint membership for initial members
-			for (uint256 i; i < votersLen; ) {
-				_mint(members_[i], MEMBERSHIP, 1, '');
-				++i;
-			}
-		}
 	}
 
 	/// ----------------------------------------------------------------------------------------
@@ -166,9 +151,8 @@ abstract contract ForumGovernance {
 		balanceOf[to][id] += amount;
 
 		// Cannot transfer membership while delegating / being delegated to
-		if (id == MEMBERSHIP)
-			if (memberDelegatee[from] != address(0) || memberDelegators[from].length() > 0)
-				revert InvalidDelegate();
+		if (memberDelegatee[from] != address(0) || memberDelegators[from].length() > 0)
+			revert InvalidDelegate();
 
 		emit TransferSingle(msg.sender, from, to, id, amount);
 
@@ -202,9 +186,8 @@ abstract contract ForumGovernance {
 			balanceOf[to][id] += amount;
 
 			// Cannot transfer membership while delegating / being delegated to
-			if (ids[i] == MEMBERSHIP)
-				if (memberDelegatee[from] != address(0) || memberDelegators[from].length() > 0)
-					revert InvalidDelegate();
+			if (memberDelegatee[from] != address(0) || memberDelegators[from].length() > 0)
+				revert InvalidDelegate();
 
 			// An array can't have a total length
 			// larger than the max uint256 value.
@@ -307,7 +290,7 @@ abstract contract ForumGovernance {
 
 		address signatory = ecrecover(digest, v, r, s);
 
-		if (balanceOf[signatory][MEMBERSHIP] == 0) revert InvalidDelegate();
+		if (!isOwner(signatory)) revert InvalidDelegate();
 
 		// cannot realistically overflow on human timescales
 		unchecked {
@@ -325,8 +308,7 @@ abstract contract ForumGovernance {
 
 	function _delegate(address delegator, address delegatee) internal {
 		// Can only delegate from/to existing members
-		if (balanceOf[msg.sender][MEMBERSHIP] == 0 || balanceOf[delegatee][MEMBERSHIP] == 0)
-			revert InvalidDelegate();
+		if (!(isOwner(msg.sender) && isOwner(delegatee))) revert InvalidDelegate();
 
 		address currentDelegatee = memberDelegatee[delegator];
 
@@ -377,12 +359,7 @@ abstract contract ForumGovernance {
 			balanceOf[to][id] += amount;
 		}
 
-		// If membership token is being updated, update member count
-		if (id == MEMBERSHIP) {
-			++memberCount;
-		}
-
-		// If non membership token is being updated, update total supply
+		// If token is being updated, update total supply
 		if (id == TOKEN) {
 			totalSupply += amount;
 		}
@@ -416,12 +393,7 @@ abstract contract ForumGovernance {
 		for (uint256 i = 0; i < idsLength; ) {
 			balanceOf[to][ids[i]] += amounts[i];
 
-			// If membership token is being updated, update member count
-			if (ids[i] == MEMBERSHIP) {
-				++memberCount;
-			}
-
-			// If non membership token is being updated, update total supply
+			// If token is being updated, update total supply
 			if (ids[i] == TOKEN) {
 				totalSupply += amounts[i];
 			}
@@ -457,16 +429,11 @@ abstract contract ForumGovernance {
 		for (uint256 i = 0; i < idsLength; ) {
 			balanceOf[from][ids[i]] -= amounts[i];
 
-			// If membership token is being updated, update member count
-			if (ids[i] == MEMBERSHIP) {
-				// Member can not leave while delegating / being delegated to
-				if (memberDelegatee[from] != address(0) || memberDelegators[from].length() > 0)
-					revert InvalidDelegate();
+			// Member can not leave while delegating / being delegated to
+			if (memberDelegatee[from] != address(0) || memberDelegators[from].length() > 0)
+				revert InvalidDelegate();
 
-				--memberCount;
-			}
-
-			// If non membership token is being updated, update total supply
+			// If token is being updated, update total supply
 			if (ids[i] == TOKEN) {
 				totalSupply -= amounts[i];
 			}
@@ -484,18 +451,11 @@ abstract contract ForumGovernance {
 	function _burn(address from, uint256 id, uint256 amount) internal {
 		balanceOf[from][id] -= amount;
 
-		// If membership token is being updated, update member count
-		if (id == MEMBERSHIP) {
-			// Member can not leave while delegating / being delegated to
-			if (
-				memberDelegatee[from] != address(0) ||
-				EnumerableSet.length(memberDelegators[from]) > 0
-			) revert InvalidDelegate();
+		// Member can not leave while delegating / being delegated to
+		if (memberDelegatee[from] != address(0) || EnumerableSet.length(memberDelegators[from]) > 0)
+			revert InvalidDelegate();
 
-			--memberCount;
-		}
-
-		// If non membership token is being updated, update total supply
+		// If token is being updated, update total supply
 		if (id == TOKEN) {
 			totalSupply -= amount;
 		}
