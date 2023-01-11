@@ -9,7 +9,6 @@ import {ReentrancyGuard} from '../utils/ReentrancyGuard.sol';
 
 import {IForumSafeModuleTypes} from '../interfaces/IForumSafeModuleTypes.sol';
 import {IForumGroupExtension} from '../interfaces/IForumGroupExtension.sol';
-import {IPfpStaker} from '../interfaces/IPfpStaker.sol'; // ! remove this
 
 /**
  * @title ForumSafeModule
@@ -425,7 +424,10 @@ contract ForumSafeModule is IForumSafeModuleTypes, ForumGovernance, ReentrancyGu
 	}
 
 	function uri(uint256 tokenId) public view override returns (string memory) {
-		return IPfpStaker(pfpExtension).getUri(address(this), name, tokenId);
+		(, bytes memory pfp) = pfpExtension.staticcall(
+			abi.encodeWithSignature('getUri(address,string,uint256)', address(this), name, tokenId)
+		);
+		return string(pfp);
 	}
 
 	/**
