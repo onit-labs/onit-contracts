@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
+import {IERC1271Upgradeable} from '@openzeppelin/contracts-upgradeable/interfaces/IERC1271Upgradeable.sol';
+
 import './helpers/ForumSafeTestConfig.t.sol';
 import './helpers/TokenTestConfig.t.sol';
 
@@ -270,7 +272,56 @@ contract ForumSafeModuleTest is ForumSafeTestConfig, TokenTestConfig {
 		assertEq(mockErc20.balanceOf(alice), 100);
 	}
 
-	// function testAdds1271SigToSafe() public {}
+	function testAdds1271SigToSafe() public {
+		bytes memory message = 'hello';
+
+		// Create payload to sign a message
+		bytes memory signPayload = abi.encodeWithSignature('signMessage(bytes)', message);
+
+		// Create proposal to sign message
+		uint256 prop = proposeToForum(
+			forumSafeModule,
+			IForumSafeModuleTypes.ProposalType.CALL,
+			Enum.Operation.DelegateCall,
+			[address(signMessageLib)],
+			[uint256(0)],
+			[signPayload]
+		);
+
+		processProposal(prop, forumSafeModule, true);
+
+		bytes32 tmp = keccak256(
+			abi.encodePacked(
+				bytes1(0x19),
+				bytes1(0x01),
+				GnosisSafe(payable(address(safe))).domainSeparator(),
+				keccak256(
+					abi.encode(
+						0x60b3cbf8b4a223d68d641b3b6ddf9a298e7f33710cf3d3a9d1146b5a6150fbca,
+						keccak256(message)
+					)
+				)
+			)
+		);
+		console.logBytes32(tmp);
+
+		// Check signature is valid
+		assertTrue(safe.signedMessages(tmp) == 1);
+
+		// create isValidSignature payload
+		bytes memory isValidSigPayload = abi.encodeWithSignature(
+			'isValidSignature(bytes32,bytes)',
+			tmp,
+			abi.encodePacked('0x', '0x', uint8(0))
+		);
+
+		(, bytes memory ret) = safeAddress.staticcall(isValidSigPayload);
+
+		//IERC1271Upgradeable(safeAddress).isValidSignature(tmp, '0x');
+
+		// Check isValidSig on safe
+		//assertTrue(!safe.call(isValidSigPayload));
+	}
 
 	function testSingleProposalViaSafe() public {
 		// Create transfer proposal
@@ -421,7 +472,6 @@ contract ForumSafeModuleTest is ForumSafeTestConfig, TokenTestConfig {
 	/// -----------------------------------------------------------------------
 
 	function testIsOwner() public {
-		assertTrue(forumSafeModule.isOwner2(alice));
 		assertTrue(forumSafeModule.isOwner(alice));
 	}
 }

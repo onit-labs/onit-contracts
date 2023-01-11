@@ -7,6 +7,7 @@ import {GnosisSafe} from '@gnosis/GnosisSafe.sol';
 import {CompatibilityFallbackHandler} from '@gnosis/handler/CompatibilityFallbackHandler.sol';
 import {MultiSend} from '@gnosis/libraries/MultiSend.sol';
 import {GnosisSafeProxyFactory} from '@gnosis/proxies/GnosisSafeProxyFactory.sol';
+import {SignMessageLib} from '@gnosis/examples/libraries/SignMessage.sol';
 
 import {ForumSafeFactory} from '../../../src/gnosis-forum/ForumSafeFactory.sol';
 import {ForumSafeModule} from '../../../src/gnosis-forum/ForumSafeModule.sol';
@@ -23,7 +24,7 @@ abstract contract ForumSafeTestConfig is Test {
 	MultiSend internal multisend;
 	CompatibilityFallbackHandler internal handler;
 	GnosisSafeProxyFactory internal safeProxyFactory;
-	// sigMessageLib -> get when needed for 1271 tests
+	SignMessageLib internal signMessageLib;
 
 	// Forum contract types
 	ForumSafeModule internal forumSafeModuleSingleton;
@@ -50,6 +51,7 @@ abstract contract ForumSafeTestConfig is Test {
 		multisend = new MultiSend();
 		handler = new CompatibilityFallbackHandler();
 		safeProxyFactory = new GnosisSafeProxyFactory();
+		signMessageLib = new SignMessageLib();
 
 		forumSafeModuleSingleton = new ForumSafeModule();
 		forumSafeFactory = new ForumSafeFactory(
