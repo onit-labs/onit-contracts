@@ -10,7 +10,7 @@ import {GnosisSafeProxyFactory} from '@gnosis.pm/safe-contracts/contracts/proxie
 
 import {Owned} from '../utils/Owned.sol';
 
-import {ForumSafeModule} from './ForumSafeModule.sol';
+import {ForumSafeModule, Enum} from './ForumSafeModule.sol';
 
 // ! consider member limit on creation
 
@@ -39,7 +39,6 @@ contract ForumSafeFactory is Owned {
 	/// ----------------------------------------------------------------------------------------
 
 	GnosisSafeProxyFactory public gnosisSafeProxyFactory;
-	// ModuleProxyFactory moduleProxyFactory;
 
 	// Template contract to use for new Gnosis safe proxies
 	address public immutable gnosisSingleton;
@@ -47,12 +46,12 @@ contract ForumSafeFactory is Owned {
 	address public immutable gnosisFallbackLibrary;
 	// Library to use for all safe transaction executions
 	address public immutable gnosisMultisendLibrary;
-
-	// ! make these immutable
-	address public forumSafeSingleton;
-	address public fundraiseExtension;
-	address public withdrawalExtension;
-	address public pfpStaker;
+	// Template contract to use for new forum groups
+	address public immutable forumSafeSingleton;
+	// Forum initial extensions
+	address public immutable fundraiseExtension;
+	address public immutable withdrawalExtension;
+	address public immutable pfpStaker;
 
 	uint256 internal immutable BASIC_EXTENSION_COUNT = 2;
 
@@ -66,34 +65,19 @@ contract ForumSafeFactory is Owned {
 		address _gnosisSingleton,
 		address _gnosisFallbackLibrary,
 		address _gnosisMultisendLibrary,
-		address _gnosisSafeProxyFactory
+		address _gnosisSafeProxyFactory,
+		address _fundraiseExtension,
+		address _withdrawalExtension,
+		address _pfpStaker
 	) Owned(_deployer) {
 		forumSafeSingleton = _forumSafeSingleton;
 		gnosisSingleton = _gnosisSingleton;
 		gnosisFallbackLibrary = _gnosisFallbackLibrary;
 		gnosisMultisendLibrary = _gnosisMultisendLibrary;
 		gnosisSafeProxyFactory = GnosisSafeProxyFactory(_gnosisSafeProxyFactory);
-		// _moduleProxyFactory
-	}
-
-	/// ----------------------------------------------------------------------------------------
-	/// Owner Interface
-	/// ----------------------------------------------------------------------------------------
-
-	function setForumSafeSingleton(address _forumSafeSingleton) external onlyOwner {
-		forumSafeSingleton = _forumSafeSingleton;
-	}
-
-	function setPfpStaker(address _pfpStaker) external onlyOwner {
-		pfpStaker = _pfpStaker;
-	}
-
-	function setFundraiseExtension(address _fundraiseExtension) external onlyOwner {
 		fundraiseExtension = _fundraiseExtension;
-	}
-
-	function setWithdrawalExtension(address _withdrawalExtension) external onlyOwner {
 		withdrawalExtension = _withdrawalExtension;
+		pfpStaker = _pfpStaker;
 	}
 
 	/// ----------------------------------------------------------------------------------------
@@ -101,41 +85,37 @@ contract ForumSafeFactory is Owned {
 	/// ----------------------------------------------------------------------------------------
 
 	function deployForumSafe(
-		string calldata name_,
-		string calldata symbol_,
-		uint32[4] calldata govSettings_,
-		address[] calldata voters_,
-		address[] calldata customExtensions_
+		string calldata _name,
+		string calldata _symbol,
+		uint32[4] calldata _govSettings,
+		address[] calldata _voters,
+		address[] calldata _customExtensions
 	) external payable virtual returns (ForumSafeModule forumGroup, GnosisSafe _safe) {
-		if (voters_.length > 100) revert MemberLimitExceeded();
+		if (_voters.length > 100) revert MemberLimitExceeded();
 
 		// Deploy new safe but do not set it up yet
 		_safe = GnosisSafe(
-			payable(
-				gnosisSafeProxyFactory.createProxy(
-					gnosisSingleton,
-					abi.encodePacked(name_)
-					//abi.encodePacked(_moloch, _saltNonce)
-				)
-			)
+			payable(gnosisSafeProxyFactory.createProxy(gnosisSingleton, abi.encodePacked(_name)))
 		);
 
 		// Deploy new Forum group but do not set it up yet
-		forumGroup = ForumSafeModule(_cloneAsMinimalProxy(forumSafeSingleton, name_));
+		forumGroup = ForumSafeModule(_cloneAsMinimalProxy(forumSafeSingleton, _name));
 
 		{
-			// Generate delegate calls so the safe calls enableModule on itself during setup
+			// Payload to enable the forum group module on the safe
 			bytes memory _enableForumGroup = abi.encodeWithSignature(
 				'enableModule(address)',
 				address(forumGroup)
 			);
+			// Generate delegate calls so the safe calls enableModule on itself via multisend
 			bytes memory _enableForumGroupMultisend = abi.encodePacked(
-				uint8(0),
+				Enum.Operation.DelegateCall,
 				address(_safe),
 				uint256(0),
 				uint256(_enableForumGroup.length),
 				bytes(_enableForumGroup)
 			);
+			// Encode data to be sent to multisend
 			bytes memory _multisendAction = abi.encodeWithSignature(
 				'multiSend(bytes)',
 				_enableForumGroupMultisend
@@ -143,8 +123,8 @@ contract ForumSafeFactory is Owned {
 
 			// Call setup on safe to enable our new module and set the module as the only signer
 			_safe.setup(
-				voters_,
-				voters_.length,
+				_voters,
+				_voters.length,
 				gnosisMultisendLibrary,
 				_multisendAction,
 				gnosisFallbackLibrary,
@@ -156,20 +136,20 @@ contract ForumSafeFactory is Owned {
 
 		{
 			// Create initialExtensions array
-			address[] memory initialExtensions = _createInitialExtensions(customExtensions_);
+			address[] memory initialExtensions = _createInitialExtensions(_customExtensions);
 
-			//!!!!! remove hardcoding after testing (used to speed up compile without needing via-ir)
 			bytes memory init = abi.encode(
-				'test',
-				symbol_,
+				_name,
+				_symbol,
 				address(_safe),
 				initialExtensions,
-				govSettings_
+				_govSettings
 			);
 
 			forumGroup.setUp(init);
 		}
-		emit GroupDeployed(forumGroup, name_, symbol_, voters_, govSettings_);
+		// ! include safe address in event
+		emit GroupDeployed(forumGroup, _name, _symbol, _voters, _govSettings);
 	}
 
 	function extendSafeWithForumModule(
@@ -178,27 +158,16 @@ contract ForumSafeFactory is Owned {
 		uint32[4] calldata _govSettings
 	) external returns (ForumSafeModule forumGroup) {
 		// Deploy new Forum group but do not set it up yet
-		forumGroup = ForumSafeModule(_cloneAsMinimalProxy(forumSafeSingleton, 'test'));
+		forumGroup = ForumSafeModule(_cloneAsMinimalProxy(forumSafeSingleton, _name));
 
-		// Generate delegate calls so the safe calls enableModule on itself during setup
+		// Payload to enable the forum group module on the safe
 		bytes memory _enableForumGroup = abi.encodeWithSignature(
 			'enableModule(address)',
 			address(forumGroup)
 		);
-		bytes memory _enableForumGroupMultisend = abi.encodePacked(
-			uint8(1),
-			address(msg.sender),
-			uint256(0),
-			uint256(_enableForumGroup.length),
-			bytes(_enableForumGroup)
-		);
-		bytes memory _multisendAction = abi.encodeWithSignature(
-			'multiSend(bytes)',
-			_enableForumGroupMultisend
-		);
 
-		// Call multisend to enable module
-		(bool success, ) = gnosisMultisendLibrary.delegatecall(_multisendAction);
+		// Call safe with payload to enable module
+		(bool success, ) = (msg.sender).delegatecall(_enableForumGroup);
 		if (!success) revert EnableModuleFailed();
 
 		// Create initialExtensions array - no custom extensions, therefore empty array
@@ -222,7 +191,7 @@ contract ForumSafeFactory is Owned {
 	/// @dev modified from Aelin (https://github.com/AelinXYZ/aelin/blob/main/contracts/MinimalProxyFactory.sol)
 	function _cloneAsMinimalProxy(
 		address base,
-		string memory name_
+		string memory _name
 	) internal virtual returns (address payable clone) {
 		bytes memory createData = abi.encodePacked(
 			// constructor
@@ -233,7 +202,7 @@ contract ForumSafeFactory is Owned {
 			bytes15(0x5af43d82803e903d91602b57fd5bf3)
 		);
 
-		bytes32 salt = keccak256(bytes(name_));
+		bytes32 salt = keccak256(bytes(_name));
 
 		assembly {
 			clone := create2(
