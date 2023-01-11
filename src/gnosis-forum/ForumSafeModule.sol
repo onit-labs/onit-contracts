@@ -103,7 +103,7 @@ contract ForumSafeModule is IForumSafeModuleTypes, ForumGovernance, ReentrancyGu
 	/**
 	 * @notice init the group settings and mint membership for founders
 	 * @param _initializationParams for the group, decoded to:
-	 * 	(_name ,_symbol ,_members ,_extension ,_govSettings)
+	 * 	(_name ,_symbol ,_extension ,_govSettings)
 	 */
 	function setUp(
 		bytes memory _initializationParams
@@ -112,13 +112,9 @@ contract ForumSafeModule is IForumSafeModuleTypes, ForumGovernance, ReentrancyGu
 			string memory _name,
 			string memory _symbol,
 			address _safe,
-			address[] memory _members,
 			address[] memory _extensions,
 			uint32[4] memory _govSettings
-		) = abi.decode(
-				_initializationParams,
-				(string, string, address, address[], address[], uint32[4])
-			);
+		) = abi.decode(_initializationParams, (string, string, address, address[], uint32[4]));
 
 		// Initialize ownership and transfer immediately to avatar
 		// Ownable Init reverts if already initialized
@@ -133,7 +129,7 @@ contract ForumSafeModule is IForumSafeModuleTypes, ForumGovernance, ReentrancyGu
 		/// SETUP FORUM GOVERNANCE ///
 		if (_govSettings[0] == 0 || _govSettings[0] > 365 days) revert PeriodBounds();
 
-		if (_govSettings[1] > 100 || _govSettings[1] < _members.length)
+		if (_govSettings[1] > 100 || _govSettings[1] < getOwners().length)
 			revert MemberLimitExceeded();
 
 		if (_govSettings[2] < 1 || _govSettings[2] > 100) revert VoteThresholdBounds();

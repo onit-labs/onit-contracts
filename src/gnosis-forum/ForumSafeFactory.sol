@@ -12,6 +12,8 @@ import {Owned} from '../utils/Owned.sol';
 
 import {ForumSafeModule} from './ForumSafeModule.sol';
 
+// ! consider member limit on creation
+
 /// @notice Factory to deploy forum group.
 contract ForumSafeFactory is Owned {
 	/// ----------------------------------------------------------------------------------------
@@ -27,6 +29,8 @@ contract ForumSafeFactory is Owned {
 	);
 
 	error NullDeploy();
+
+	error EnableModuleFailed();
 
 	error MemberLimitExceeded();
 
@@ -44,23 +48,26 @@ contract ForumSafeFactory is Owned {
 	// Library to use for all safe transaction executions
 	address public immutable gnosisMultisendLibrary;
 
+	// ! make these immutable
 	address public forumSafeSingleton;
 	address public fundraiseExtension;
 	address public withdrawalExtension;
 	address public pfpStaker;
+
+	uint256 internal immutable BASIC_EXTENSION_COUNT = 2;
 
 	/// ----------------------------------------------------------------------------------------
 	/// Constructor
 	/// ----------------------------------------------------------------------------------------
 
 	constructor(
-		address deployer,
+		address _deployer,
 		address payable _forumSafeSingleton,
 		address _gnosisSingleton,
 		address _gnosisFallbackLibrary,
 		address _gnosisMultisendLibrary,
 		address _gnosisSafeProxyFactory
-	) Owned(deployer) {
+	) Owned(_deployer) {
 		forumSafeSingleton = _forumSafeSingleton;
 		gnosisSingleton = _gnosisSingleton;
 		gnosisFallbackLibrary = _gnosisFallbackLibrary;
@@ -99,7 +106,7 @@ contract ForumSafeFactory is Owned {
 		uint32[4] calldata govSettings_,
 		address[] calldata voters_,
 		address[] calldata customExtensions_
-	) public payable virtual returns (ForumSafeModule forumGroup, GnosisSafe _safe) {
+	) external payable virtual returns (ForumSafeModule forumGroup, GnosisSafe _safe) {
 		if (voters_.length > 100) revert MemberLimitExceeded();
 
 		// Deploy new safe but do not set it up yet
@@ -148,31 +155,14 @@ contract ForumSafeFactory is Owned {
 		}
 
 		{
-			// Create initialExtensions array of correct length. 2 Forum set extensions + customExtensions
-			address[] memory initialExtensions = new address[](2 + customExtensions_.length);
-
-			// Set the base Forum extensions // todo add withdrawal extension as default
-			(initialExtensions[0], initialExtensions[1]) = (pfpStaker, fundraiseExtension);
-
-			// Set the custom extensions
-			if (customExtensions_.length != 0) {
-				// Cannot realistically overflow on human timescales
-				unchecked {
-					for (uint256 i; i < customExtensions_.length; ) {
-						// +2 offsets the base Forum extensions
-						initialExtensions[i + 2] = customExtensions_[i];
-
-						++i;
-					}
-				}
-			}
+			// Create initialExtensions array
+			address[] memory initialExtensions = _createInitialExtensions(customExtensions_);
 
 			//!!!!! remove hardcoding after testing (used to speed up compile without needing via-ir)
 			bytes memory init = abi.encode(
 				'test',
 				symbol_,
 				address(_safe),
-				voters_,
 				initialExtensions,
 				govSettings_
 			);
@@ -182,7 +172,52 @@ contract ForumSafeFactory is Owned {
 		emit GroupDeployed(forumGroup, name_, symbol_, voters_, govSettings_);
 	}
 
-	//  function extendSafeWithForumModule()
+	function extendSafeWithForumModule(
+		string calldata _name,
+		string calldata _symbol,
+		uint32[4] calldata _govSettings
+	) external returns (ForumSafeModule forumGroup) {
+		// Deploy new Forum group but do not set it up yet
+		forumGroup = ForumSafeModule(_cloneAsMinimalProxy(forumSafeSingleton, 'test'));
+
+		// Generate delegate calls so the safe calls enableModule on itself during setup
+		bytes memory _enableForumGroup = abi.encodeWithSignature(
+			'enableModule(address)',
+			address(forumGroup)
+		);
+		bytes memory _enableForumGroupMultisend = abi.encodePacked(
+			uint8(1),
+			address(msg.sender),
+			uint256(0),
+			uint256(_enableForumGroup.length),
+			bytes(_enableForumGroup)
+		);
+		bytes memory _multisendAction = abi.encodeWithSignature(
+			'multiSend(bytes)',
+			_enableForumGroupMultisend
+		);
+
+		// Call multisend to enable module
+		(bool success, ) = gnosisMultisendLibrary.delegatecall(_multisendAction);
+		if (!success) revert EnableModuleFailed();
+
+		// Create initialExtensions array - no custom extensions, therefore empty array
+		address[] memory _initialExtensions = _createInitialExtensions(new address[](0));
+
+		bytes memory init = abi.encode(
+			_name,
+			_symbol,
+			msg.sender,
+			_initialExtensions,
+			_govSettings
+		);
+
+		forumGroup.setUp(init);
+	}
+
+	/// ----------------------------------------------------------------------------------------
+	/// Factory Internal
+	/// ----------------------------------------------------------------------------------------
 
 	/// @dev modified from Aelin (https://github.com/AelinXYZ/aelin/blob/main/contracts/MinimalProxyFactory.sol)
 	function _cloneAsMinimalProxy(
@@ -210,5 +245,32 @@ contract ForumSafeFactory is Owned {
 		}
 		// if CREATE2 fails for some reason, address(0) is returned
 		if (clone == address(0)) revert NullDeploy();
+	}
+
+	/**
+	 * @notice Creates the initial extensions array
+	 * @param _customExtensions The initial extensions to add to the Forum
+	 */
+	function _createInitialExtensions(
+		address[] memory _customExtensions
+	) internal view returns (address[] memory initialExtensions) {
+		// Create initialExtensions array of correct length. Basic Forum extensions + customExtensions
+		initialExtensions = new address[](BASIC_EXTENSION_COUNT + _customExtensions.length);
+
+		// Set the base Forum extensions // todo add withdrawal extension as default
+		(initialExtensions[0], initialExtensions[1]) = (pfpStaker, fundraiseExtension);
+
+		// Set the custom extensions
+		if (_customExtensions.length != 0) {
+			// Cannot realistically overflow on human timescales
+			unchecked {
+				for (uint256 i; i < _customExtensions.length; ) {
+					// +2 offsets the base Forum extensions
+					initialExtensions[i + BASIC_EXTENSION_COUNT] = _customExtensions[i];
+
+					++i;
+				}
+			}
+		}
 	}
 }
