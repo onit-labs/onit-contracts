@@ -12,6 +12,9 @@ import {SignMessageLib} from '@gnosis/examples/libraries/SignMessage.sol';
 import {ForumSafeFactory} from '../../../src/gnosis-forum/ForumSafeFactory.sol';
 import {ForumSafeModule} from '../../../src/gnosis-forum/ForumSafeModule.sol';
 
+import {ForumFundraiseExtension} from '../../../src/gnosis-forum/extensions/fundraise/ForumFundraiseExtension.sol';
+import {ForumWithdrawalExtension} from '../../../src/gnosis-forum/extensions/withdrawal/ForumWithdrawalExtension.sol';
+
 import {IForumSafeModuleTypes} from '../../../src/interfaces/IForumSafeModuleTypes.sol';
 
 import 'forge-std/Test.sol';
@@ -29,6 +32,10 @@ abstract contract ForumSafeTestConfig is Test {
 	// Forum contract types
 	ForumSafeModule internal forumSafeModuleSingleton;
 	ForumSafeFactory internal forumSafeFactory;
+
+	// Forum extensions
+	ForumFundraiseExtension internal fundraiseExtension;
+	ForumWithdrawalExtension internal withdrawalExtension;
 
 	address internal alice;
 	uint256 internal alicePk;
@@ -60,7 +67,10 @@ abstract contract ForumSafeTestConfig is Test {
 			address(safeSingleton),
 			address(handler),
 			address(multisend),
-			address(safeProxyFactory)
+			address(safeProxyFactory),
+			address(fundraiseExtension),
+			address(withdrawalExtension),
+			address(0) // pfpSetter - not used in tests
 		);
 
 		voters[0] = alice;
