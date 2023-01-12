@@ -4,14 +4,13 @@ pragma solidity ^0.8.13;
 import {IERC1271Upgradeable} from '@openzeppelin/contracts-upgradeable/interfaces/IERC1271Upgradeable.sol';
 
 import './helpers/ForumSafeTestConfig.t.sol';
-import './helpers/TokenTestConfig.t.sol';
 
 import 'forge-std/console.sol';
 
 // ! Consider
 // Other interactions which can happen between module and safe?
 
-contract ForumSafeModuleTest is ForumSafeTestConfig, TokenTestConfig {
+contract ForumSafeModuleTest is ForumSafeTestConfig {
 	ForumSafeModule private forumSafeModule;
 	GnosisSafe private safe;
 

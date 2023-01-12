@@ -3,25 +3,27 @@ pragma solidity ^0.8.13;
 
 import {Module, Enum} from '@gnosis.pm/zodiac/contracts/core/Module.sol';
 
+// Gnosis Safe imports
 import {GnosisSafe} from '@gnosis/GnosisSafe.sol';
 import {CompatibilityFallbackHandler} from '@gnosis/handler/CompatibilityFallbackHandler.sol';
 import {MultiSend} from '@gnosis/libraries/MultiSend.sol';
 import {GnosisSafeProxyFactory} from '@gnosis/proxies/GnosisSafeProxyFactory.sol';
 import {SignMessageLib} from '@gnosis/examples/libraries/SignMessage.sol';
 
+// Forum imports
 import {ForumSafeFactory} from '../../../src/gnosis-forum/ForumSafeFactory.sol';
 import {ForumSafeModule} from '../../../src/gnosis-forum/ForumSafeModule.sol';
 
+// Forum extension imports
 import {ForumFundraiseExtension} from '../../../src/gnosis-forum/extensions/fundraise/ForumFundraiseExtension.sol';
 import {ForumWithdrawalExtension} from '../../../src/gnosis-forum/extensions/withdrawal/ForumWithdrawalExtension.sol';
 
+// Forum interfaces
 import {IForumSafeModuleTypes} from '../../../src/interfaces/IForumSafeModuleTypes.sol';
 
-import 'forge-std/Test.sol';
-import 'forge-std/StdCheats.sol';
-import 'forge-std/console.sol';
+import {BasicTestConfig} from './BasicTestConfig.t.sol';
 
-abstract contract ForumSafeTestConfig is Test {
+abstract contract ForumSafeTestConfig is BasicTestConfig {
 	// Safe contract types
 	GnosisSafe internal safeSingleton;
 	MultiSend internal multisend;
@@ -37,11 +39,6 @@ abstract contract ForumSafeTestConfig is Test {
 	ForumFundraiseExtension internal fundraiseExtension;
 	ForumWithdrawalExtension internal withdrawalExtension;
 
-	address internal alice;
-	uint256 internal alicePk;
-	address internal bob;
-	uint256 internal bobPk;
-
 	// Declare arrys used to setup forum groups
 	address[] internal voters = new address[](1);
 	address[] internal initialExtensions = new address[](1);
@@ -54,9 +51,6 @@ abstract contract ForumSafeTestConfig is Test {
 	/// -----------------------------------------------------------------------
 
 	constructor() {
-		(alice, alicePk) = makeAddrAndKey('alice');
-		(bob, bobPk) = makeAddrAndKey('bob');
-
 		safeSingleton = new GnosisSafe();
 		multisend = new MultiSend();
 		handler = new CompatibilityFallbackHandler();
