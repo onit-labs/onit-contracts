@@ -250,7 +250,7 @@ abstract contract ForumGovernance is SafeHelper {
 						'EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)'
 					),
 					keccak256(bytes(name)),
-					keccak256('1'),
+					keccak256('1.1.0'),
 					block.chainid,
 					address(this)
 				)
