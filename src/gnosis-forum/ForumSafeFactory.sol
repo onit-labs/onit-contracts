@@ -2,8 +2,6 @@
 
 pragma solidity ^0.8.15;
 
-import 'forge-std/console.sol';
-
 // ! fix remappings failings with hardhat
 import {GnosisSafe} from '@gnosis.pm/safe-contracts/contracts/GnosisSafe.sol';
 import {GnosisSafeProxyFactory} from '@gnosis.pm/safe-contracts/contracts/proxies/GnosisSafeProxyFactory.sol';
@@ -143,7 +141,7 @@ contract ForumSafeFactory is Owned {
 				_enableForumGroupMultisend
 			);
 
-			// Call setup on safe to add voters as owners
+			// Call setup on safe adding owners and enabling module
 			_safe.setup(
 				_owners,
 				_owners.length,

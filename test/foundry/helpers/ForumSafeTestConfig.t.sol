@@ -46,6 +46,9 @@ abstract contract ForumSafeTestConfig is Test {
 	address[] internal voters = new address[](1);
 	address[] internal initialExtensions = new address[](1);
 
+	address internal zeroAddress = address(0);
+	address internal oneAddress = address(1);
+
 	/// -----------------------------------------------------------------------
 	/// Setup
 	/// -----------------------------------------------------------------------
@@ -167,11 +170,25 @@ abstract contract ForumSafeTestConfig is Test {
 
 		return
 			group.propose(
-				group.packProposal(uint32(block.timestamp), proposalType, operationType),
+				packProposal(uint32(block.timestamp), proposalType, operationType),
 				_accounts,
 				_amounts,
 				_payloads
 			);
+	}
+
+	/**
+	 * @notice packs proposaltype, creationtime, and operation type into a single uint256
+	 * @param creationTime creation time
+	 * @param proposalType proposal type
+	 * @param operationType operation type
+	 */
+	function packProposal(
+		uint32 creationTime,
+		IForumSafeModuleTypes.ProposalType proposalType,
+		Enum.Operation operationType
+	) internal pure returns (uint56) {
+		return (uint56(creationTime) << 32) | (uint56(proposalType) << 8) | uint56(operationType);
 	}
 
 	function buildSafeMultisend(

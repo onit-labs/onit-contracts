@@ -171,7 +171,7 @@ contract ForumSafeModule is IForumSafeModuleTypes, ForumGovernance, ReentrancyGu
 	function getProposalArrays(
 		uint256 proposal
 	)
-		public
+		external
 		view
 		virtual
 		returns (address[] memory accounts, uint256[] memory amounts, bytes[] memory payloads)
@@ -179,6 +179,26 @@ contract ForumSafeModule is IForumSafeModuleTypes, ForumGovernance, ReentrancyGu
 		Proposal storage prop = proposals[proposal];
 
 		(accounts, amounts, payloads) = (prop.accounts, prop.amounts, prop.payloads);
+	}
+
+	/**
+	 * @notice unpacks proposaltype, creationtime, and operation type from a single uint256
+	 * @param proposal packed proposal
+	 * @return creationTime creation time
+	 * @return proposalType proposal type
+	 * @return operationType operation type
+	 * @dev consider making internal, depending on use
+	 */
+	function unpackProposal(
+		uint56 proposal
+	)
+		public
+		pure
+		returns (uint32 creationTime, ProposalType proposalType, Enum.Operation operationType)
+	{
+		creationTime = uint32(proposal >> 32);
+		proposalType = ProposalType(uint8(proposal >> 8));
+		operationType = Enum.Operation(uint8(proposal));
 	}
 
 	/**
@@ -278,7 +298,7 @@ contract ForumSafeModule is IForumSafeModuleTypes, ForumGovernance, ReentrancyGu
 					}
 
 					// If member limit is exceeed, revert
-					if (getThreshold() > memberLimit) revert MemberLimitExceeded();
+					if (getOwners().length > memberLimit) revert MemberLimitExceeded();
 				}
 
 				// Governance settings
@@ -440,39 +460,6 @@ contract ForumSafeModule is IForumSafeModuleTypes, ForumGovernance, ReentrancyGu
 	) external avatarOnly {
 		(bool success, ) = _to.call{value: _value}(_data);
 		if (!success) revert CallError();
-	}
-
-	/**
-	 * @notice packs proposaltype, creationtime, and operation type into a single uint256
-	 * @param creationTime creation time
-	 * @param proposalType proposal type
-	 * @param operationType operation type
-	 */
-	function packProposal(
-		uint32 creationTime,
-		ProposalType proposalType,
-		Enum.Operation operationType
-	) external pure returns (uint56) {
-		return (uint56(creationTime) << 32) | (uint56(proposalType) << 8) | uint56(operationType);
-	}
-
-	/**
-	 * @notice unpacks proposaltype, creationtime, and operation type from a single uint256
-	 * @param proposal packed proposal
-	 * @return creationTime creation time
-	 * @return proposalType proposal type
-	 * @return operationType operation type
-	 */
-	function unpackProposal(
-		uint56 proposal
-	)
-		internal
-		pure
-		returns (uint32 creationTime, ProposalType proposalType, Enum.Operation operationType)
-	{
-		creationTime = uint32(proposal >> 32);
-		proposalType = ProposalType(uint8(proposal >> 8));
-		operationType = Enum.Operation(uint8(proposal));
 	}
 
 	function getVotes(
