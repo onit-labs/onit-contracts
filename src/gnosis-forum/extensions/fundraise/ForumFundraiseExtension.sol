@@ -6,12 +6,14 @@ import {SafeTransferLib} from '../../../libraries/SafeTransferLib.sol';
 
 import {ReentrancyGuard} from '../../../utils/ReentrancyGuard.sol';
 
-import {IForumGroup} from '../../../interfaces/IForumGroup.sol';
+import {IForumSafeModule} from '../../../interfaces/IForumSafeModule.sol';
+
+import {SafeHelper} from '../../../utils/SafeHelper.sol';
 
 /**
  * @title ForumGroupFundraise
  * @notice Contract that implements a round of fundraising from all DAO members
- * @dev Version 1 - AVAX only fundraise. All members must contribute
+ * @dev Version 2 - AVAX only fundraise. All members must contribute. Funds go to safe
  */
 contract ForumFundraiseExtension is ReentrancyGuard {
 	using SafeTransferLib for address;
@@ -20,16 +22,12 @@ contract ForumFundraiseExtension is ReentrancyGuard {
 	/// Events
 	/// -----------------------------------------------------------------------
 
-	event NewFundContribution(
-		address indexed groupAddress,
-		address indexed proposer,
-		uint256 value
-	);
+	event NewFundContribution(address indexed forumModule, address indexed proposer, uint256 value);
 
-	event FundRoundCancelled(address indexed groupAddress);
+	event FundRoundCancelled(address indexed forumModule);
 
 	event FundRoundReleased(
-		address indexed groupAddress,
+		address indexed forumModule,
 		address[] contributors,
 		uint256 individualContribution
 	);
@@ -55,7 +53,7 @@ contract ForumFundraiseExtension is ReentrancyGuard {
 	/// -----------------------------------------------------------------------
 
 	// valueNumerator and valueDenominator combine to form unitValue of treasury tokens
-	// This is used to determin how many token to mint for eac contributor
+	// This is used to determine how many token to mint for each contributor
 	struct Fund {
 		address[] contributors;
 		uint256 individualContribution;
@@ -63,8 +61,8 @@ contract ForumFundraiseExtension is ReentrancyGuard {
 		uint256 valueDenominator;
 	}
 
-	uint256 private constant MEMBERSHIP = 0;
-	uint256 private constant TOKEN = 1;
+	// Consider a variable token, allowing groups to have different tiers of member
+	uint256 private constant TOKEN = 0;
 
 	mapping(address => Fund) private funds;
 
@@ -76,86 +74,90 @@ contract ForumFundraiseExtension is ReentrancyGuard {
 
 	/**
 	 * @notice Initiate a round of fundraising
-	 * @param groupAddress Address of group
+	 * @param forumModule Address of module tracking ownership
+	 * @param valueNumerator Numerator of unitValue
+	 * @param valueDenominator Denominator of unitValue
 	 */
 	function initiateFundRound(
-		address groupAddress,
+		address forumModule,
 		uint256 valueNumerator,
 		uint256 valueDenominator
 	) public payable virtual nonReentrant {
 		// Only members can start a fund.
-		if (IForumGroup(groupAddress).balanceOf(msg.sender, MEMBERSHIP) == 0) revert NotMember();
+		if (!SafeHelper(forumModule).isOwner(msg.sender)) revert NotMember();
 
-		if (funds[groupAddress].individualContribution != 0) revert OpenFund();
+		if (funds[forumModule].individualContribution != 0) revert OpenFund();
 
 		// No gas saving to use Fund({}) format, and since we need to push to the arry, we assign each element individually.
-		funds[groupAddress].contributors.push(msg.sender);
-		funds[groupAddress].individualContribution = msg.value;
-		funds[groupAddress].valueNumerator = valueNumerator;
-		funds[groupAddress].valueDenominator = valueDenominator;
-		contributionTracker[groupAddress][msg.sender] = true;
+		funds[forumModule].contributors.push(msg.sender);
+		funds[forumModule].individualContribution = msg.value;
+		funds[forumModule].valueNumerator = valueNumerator;
+		funds[forumModule].valueDenominator = valueDenominator;
+		contributionTracker[forumModule][msg.sender] = true;
 
-		emit NewFundContribution(groupAddress, msg.sender, msg.value);
+		emit NewFundContribution(forumModule, msg.sender, msg.value);
 	}
 
 	/**
 	 * @notice Submit a fundraise contribution
-	 * @param groupAddress Address of group
+	 * @param forumModule Address of module tracking ownership
 	 */
-	function submitFundContribution(address groupAddress) public payable virtual nonReentrant {
+	function submitFundContribution(address forumModule) public payable virtual nonReentrant {
 		// Only members can contribute to the fund
-		if (IForumGroup(groupAddress).balanceOf(msg.sender, MEMBERSHIP) == 0) revert NotMember();
+		if (!SafeHelper(forumModule).isOwner(msg.sender)) revert NotMember();
 
 		// Can only contribute once per fund
-		if (contributionTracker[groupAddress][msg.sender]) revert IncorrectContribution();
+		if (contributionTracker[forumModule][msg.sender]) revert IncorrectContribution();
 
-		if (msg.value != funds[groupAddress].individualContribution) revert IncorrectContribution();
+		if (msg.value != funds[forumModule].individualContribution) revert IncorrectContribution();
 
-		if (funds[groupAddress].individualContribution == 0) revert FundraiseMissing();
+		if (funds[forumModule].individualContribution == 0) revert FundraiseMissing();
 
-		funds[groupAddress].contributors.push(msg.sender);
-		contributionTracker[groupAddress][msg.sender] = true;
+		funds[forumModule].contributors.push(msg.sender);
+		contributionTracker[forumModule][msg.sender] = true;
 
-		emit NewFundContribution(groupAddress, msg.sender, msg.value);
+		emit NewFundContribution(forumModule, msg.sender, msg.value);
 	}
 
 	/**
 	 * @notice Cancel a fundraise and return funds to contributors
-	 * @param groupAddress Address of group
+	 * @param forumModule Address of module tracking ownership
 	 */
-	function cancelFundRound(address groupAddress) public virtual nonReentrant {
-		if (IForumGroup(groupAddress).balanceOf(msg.sender, MEMBERSHIP) == 0) revert NotMember();
+	function cancelFundRound(address forumModule) public virtual nonReentrant {
+		if (!SafeHelper(forumModule).isOwner(msg.sender)) revert NotMember();
 
-		Fund storage fund = funds[groupAddress];
+		Fund storage fund = funds[forumModule];
 
-		// Only groupAddress or proposer can cancel the fundraise.
-		if (!(msg.sender == groupAddress || msg.sender == fund.contributors[0]))
+		// ! consider this from safe
+		// Only forumModule or proposer can cancel the fundraise.
+		if (!(msg.sender == forumModule || msg.sender == fund.contributors[0]))
 			revert NotProposer();
 
+		// ! consider replacing this with just a normal call, not transfer
 		// Return funds from escrow
 		for (uint256 i; i < fund.contributors.length; ) {
+			contributionTracker[forumModule][fund.contributors[i]] = false;
 			payable(fund.contributors[i]).transfer(fund.individualContribution);
-			contributionTracker[groupAddress][fund.contributors[i]] = false;
 
-			// Members can only be 12
+			// Members will not overflow maxint
 			unchecked {
 				++i;
 			}
 		}
 
-		delete funds[groupAddress];
+		delete funds[forumModule];
 
-		emit FundRoundCancelled(groupAddress);
+		emit FundRoundCancelled(forumModule);
 	}
 
 	/**
 	 * @notice Process the fundraise, sending AVAX to group and minting tokens to contributors
-	 * @param groupAddress Address of group
+	 * @param forumModule Address of module tracking ownership
 	 */
-	function processFundRound(address groupAddress) public virtual nonReentrant {
-		Fund memory fund = funds[groupAddress];
+	function processFundRound(address forumModule) public virtual nonReentrant {
+		Fund memory fund = funds[forumModule];
 
-		if (funds[groupAddress].individualContribution == 0) revert FundraiseMissing();
+		if (funds[forumModule].individualContribution == 0) revert FundraiseMissing();
 
 		uint256 memberCount = fund.contributors.length;
 
@@ -164,32 +166,40 @@ contract ForumFundraiseExtension is ReentrancyGuard {
 		uint256 adjustedContribution = (fund.individualContribution * fund.valueDenominator) /
 			fund.valueNumerator;
 
-		if (memberCount != IForumGroup(groupAddress).memberCount()) revert MembersMissing();
+		if (memberCount != SafeHelper(forumModule).getOwners().length) revert MembersMissing();
 
-		groupAddress._safeTransferETH(fund.individualContribution * memberCount);
+		// Transfer avax to the group safe
+		SafeHelper(forumModule).target()._safeTransferETH(
+			fund.individualContribution * memberCount
+		);
 
+		// Mint tokens to each member
 		for (uint256 i; i < memberCount; ) {
-			// Mint member an share of tokens equal to their contribution and reset their status in the tracker
-			IForumGroup(groupAddress).mintShares(fund.contributors[i], TOKEN, adjustedContribution);
-			contributionTracker[groupAddress][fund.contributors[i]] = false;
+			// Mint member a share of tokens equal to their contribution and reset their status in the tracker
+			IForumSafeModule(forumModule).mintShares(
+				fund.contributors[i],
+				TOKEN,
+				adjustedContribution
+			);
+			contributionTracker[forumModule][fund.contributors[i]] = false;
 
-			// Members can only be 12
+			// Members will not overflow maxint
 			unchecked {
 				++i;
 			}
 		}
 
-		delete funds[groupAddress];
+		delete funds[forumModule];
 
-		emit FundRoundReleased(groupAddress, fund.contributors, fund.individualContribution);
+		emit FundRoundReleased(forumModule, fund.contributors, fund.individualContribution);
 	}
 
 	/**
 	 * @notice Get the details of a fundraise
-	 * @param groupAddress Address of group
+	 * @param forumModule Address of module tracking ownership
 	 * @return fundDetails The fundraise requested
 	 */
-	function getFund(address groupAddress) public view returns (Fund memory fundDetails) {
-		return funds[groupAddress];
+	function getFund(address forumModule) public view returns (Fund memory fundDetails) {
+		return funds[forumModule];
 	}
 }
