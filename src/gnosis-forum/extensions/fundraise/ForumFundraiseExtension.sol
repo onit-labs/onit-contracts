@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.15;
 
 import {SafeTransferLib} from '../../../libraries/SafeTransferLib.sol';
 
@@ -128,12 +128,10 @@ contract ForumFundraiseExtension is ReentrancyGuard {
 
 		Fund storage fund = funds[forumModule];
 
-		// ! consider this from safe
 		// Only forumModule or proposer can cancel the fundraise.
 		if (!(msg.sender == forumModule || msg.sender == fund.contributors[0]))
 			revert NotProposer();
 
-		// ! consider replacing this with just a normal call, not transfer
 		// Return funds from escrow
 		for (uint256 i; i < fund.contributors.length; ) {
 			contributionTracker[forumModule][fund.contributors[i]] = false;
@@ -198,6 +196,7 @@ contract ForumFundraiseExtension is ReentrancyGuard {
 	 * @notice Get the details of a fundraise
 	 * @param forumModule Address of module tracking ownership
 	 * @return fundDetails The fundraise requested
+	 * @dev Required as public getter fn on funds won't return array
 	 */
 	function getFund(address forumModule) public view returns (Fund memory fundDetails) {
 		return funds[forumModule];

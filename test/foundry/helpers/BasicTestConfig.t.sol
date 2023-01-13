@@ -34,5 +34,9 @@ abstract contract BasicTestConfig is Test {
 		(alice, alicePk) = makeAddrAndKey('alice');
 		(bob, bobPk) = makeAddrAndKey('bob');
 		(carl, carlPk) = makeAddrAndKey('carl');
+
+		deal(alice, 1 ether);
+		deal(bob, 1 ether);
+		deal(carl, 1 ether);
 	}
 }

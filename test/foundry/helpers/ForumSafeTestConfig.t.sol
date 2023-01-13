@@ -21,7 +21,7 @@ import {ForumWithdrawalExtension} from '../../../src/gnosis-forum/extensions/wit
 // Forum interfaces
 import {IForumSafeModuleTypes} from '../../../src/interfaces/IForumSafeModuleTypes.sol';
 
-import {BasicTestConfig} from './BasicTestConfig.t.sol';
+import './BasicTestConfig.t.sol';
 
 abstract contract ForumSafeTestConfig is BasicTestConfig {
 	// Safe contract types
@@ -45,6 +45,9 @@ abstract contract ForumSafeTestConfig is BasicTestConfig {
 
 	address internal zeroAddress = address(0);
 	address internal oneAddress = address(1);
+
+	// id of gov token on forum module
+	uint256 TOKEN = 0;
 
 	/// -----------------------------------------------------------------------
 	/// Setup
