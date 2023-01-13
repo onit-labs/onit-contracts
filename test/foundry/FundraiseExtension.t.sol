@@ -25,7 +25,6 @@ contract TestFundraiseExtension is ForumSafeTestConfig {
 
 		// Add bob to voters, alongside alice
 		voters.push(bob);
-
 		// Use factory to deploy a safe
 		(forumModule, safe) = forumSafeFactory.deployForumSafe(
 			'test',
@@ -35,6 +34,7 @@ contract TestFundraiseExtension is ForumSafeTestConfig {
 			initialExtensions
 		);
 
+		// Set addresses for easier use in tests
 		fundraiseAddress = address(fundraiseExtension);
 		moduleAddress = address(forumModule);
 		safeAddress = address(safe);
