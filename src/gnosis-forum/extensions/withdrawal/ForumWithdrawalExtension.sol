@@ -7,10 +7,14 @@ import {SafeTransferLib} from '../../../libraries/SafeTransferLib.sol';
 import {IERC1155} from '@openzeppelin/contracts/interfaces/IERC1155.sol';
 import {IERC20} from '@openzeppelin/contracts/interfaces/IERC20.sol';
 
-import {IForumGroup, IForumGroupTypes} from '../../../interfaces/IForumGroup.sol';
+import {IForumSafeModule, IForumSafeModuleTypes} from '../../../interfaces/IForumSafeModule.sol';
 import {IWithdrawalTransferManager} from '../../../interfaces/IWithdrawalTransferManager.sol';
 
 import {ReentrancyGuard} from '../../../utils/ReentrancyGuard.sol';
+import {ProposalPacker} from '../../../utils/ProposalPacker.sol';
+
+// todo see if this can be inherited from somewhere else
+import {Enum} from '@gnosis.pm/zodiac/contracts/core/Module.sol';
 
 /// @notice Withdrawal contract that transfers registered tokens from Forum group in proportion to burnt DAO tokens.
 contract ForumWithdrawalExtension is ReentrancyGuard {
@@ -66,10 +70,15 @@ contract ForumWithdrawalExtension is ReentrancyGuard {
 	struct CustomWithdrawal {
 		address[] tokens;
 		uint256[] amountOrId;
-		uint256 amountToBurn;
+		uint256 basisPointsToBurn;
 	}
 
-	IWithdrawalTransferManager public withdrawalTransferManager;
+	IWithdrawalTransferManager public immutable withdrawalTransferManager;
+
+	// 100% = 10,000 basis points
+	uint256 internal constant BASIS_POINTS = 10000;
+	// The token representing DAO tokens on the module
+	uint256 internal constant TOKEN = 0;
 
 	// Pre-set assets which can be redeemed at any point by members
 	mapping(address => address[]) public withdrawables;
@@ -135,18 +144,22 @@ contract ForumWithdrawalExtension is ReentrancyGuard {
 		if (amount > 10000) revert IncorrectAmount();
 
 		// Token amount to be withdrawn, given the 'amount' (%) in basis points of 10000
-		uint256 tokenAmount = (amount * IForumGroup(msg.sender).balanceOf(withdrawer, 1)) / 10000;
+		uint256 tokenAmount = (amount * IForumSafeModule(msg.sender).balanceOf(withdrawer, TOKEN)) /
+			BASIS_POINTS;
+
+		address targetSafe = IForumSafeModule(msg.sender).target();
 
 		for (uint256 i; i < withdrawables[msg.sender].length; ) {
-			// Calculate fair share of given token for withdrawal
+			// Calculate fair share of given token for withdrawal:
+			// (amount of group token * withdrawable token balance of safe) / total supply of group token)
 			uint256 amountToRedeem = (tokenAmount *
-				IERC20(withdrawables[msg.sender][i]).balanceOf(msg.sender)) /
+				IERC20(withdrawables[msg.sender][i]).balanceOf(targetSafe)) /
 				IERC20(msg.sender).totalSupply();
 
 			// `transferFrom` DAO to redeemer
 			if (amountToRedeem != 0) {
 				address(withdrawables[msg.sender][i])._safeTransferFrom(
-					msg.sender,
+					targetSafe,
 					withdrawer,
 					amountToRedeem
 				);
@@ -169,21 +182,22 @@ contract ForumWithdrawalExtension is ReentrancyGuard {
 	 * @param group to withdraw from
 	 * @param accounts contract address of assets to withdraw
 	 * @param amounts to withdraw if needed
+	 * @param amount of DAO tokens to burn - basis points, 10,000 = 100%
 	 */
-	function submitWithdrawlProposal(
-		IForumGroup group,
+	function submitWithdrawalProposal(
+		IForumSafeModule group,
 		address[] calldata accounts,
 		uint256[] calldata amounts,
 		uint256 amount
 	) public payable virtual nonReentrant {
 		// Sender must be group member
-		if (group.balanceOf(msg.sender, 0) == 0) revert NotMember();
+		if (!group.isOwner(msg.sender)) revert NotMember();
 
 		// Array lenghts must match
 		if (accounts.length != amounts.length) revert NoArrayParity();
 
-		// Set allowance for DAO to burn members tokens
-		customWithdrawals[address(group)][msg.sender].amountToBurn += amount;
+		// Set allowance for DAO to burn member tokens
+		customWithdrawals[address(group)][msg.sender].basisPointsToBurn += amount;
 
 		// +1 to include the call to processWithdrawalProposal function on this contract
 		uint256 adjustedArrayLength = accounts.length + 1;
@@ -228,13 +242,16 @@ contract ForumWithdrawalExtension is ReentrancyGuard {
 		// Build the payload to call processWithdrawalProposal on this contract and put it as the last payload
 		// This will process the withdrawal as soon as the vote is passed
 		proposalPayloads[adjustedArrayLength - 1] = abi.encodeWithSignature(
-			'processWithdrawalProposal(address)',
+			'processWithdrawalProposal(address,address)',
+			address(group),
 			msg.sender
 		);
 
+		// todo consider building a multisend from safe
 		// Submit proposal to DAO - amounts is set to an new empty array as it is not needed (amounts are set in the payloads)
 		uint256 proposal = group.propose(
-			IForumGroupTypes.ProposalType.CALL,
+			IForumSafeModuleTypes.ProposalType.CALL,
+			Enum.Operation.Call,
 			proposalAccounts,
 			new uint256[](adjustedArrayLength),
 			proposalPayloads
@@ -247,17 +264,24 @@ contract ForumWithdrawalExtension is ReentrancyGuard {
 	 * @notice processWithdrawalProposal processes a proposal to withdraw an item not already set in the extension.
 	 * @param withdrawer to take assets and burn tokens for
 	 */
-	function processWithdrawalProposal(address withdrawer) public virtual nonReentrant {
-		CustomWithdrawal memory withdrawal = customWithdrawals[msg.sender][withdrawer];
+	function processWithdrawalProposal(
+		IForumSafeModule module,
+		address withdrawer
+	) public virtual nonReentrant {
+		CustomWithdrawal memory withdrawal = customWithdrawals[address(module)][withdrawer];
 
-		// Burn group tokens (id=1)
-		IForumGroup(msg.sender).burnShares(withdrawer, 1, withdrawal.amountToBurn);
+		// Calcualted based of the amount they own, and the % they want to redeem
+		uint256 amountToBurn = (withdrawal.basisPointsToBurn *
+			module.balanceOf(withdrawer, TOKEN)) / BASIS_POINTS;
+
+		// Burn group tokens
+		module.burnShares(withdrawer, TOKEN, amountToBurn);
 
 		for (uint256 i; i < withdrawal.tokens.length; ) {
 			// For each token, transfer the amountOrId to the withdrawer
 			withdrawalTransferManager.executeTransferPayloads(
 				withdrawal.tokens[i],
-				msg.sender,
+				module.target(),
 				withdrawer,
 				withdrawal.amountOrId[i]
 			);
@@ -268,10 +292,10 @@ contract ForumWithdrawalExtension is ReentrancyGuard {
 			}
 		}
 
-		emit CustomWithdrawalProcessed(msg.sender, msg.sender, withdrawal.amountToBurn);
+		emit CustomWithdrawalProcessed(withdrawer, address(module), amountToBurn);
 
 		// Delete the withdrawal
-		delete customWithdrawals[msg.sender][withdrawer];
+		delete customWithdrawals[address(module)][withdrawer];
 	}
 
 	/**
@@ -327,13 +351,13 @@ contract ForumWithdrawalExtension is ReentrancyGuard {
 		address group,
 		address member
 	)
-		public
+		external
 		view
 		virtual
-		returns (address[] memory tokens, uint256[] memory amounts, uint256 amountToBurn)
+		returns (address[] memory tokens, uint256[] memory amounts, uint256 basisPointsToBurn)
 	{
 		tokens = customWithdrawals[group][member].tokens;
 		amounts = customWithdrawals[group][member].amountOrId;
-		amountToBurn = customWithdrawals[group][member].amountToBurn;
+		basisPointsToBurn = customWithdrawals[group][member].basisPointsToBurn;
 	}
 }

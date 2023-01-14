@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.15;
 
-/// @notice ForumGroup interface for sharing types
+/// @notice Forum module interface for sharing types
 interface IForumSafeModuleTypes {
 	enum ProposalType {
 		MINT, // add membership

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.15;
 
 // ! fix remappings failings with hardhat
 import {Module, Enum} from '@gnosis.pm/zodiac/contracts/core/Module.sol';
@@ -12,10 +12,10 @@ abstract contract SafeHelper is Module {
 	// Gnosis multisendLibrary library contract
 	address public multisendLibrary;
 
-	// Used in staticcall to ganosis safe - bytes4(keccak256('getThreshold()'))
+	// Used in staticcall to gnosis safe - bytes4(keccak256('getThreshold()'))
 	bytes internal constant GET_THRESHOLD = abi.encodeWithSelector(0xe75235b8);
 
-	//  Used in staticcall to ganosis safe - bytes4(keccak256('getOwners()'))
+	//  Used in staticcall to gnosis safe - bytes4(keccak256('getOwners()'))
 	bytes internal constant GET_OWNERS = abi.encodeWithSelector(0xa0e67e2b);
 
 	// Function sig for isOwner - bytes4(keccak256('isOwner(address)'))
@@ -43,6 +43,7 @@ abstract contract SafeHelper is Module {
 	function isOwner(address owner) public view returns (bool) {
 		(, bytes memory _isOwner) = target.staticcall(abi.encodeWithSelector(IS_OWNER_SIG, owner));
 
+		// ! consider other way to get bool here
 		return bytes32(_isOwner) == bytes32(uint256(1));
 	}
 

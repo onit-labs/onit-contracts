@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.15;
 
 import {IERC165} from '../../../interfaces/IERC165.sol';
 
@@ -28,6 +28,24 @@ contract WithdrawalTransferManager is ReentrancyGuard {
 	// ERC1155 interfaceID
 	bytes4 public constant INTERFACE_ID_ERC1155 = 0xd9b67a26;
 
+	// ERC721 approve selector
+	bytes4 public constant ERC721_APPROVE_SELECTOR = bytes4(keccak256('approve(address,uint256)'));
+	// ERC1155 setApprovalForAll selector
+	bytes4 public constant ERC1155_SET_APPROVAL_FOR_ALL_SELECTOR =
+		bytes4(keccak256('setApprovalForAll(address,bool)'));
+	// ERC20 approve selector
+	bytes4 public constant ERC20_APPROVE_SELECTOR = bytes4(keccak256('approve(address,uint256)'));
+
+	// ERC721 transferFrom selector
+	bytes4 public constant ERC721_TRANSFER_FROM_SELECTOR =
+		bytes4(keccak256('transferFrom(address,address,uint256)'));
+	// ERC1155 safeTransferFrom selector
+	bytes4 public constant ERC1155_SAFE_TRANSFER_FROM_SELECTOR =
+		bytes4(keccak256('safeTransferFrom(address,address,uint256,uint256,bytes)'));
+	// ERC20 transfer selector
+	bytes4 public constant ERC20_TRANSFER_SELECTOR =
+		bytes4(keccak256('transferFrom(address,address,uint256)'));
+
 	/// ----------------------------------------------------------------------------------------
 	/// Withdrawl Logic
 	/// ----------------------------------------------------------------------------------------
@@ -45,29 +63,14 @@ contract WithdrawalTransferManager is ReentrancyGuard {
 		// Check the type of collection, and build the approve payload accordingly
 		TokenType tokenType = determineTokenType(collection);
 
+		if (tokenType == TokenType.ERC20)
+			return abi.encodeWithSelector(ERC20_APPROVE_SELECTOR, address(this), amountOrId);
+
 		if (tokenType == TokenType.ERC721)
-			return
-				abi.encodeWithSelector(
-					bytes4(keccak256('approve(address,uint256)')),
-					address(this),
-					amountOrId
-				);
+			return abi.encodeWithSelector(ERC721_APPROVE_SELECTOR, address(this), amountOrId);
 
-		if (tokenType == TokenType.ERC1155)
-			return
-				abi.encodeWithSelector(
-					bytes4(keccak256('setApprovalForAll(address,bool)')),
-					address(this),
-					true
-				);
-
-		// If it is not an ERC721 or ERC1155, then assume it is an ERC20
-		return
-			abi.encodeWithSelector(
-				bytes4(keccak256('approve(address,uint256)')),
-				address(this),
-				amountOrId
-			);
+		// If it is not an ERC20 or ERC721, then assume it is an ERC1155
+		return abi.encodeWithSelector(ERC1155_SET_APPROVAL_FOR_ALL_SELECTOR, address(this), true);
 	}
 
 	/**
@@ -85,45 +88,28 @@ contract WithdrawalTransferManager is ReentrancyGuard {
 		// Check the type of collection, and execute the relevant transfer
 		TokenType tokenType = determineTokenType(collection);
 
+		if (tokenType == TokenType.ERC20) {
+			(bool success, ) = collection.call(
+				abi.encodeWithSelector(ERC20_TRANSFER_SELECTOR, from, to, amountOrId)
+			);
+
+			if (!success) revert TransferFailed();
+			return;
+		}
+
 		if (tokenType == TokenType.ERC721) {
 			(bool success, ) = collection.call(
-				abi.encodeWithSelector(
-					bytes4(keccak256('safeTransferFrom(address,address,uint256)')),
-					from,
-					to,
-					amountOrId
-				)
+				abi.encodeWithSelector(ERC721_TRANSFER_FROM_SELECTOR, from, to, amountOrId)
 			);
 
 			if (!success) revert TransferFailed();
 			return;
 		}
 
+		// If it is not an ERC20 or ERC721, then assume it is an ERC1155
 		/// @dev For now only 1 ERC1155 can only be transferred at a time
-		if (tokenType == TokenType.ERC1155) {
-			(bool success, ) = collection.call(
-				abi.encodeWithSelector(
-					bytes4(keccak256('safeTransferFrom(address,address,uint256,uint256,bytes)')),
-					from,
-					to,
-					amountOrId,
-					1,
-					''
-				)
-			);
-
-			if (!success) revert TransferFailed();
-			return;
-		}
-
-		// If it is not an ERC721 or ERC1155, then assume it is an ERC20
 		(bool success, ) = collection.call(
-			abi.encodeWithSelector(
-				bytes4(keccak256('transferFrom(address,address,uint256)')),
-				from,
-				to,
-				amountOrId
-			)
+			abi.encodeWithSelector(ERC1155_SAFE_TRANSFER_FROM_SELECTOR, from, to, amountOrId, 1, '')
 		);
 
 		if (!success) revert TransferFailed();
