@@ -165,27 +165,7 @@ abstract contract ForumSafeTestConfig is BasicTestConfig {
 			bytes[] memory _payloads
 		) = buildDynamicArraysForProposal(accounts, amounts, payloads);
 
-		return
-			group.propose(
-				packProposal(uint32(block.timestamp), proposalType, operationType),
-				_accounts,
-				_amounts,
-				_payloads
-			);
-	}
-
-	/**
-	 * @notice packs proposaltype, creationtime, and operation type into a single uint256
-	 * @param creationTime creation time
-	 * @param proposalType proposal type
-	 * @param operationType operation type
-	 */
-	function packProposal(
-		uint32 creationTime,
-		IForumSafeModuleTypes.ProposalType proposalType,
-		Enum.Operation operationType
-	) internal pure returns (uint56) {
-		return (uint56(creationTime) << 32) | (uint56(proposalType) << 8) | uint56(operationType);
+		return group.propose(proposalType, operationType, _accounts, _amounts, _payloads);
 	}
 
 	function buildSafeMultisend(

@@ -58,7 +58,7 @@ contract ForumSafeModuleTest is ForumSafeTestConfig {
 		// Multicall is delegate called by the safe
 		// This lets it be used to call any function on any contract, where the call must come from owner
 		bytes memory multisendPayload = buildSafeMultisend(
-			Enum.Operation.DelegateCall,
+			Enum.Operation.Call,
 			safeAddress,
 			0,
 			addOwnerPayload
@@ -128,10 +128,22 @@ contract ForumSafeModuleTest is ForumSafeTestConfig {
 	}
 
 	function testUpdateTargetOnModule() public {
+		// Deploy new safe to add as target
+		(, GnosisSafe tmpSafe) = forumSafeFactory.deployForumSafe(
+			'test2',
+			'T',
+			[uint32(60), uint32(12), uint32(50), uint32(80)],
+			voters,
+			initialExtensions
+		);
+
 		assertEq(forumSafeModule.target(), safeAddress);
 
 		// Create payload to update target on module
-		bytes memory changeTargetPayload = abi.encodeWithSignature('setTarget(address)', alice);
+		bytes memory changeTargetPayload = abi.encodeWithSignature(
+			'setTarget(address)',
+			address(tmpSafe)
+		);
 
 		// Create proposal to update target on module
 		uint256 prop = proposeToForum(
@@ -146,7 +158,7 @@ contract ForumSafeModuleTest is ForumSafeTestConfig {
 		processProposal(prop, forumSafeModule, true);
 
 		// Check target is updated on module
-		assertEq(forumSafeModule.target(), alice);
+		assertEq(forumSafeModule.target(), address(tmpSafe));
 	}
 
 	/// -----------------------------------------------------------------------

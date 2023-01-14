@@ -5,6 +5,7 @@ pragma solidity ^0.8.15;
 import {ForumGovernance, EnumerableSet, Enum} from './ForumSafeGovernance.sol';
 
 import {NFTreceiver} from '../utils/NFTreceiver.sol';
+import {ProposalPacker} from '../utils/ProposalPacker.sol';
 import {ReentrancyGuard} from '../utils/ReentrancyGuard.sol';
 
 import {IForumSafeModuleTypes} from '../interfaces/IForumSafeModuleTypes.sol';
@@ -15,7 +16,13 @@ import {IForumGroupExtension} from '../interfaces/IForumGroupExtension.sol';
  * @notice Forum investment group governance extension for Gnosis Safe
  * @author Modified from KaliDAO (https://github.com/lexDAO/Kali/blob/main/contracts/KaliDAO.sol)
  */
-contract ForumSafeModule is IForumSafeModuleTypes, ForumGovernance, ReentrancyGuard, NFTreceiver {
+contract ForumSafeModule is
+	IForumSafeModuleTypes,
+	ForumGovernance,
+	ReentrancyGuard,
+	ProposalPacker,
+	NFTreceiver
+{
 	/// ----------------------------------------------------------------------------------------
 	///							EVENTS
 	/// ----------------------------------------------------------------------------------------
@@ -182,43 +189,23 @@ contract ForumSafeModule is IForumSafeModuleTypes, ForumGovernance, ReentrancyGu
 	}
 
 	/**
-	 * @notice unpacks proposaltype, creationtime, and operation type from a single uint256
-	 * @param proposal packed proposal
-	 * @return creationTime creation time
-	 * @return proposalType proposal type
-	 * @return operationType operation type
-	 * @dev consider making internal, depending on use
-	 */
-	function unpackProposal(
-		uint56 proposal
-	)
-		public
-		pure
-		returns (uint32 creationTime, ProposalType proposalType, Enum.Operation operationType)
-	{
-		creationTime = uint32(proposal >> 32);
-		proposalType = ProposalType(uint8(proposal >> 8));
-		operationType = Enum.Operation(uint8(proposal));
-	}
-
-	/**
 	 * @notice Make a proposal to the group
-	 * @param proposalDetails type of proposal
+	 * @param proposalType type of proposal on module
+	 * @param operationType type of operation if executed on safe
 	 * @param accounts target accounts
 	 * @param amounts to be sent
 	 * @param payloads for target accounts
 	 * @return proposal index of the created proposal
 	 */
 	function propose(
-		uint56 proposalDetails,
+		IForumSafeModuleTypes.ProposalType proposalType,
+		Enum.Operation operationType,
 		address[] calldata accounts,
 		uint256[] calldata amounts,
 		bytes[] calldata payloads
 	) public payable virtual nonReentrant returns (uint256 proposal) {
 		if (accounts.length != amounts.length || amounts.length != payloads.length)
 			revert NoArrayParity();
-
-		(, ProposalType proposalType, ) = unpackProposal(proposalDetails);
 
 		if (proposalType == ProposalType.VPERIOD)
 			if (amounts[0] == 0 || amounts[0] > 365 days) revert PeriodBounds();
@@ -243,7 +230,11 @@ contract ForumSafeModule is IForumSafeModuleTypes, ForumGovernance, ReentrancyGu
 		proposal = proposalCount;
 
 		proposals[proposal] = Proposal({
-			proposalDetails: proposalDetails,
+			proposalDetails: packProposal(
+				uint32(block.timestamp),
+				uint8(proposalType),
+				uint8(operationType)
+			),
 			accounts: accounts,
 			amounts: amounts,
 			payloads: payloads
@@ -266,11 +257,14 @@ contract ForumSafeModule is IForumSafeModuleTypes, ForumGovernance, ReentrancyGu
 	) public payable virtual nonReentrant returns (bool didProposalPass, bytes[] memory results) {
 		Proposal storage prop = proposals[proposal];
 
-		(uint32 creationTime, ProposalType proposalType, Enum.Operation operation) = unpackProposal(
+		// Unpack the proposal details
+		(uint32 creationTime, uint8 proposalTypeUint, uint8 operation) = unpackProposal(
 			prop.proposalDetails
 		);
-
-		VoteType voteType = proposalVoteTypes[ProposalType(2)];
+		// Convert the proposal type to an enum
+		ProposalType proposalType = ProposalType(proposalTypeUint);
+		// Get the vote type for the proposal
+		VoteType voteType = proposalVoteTypes[proposalType];
 
 		if (creationTime == 0) revert NotCurrentProposal();
 
@@ -289,7 +283,7 @@ contract ForumSafeModule is IForumSafeModuleTypes, ForumGovernance, ReentrancyGu
 							prop.accounts[i],
 							prop.amounts[i],
 							prop.payloads[i],
-							operation
+							Enum.Operation(operation)
 						);
 
 						if (!successCall) revert CallError();

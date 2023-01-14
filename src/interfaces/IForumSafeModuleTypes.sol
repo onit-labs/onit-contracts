@@ -26,7 +26,7 @@ interface IForumSafeModuleTypes {
 	}
 
 	struct Proposal {
-		uint56 proposalDetails; // packed creation time (uint32), ProposalType,  Enum.Operation (from safe)
+		uint48 proposalDetails; // packed creation time (uint32), ProposalType,  Enum.Operation (from safe)
 		address[] accounts; // member(s) being added/kicked; account(s) receiving payload
 		uint256[] amounts; // value(s) to be minted/burned/spent; gov setting [0]
 		bytes[] payloads; // data for CALL proposals
