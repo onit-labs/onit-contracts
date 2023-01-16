@@ -154,7 +154,7 @@ contract ForumWithdrawalExtension is ReentrancyGuard {
 			// (amount of group token * withdrawable token balance of safe) / total supply of group token)
 			uint256 amountToRedeem = (tokenAmount *
 				IERC20(withdrawables[msg.sender][i]).balanceOf(targetSafe)) /
-				IERC20(msg.sender).totalSupply();
+				IForumSafeModule(msg.sender).totalSupply();
 
 			// `transferFrom` DAO to redeemer
 			if (amountToRedeem != 0) {
@@ -165,9 +165,9 @@ contract ForumWithdrawalExtension is ReentrancyGuard {
 				);
 			}
 
-			// cannot realistically overflow on human timescales
+			// Will not overflow for length of assets
 			unchecked {
-				i++;
+				++i;
 			}
 		}
 
@@ -199,29 +199,19 @@ contract ForumWithdrawalExtension is ReentrancyGuard {
 		// Set allowance for DAO to burn member tokens
 		customWithdrawals[address(group)][msg.sender].basisPointsToBurn += amount;
 
-		// +1 to include the call to processWithdrawalProposal function on this contract
+		// Adjusts for the added proposal to call this contract to process the withdrawal
 		uint256 adjustedArrayLength = accounts.length + 1;
 
 		// Accouts to be sent to the group proposal
 		address[] memory proposalAccounts = new address[](adjustedArrayLength);
-
-		for (uint256 i; i < accounts.length; ) {
-			proposalAccounts[i] = accounts[i];
-
-			// Will not overflow for length of assets
-			unchecked {
-				++i;
-			}
-		}
-
-		// Add this contract to the end of the array
-		proposalAccounts[adjustedArrayLength - 1] = address(this);
 
 		// Create payloads based on input tokens and amounts
 		bytes[] memory proposalPayloads = new bytes[](adjustedArrayLength);
 
 		// Loop the input accounts and create payloads
 		for (uint256 i; i < accounts.length; ) {
+			proposalAccounts[i] = accounts[i];
+
 			// Build the approval for the group to allow the asset to be transferred
 			proposalPayloads[i] = withdrawalTransferManager.buildApprovalPayloads(
 				accounts[i],
@@ -239,15 +229,17 @@ contract ForumWithdrawalExtension is ReentrancyGuard {
 			}
 		}
 
+		// Add this contract to the end of the array
+		proposalAccounts[accounts.length] = address(this);
+
 		// Build the payload to call processWithdrawalProposal on this contract and put it as the last payload
 		// This will process the withdrawal as soon as the vote is passed
-		proposalPayloads[adjustedArrayLength - 1] = abi.encodeWithSignature(
+		proposalPayloads[accounts.length] = abi.encodeWithSignature(
 			'processWithdrawalProposal(address,address)',
 			address(group),
 			msg.sender
 		);
 
-		// todo consider building a multisend from safe
 		// Submit proposal to DAO - amounts is set to an new empty array as it is not needed (amounts are set in the payloads)
 		uint256 proposal = group.propose(
 			IForumSafeModuleTypes.ProposalType.CALL,

@@ -23,6 +23,8 @@ interface IForumSafeModule {
 
 	function balanceOf(address to, uint256 tokenId) external payable returns (uint256);
 
+	function totalSupply() external payable returns (uint256);
+
 	function target() external payable returns (address);
 
 	function isOwner(address account) external payable returns (bool);
