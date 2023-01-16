@@ -2,13 +2,12 @@
 
 pragma solidity ^0.8.15;
 
-import {SafeTransferLib} from '../../../libraries/SafeTransferLib.sol';
+import {SafeTransferLib} from '@libraries/SafeTransferLib.sol';
 
-import {ReentrancyGuard} from '../../../utils/ReentrancyGuard.sol';
+import {IForumSafeModule} from '@interfaces/IForumSafeModule.sol';
 
-import {IForumSafeModule} from '../../../interfaces/IForumSafeModule.sol';
-
-import {SafeHelper} from '../../../utils/SafeHelper.sol';
+import {ReentrancyGuard} from '@utils/ReentrancyGuard.sol';
+import {SafeHelper} from '@utils/SafeHelper.sol';
 
 /**
  * @title ForumGroupFundraise

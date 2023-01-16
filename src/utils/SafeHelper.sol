@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.15;
 
-// ! fix remappings failings with hardhat
-import {Module, Enum} from '@gnosis.pm/zodiac/contracts/core/Module.sol';
+import {Module, Enum} from '@zodiac/core/Module.sol';
 
 abstract contract SafeHelper is Module {
 	/// ----------------------------------------------------------------------------------------

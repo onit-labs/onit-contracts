@@ -3,7 +3,7 @@ pragma solidity ^0.8.15;
 
 import {EnumerableSet} from '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
-import {SafeHelper, Enum} from '../utils/SafeHelper.sol';
+import {SafeHelper, Enum} from '@utils/SafeHelper.sol';
 
 /// @notice Minimalist and gas efficient ERC1155 based DAO implementation with governance.
 /// @author Modified from KaliDAO (https://github.com/kalidao/kali-contracts/blob/main/contracts/KaliDAOtoken.sol)

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {IERC165} from '../../../interfaces/IERC165.sol';
+import {IERC165} from '@interfaces/IERC165.sol';
 
-import {ReentrancyGuard} from '../../../utils/ReentrancyGuard.sol';
+import {ReentrancyGuard} from '@utils/ReentrancyGuard.sol';
 
 /**
  * @title WithdrawalTransferManager

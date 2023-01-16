@@ -2,11 +2,10 @@
 
 pragma solidity ^0.8.15;
 
-// ! fix remappings failings with hardhat
-import {GnosisSafe} from '@gnosis.pm/safe-contracts/contracts/GnosisSafe.sol';
-import {GnosisSafeProxyFactory} from '@gnosis.pm/safe-contracts/contracts/proxies/GnosisSafeProxyFactory.sol';
+import {GnosisSafe} from '@gnosis/GnosisSafe.sol';
+import {GnosisSafeProxyFactory} from '@gnosis/proxies/GnosisSafeProxyFactory.sol';
 
-import {Owned} from '../utils/Owned.sol';
+import {Owned} from '@utils/Owned.sol';
 
 import {ForumSafeModule, Enum} from './ForumSafeModule.sol';
 

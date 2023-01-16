@@ -4,12 +4,12 @@ pragma solidity ^0.8.15;
 
 import {ForumGovernance, EnumerableSet, Enum} from './ForumSafeGovernance.sol';
 
-import {NFTreceiver} from '../utils/NFTreceiver.sol';
-import {ProposalPacker} from '../utils/ProposalPacker.sol';
-import {ReentrancyGuard} from '../utils/ReentrancyGuard.sol';
+import {NFTreceiver} from '@utils/NFTreceiver.sol';
+import {ProposalPacker} from '@utils/ProposalPacker.sol';
+import {ReentrancyGuard} from '@utils/ReentrancyGuard.sol';
 
-import {IForumSafeModuleTypes} from '../interfaces/IForumSafeModuleTypes.sol';
-import {IForumGroupExtension} from '../interfaces/IForumGroupExtension.sol';
+import {IForumSafeModuleTypes} from '@interfaces/IForumSafeModuleTypes.sol';
+import {IForumGroupExtension} from '@interfaces/IForumGroupExtension.sol';
 
 /**
  * @title ForumSafeModule

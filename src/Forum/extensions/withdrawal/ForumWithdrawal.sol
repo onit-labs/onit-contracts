@@ -2,15 +2,15 @@
 
 pragma solidity ^0.8.15;
 
-import {SafeTransferLib} from '../../../libraries/SafeTransferLib.sol';
+import {SafeTransferLib} from '@libraries/SafeTransferLib.sol';
 
 import {IERC1155} from '@openzeppelin/contracts/interfaces/IERC1155.sol';
 import {IERC20} from '@openzeppelin/contracts/interfaces/IERC20.sol';
 
-import {IForumGroup, IForumGroupTypes} from '../../../interfaces/IForumGroup.sol';
-import {IWithdrawalTransferManager} from '../../../interfaces/IWithdrawalTransferManager.sol';
+import {IForumGroup, IForumGroupTypes} from '@interfaces/IForumGroup.sol';
+import {IWithdrawalTransferManager} from '@interfaces/IWithdrawalTransferManager.sol';
 
-import {ReentrancyGuard} from '../../../utils/ReentrancyGuard.sol';
+import {ReentrancyGuard} from '@utils/ReentrancyGuard.sol';
 
 /// @notice Withdrawal contract that transfers registered tokens from Forum group in proportion to burnt DAO tokens.
 contract ForumWithdrawal is ReentrancyGuard {

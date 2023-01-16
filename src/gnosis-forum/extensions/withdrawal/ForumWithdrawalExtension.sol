@@ -2,19 +2,18 @@
 
 pragma solidity ^0.8.15;
 
-import {SafeTransferLib} from '../../../libraries/SafeTransferLib.sol';
+import {SafeTransferLib} from '@libraries/SafeTransferLib.sol';
 
 import {IERC1155} from '@openzeppelin/contracts/interfaces/IERC1155.sol';
 import {IERC20} from '@openzeppelin/contracts/interfaces/IERC20.sol';
 
-import {IForumSafeModule, IForumSafeModuleTypes} from '../../../interfaces/IForumSafeModule.sol';
-import {IWithdrawalTransferManager} from '../../../interfaces/IWithdrawalTransferManager.sol';
+import {Enum} from '@zodiac/core/Module.sol';
 
-import {ReentrancyGuard} from '../../../utils/ReentrancyGuard.sol';
-import {ProposalPacker} from '../../../utils/ProposalPacker.sol';
+import {IForumSafeModule, IForumSafeModuleTypes} from '@interfaces/IForumSafeModule.sol';
+import {IWithdrawalTransferManager} from '@interfaces/IWithdrawalTransferManager.sol';
 
-// todo see if this can be inherited from somewhere else
-import {Enum} from '@gnosis.pm/zodiac/contracts/core/Module.sol';
+import {ReentrancyGuard} from '@utils/ReentrancyGuard.sol';
+import {ProposalPacker} from '@utils/ProposalPacker.sol';
 
 /// @notice Withdrawal contract that transfers registered tokens from Forum group in proportion to burnt DAO tokens.
 contract ForumWithdrawalExtension is ReentrancyGuard {

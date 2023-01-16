@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.13;
 
-import {ReentrancyGuard} from '../utils/ReentrancyGuard.sol';
-import {NFTreceiver} from '../utils/NFTreceiver.sol';
+import {ReentrancyGuard} from '@utils/ReentrancyGuard.sol';
+import {NFTreceiver} from '@utils/NFTreceiver.sol';
 
-import {IPfpStaker} from '../interfaces/IPfpStaker.sol';
-import {Owned} from '../utils/Owned.sol';
+import {IPfpStaker} from '@interfaces/IPfpStaker.sol';
+import {Owned} from '@utils/Owned.sol';
 
-import {SVG} from '../libraries/SVG.sol';
-import {JSON} from '../libraries/JSON.sol';
+import {SVG} from '@libraries/SVG.sol';
+import {JSON} from '@libraries/JSON.sol';
 
 import {IERC1155} from '@openzeppelin/contracts/token/ERC1155/IERC1155.sol';
 import {IERC1155MetadataURI} from '@openzeppelin/contracts/token/ERC1155/extensions/IERC1155MetadataURI.sol';

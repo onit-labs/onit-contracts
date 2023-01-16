@@ -4,15 +4,15 @@ pragma solidity ^0.8.13;
 
 import {ForumGovernance, EnumerableSet} from './ForumGovernance.sol';
 
-import {Multicall} from '../utils/Multicall.sol';
-import {NFTreceiver} from '../utils/NFTreceiver.sol';
-import {ReentrancyGuard} from '../utils/ReentrancyGuard.sol';
+import {Multicall} from '@utils/Multicall.sol';
+import {NFTreceiver} from '@utils/NFTreceiver.sol';
+import {ReentrancyGuard} from '@utils/ReentrancyGuard.sol';
 
-import {IForumGroupTypes} from '../interfaces/IForumGroupTypes.sol';
-import {IForumGroupExtension} from '../interfaces/IForumGroupExtension.sol';
-import {IPfpStaker} from '../interfaces/IPfpStaker.sol';
-import {IERC1271} from '../interfaces/IERC1271.sol';
-import {ICommissionManager} from '../interfaces/ICommissionManager.sol';
+import {IForumGroupTypes} from '@interfaces/IForumGroupTypes.sol';
+import {IForumGroupExtension} from '@interfaces/IForumGroupExtension.sol';
+import {IPfpStaker} from '@interfaces/IPfpStaker.sol';
+import {IERC1271} from '@interfaces/IERC1271.sol';
+import {ICommissionManager} from '@interfaces/ICommissionManager.sol';
 
 /**
  * @title ForumGroup

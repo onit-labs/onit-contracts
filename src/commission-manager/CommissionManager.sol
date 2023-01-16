@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.13;
 
-import {Owned} from '../utils/Owned.sol';
+import {Owned} from '@utils/Owned.sol';
 
-import {ICommissionManager} from '../interfaces/ICommissionManager.sol';
-import {IProposalHandler} from '../interfaces/IProposalHandler.sol';
-import {IERC20} from '../interfaces/IERC20.sol';
+import {ICommissionManager} from '@interfaces/ICommissionManager.sol';
+import {IProposalHandler} from '@interfaces/IProposalHandler.sol';
+import {IERC20} from '@interfaces/IERC20.sol';
 
 /**
  * @title CommissionManager
