@@ -62,15 +62,15 @@ contract ForumShareManager is ReentrancyGuard {
 		if (!management[dao][msg.sender]) revert Forbidden();
 
 		for (uint256 i; i < extensionData.length; ) {
-			(address account, uint256 amount, bool mint) = abi.decode(
+			(address account, uint256 amount, uint256 id, bool mint) = abi.decode(
 				extensionData[i],
-				(address, uint256, bool)
+				(address, uint256, uint256, bool)
 			);
 
 			if (mint) {
-				IForumShareManager(dao).mintShares(account, amount);
+				IForumShareManager(dao).mintShares(account, id, amount);
 			} else {
-				IForumShareManager(dao).burnShares(account, amount);
+				IForumShareManager(dao).burnShares(account, id, amount);
 			}
 			// cannot realistically overflow
 			unchecked {
