@@ -2,7 +2,8 @@
 pragma solidity ^0.8.15;
 
 import {ERC1155} from '@solbase/src/tokens/ERC1155/ERC1155.sol';
-import {Owned} from '@solbase/src/auth/Owned.sol';
+
+import {Owned} from '@utils/Owned.sol'; // Consider upgrade to owned without conflicting Unauthorized error
 
 import {IPfpAccessControl} from '@interfaces/IPfpAccessControl.sol';
 
@@ -57,7 +58,7 @@ contract PfpStore is ERC1155, Owned {
 		// Set the deployer as the manager of the first token, then restrict it from use to avoid tokenId = 0
 		approvedManagers[deployer] = tokenCount;
 		// From here first useable tokenId = 1
-		TokenAdded(tokenCount++, deployer);
+		emit TokenAdded(tokenCount++, deployer);
 	}
 
 	/// ----------------------------------------------------------------------------------------
@@ -71,7 +72,7 @@ contract PfpStore is ERC1155, Owned {
 	function setManager(address manager) external onlyOwner {
 		approvedManagers[manager] = tokenCount;
 
-		TokenAdded(tokenCount++, manager);
+		emit TokenAdded(tokenCount++, manager);
 	}
 
 	/// ----------------------------------------------------------------------------------------
@@ -96,7 +97,7 @@ contract PfpStore is ERC1155, Owned {
 		if (accessControl != address(0)) tokenDetails[tokenId].accessControl = accessControl;
 		if (bytes(tokenUri).length > 2) tokenDetails[tokenId].tokenUri = tokenUri;
 
-		TokenUpdated(tokenId, manager, accessControl, tokenUri);
+		emit TokenUpdated(tokenId, manager, accessControl, tokenUri);
 	}
 
 	/// ----------------------------------------------------------------------------------------
