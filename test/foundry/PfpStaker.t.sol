@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {PfpStaker} from '../../src/pfp-staker/PfpStaker.sol';
+import {PfpSetter} from '../../src/gnosis-forum/extensions/pfp-setter/PfpSetter.sol';
 
 import {ERC721Test} from '../../src/test-contracts/ERC721Test.sol';
 import {ERC1155Test} from '../../src/test-contracts/ERC1155Test.sol';
@@ -10,7 +10,7 @@ import 'forge-std/Test.sol';
 import 'forge-std/StdCheats.sol';
 
 contract WithdrawalTest is Test {
-	PfpStaker public pfpStaker;
+	PfpSetter public pfpStaker;
 
 	ERC721Test public mockErc721;
 	ERC1155Test public mockErc1155;
@@ -40,7 +40,7 @@ contract WithdrawalTest is Test {
 
 		pfpStore = address(0x1);
 
-		pfpStaker = new PfpStaker(alice);
+		pfpStaker = new PfpSetter(alice);
 		mockErc721 = new ERC721Test('MockERC721', 'M721');
 		mockErc1155 = new ERC1155Test('MockERC1155', 'M1155');
 
