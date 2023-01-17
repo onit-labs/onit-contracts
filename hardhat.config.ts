@@ -10,10 +10,13 @@ import {
 	SNOWTRACE_API_KEY
 } from './config'
 
+const fs = require('fs')
 import '@nomiclabs/hardhat-ethers'
 import '@nomiclabs/hardhat-etherscan'
 import '@nomiclabs/hardhat-waffle'
+import '@nomicfoundation/hardhat-foundry'
 import '@typechain/hardhat'
+import 'hardhat-preprocessor'
 import 'hardhat-contract-sizer'
 import 'hardhat-deploy'
 import 'hardhat-gas-reporter'
@@ -29,6 +32,14 @@ subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS).setAction(async (_, __, runSuper
 
 	return paths.filter((p) => p.includes('src'))
 })
+
+function getRemappings() {
+	return fs
+		.readFileSync('remappings.txt', 'utf8')
+		.split('\n')
+		.filter(Boolean) // remove empty lines
+		.map((line) => line.replace('node_modules/', '').trim().split('='))
+}
 
 const OPTIMIZED_COMPILER_SETTINGS = {
 	version: '0.8.15',
@@ -208,7 +219,7 @@ const config: HardhatUserConfigExtended = {
 		apiKey: getApiKey()
 	},
 	paths: {
-		sources: './src/',
+		sources: 'src',
 		tests: './test',
 		cache: './cache',
 		artifacts: './artifacts',
@@ -216,8 +227,20 @@ const config: HardhatUserConfigExtended = {
 		deployments: './deployments',
 		scripts: './scripts'
 	},
-	mocha: {
-		timeout: 2147483647
+	preprocess: {
+		eachLine: (hre) => ({
+			transform: (line: string) => {
+				if (line.match(/^\s*import /i)) {
+					for (const [from, to] of getRemappings()) {
+						if (line.includes(from)) {
+							line = line.replace(from, to)
+							break
+						}
+					}
+				}
+				return line
+			}
+		})
 	}
 }
 
