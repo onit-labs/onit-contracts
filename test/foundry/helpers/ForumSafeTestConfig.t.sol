@@ -46,6 +46,10 @@ abstract contract ForumSafeTestConfig is BasicTestConfig {
 	address internal zeroAddress = address(0);
 	address internal oneAddress = address(1);
 
+	address internal safeAddress;
+	address internal moduleAddress;
+	address internal fundraiseAddress;
+
 	// id of gov token on forum module
 	uint256 TOKEN = 0;
 

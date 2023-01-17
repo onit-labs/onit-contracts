@@ -23,8 +23,6 @@ contract WithdrawalTest is ForumSafeTestConfig {
 	// Another erc20 to test multiple withdrawals
 	MockERC20 internal mockErc20_2;
 
-	address internal moduleAddress;
-	address internal safeAddress;
 	address[] internal tokens;
 
 	uint256 internal WITHDRAWAL_START = block.timestamp;

@@ -14,9 +14,6 @@ contract ForumSafeModuleTest is ForumSafeTestConfig {
 	ForumSafeModule private forumSafeModule;
 	GnosisSafe private safe;
 
-	address private safeAddress;
-	address private moduleAddress;
-
 	// 1271 return value
 	bytes4 internal constant UPDATED_MAGIC_VALUE = 0x1626ba7e;
 

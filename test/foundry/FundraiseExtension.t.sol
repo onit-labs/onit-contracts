@@ -11,10 +11,6 @@ contract TestFundraiseExtension is ForumSafeTestConfig {
 	ForumSafeModule internal forumModule;
 	GnosisSafe internal safe;
 
-	address internal fundraiseAddress;
-	address internal moduleAddress;
-	address internal safeAddress;
-
 	/// -----------------------------------------------------------------------
 	/// Setup
 	/// -----------------------------------------------------------------------
