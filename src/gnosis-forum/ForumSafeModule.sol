@@ -83,14 +83,7 @@ contract ForumSafeModule is
 
 	bytes32 public constant PROPOSAL_HASH = keccak256('SignProposal(uint256 proposal)');
 
-	/**
-	 * 'contractSignatureAllowance' provides the contract with the ability to 'sign' as an EOA would
-	 * 	It enables signature based transactions on marketplaces accommodating the EIP-1271 standard.
-	 *  Address is the account which makes the call to check the verified signature (ie. the martketplace).
-	 * 	Bytes32 is the hash of the calldata which the group approves. This data is dependant
-	 * 	on the marketplace / dex where the group are approving the transaction.
-	 */
-	mapping(address => mapping(bytes32 => uint256)) private contractSignatureAllowance;
+	// Enabled extensions which can interact with this contract
 	mapping(address => bool) public extensions;
 	mapping(uint256 => Proposal) public proposals;
 	mapping(ProposalType => VoteType) public proposalVoteTypes;
@@ -327,14 +320,6 @@ contract ForumSafeModule is
 
 				if (proposalType == ProposalType.DOCS) docs = string(prop.payloads[0]);
 
-				// TODO should be converted to set hash on gnosis safe
-				if (proposalType == ProposalType.ALLOW_CONTRACT_SIG) {
-					// This sets the allowance for EIP-1271 contract signature transactions on marketplaces
-					for (uint256 i; i < prop.accounts.length; i++) {
-						// set the sig on the gnosis safe
-					}
-				}
-
 				emit ProposalProcessed(proposalType, proposal, didProposalPass);
 
 				// Delete proposal now that it has been processed
@@ -472,8 +457,10 @@ contract ForumSafeModule is
 			)
 		);
 
+		uint256 sigCount = signatures.length;
+
 		// For each sig we check the recovered signer is a valid member and count thier vote
-		for (uint256 i; i < signatures.length; ) {
+		for (uint256 i; i < sigCount; ) {
 			// Recover the signer
 			address recoveredSigner = ecrecover(
 				digest,

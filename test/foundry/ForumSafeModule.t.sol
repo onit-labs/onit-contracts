@@ -17,6 +17,9 @@ contract ForumSafeModuleTest is ForumSafeTestConfig {
 	address private safeAddress;
 	address private moduleAddress;
 
+	// 1271 return value
+	bytes4 internal constant UPDATED_MAGIC_VALUE = 0x1626ba7e;
+
 	/// -----------------------------------------------------------------------
 	/// Setup
 	/// -----------------------------------------------------------------------
@@ -287,7 +290,10 @@ contract ForumSafeModuleTest is ForumSafeTestConfig {
 		bytes memory message = 'hello';
 
 		// Create payload to sign a message
-		bytes memory signPayload = abi.encodeWithSignature('signMessage(bytes)', message);
+		bytes memory signPayload = abi.encodeWithSignature(
+			'signMessage(bytes)',
+			abi.encode(keccak256(message))
+		);
 
 		// Create proposal to sign message
 		uint256 prop = proposeToForum(
@@ -301,37 +307,17 @@ contract ForumSafeModuleTest is ForumSafeTestConfig {
 
 		processProposal(prop, forumSafeModule, true);
 
-		bytes32 tmp = keccak256(
-			abi.encodePacked(
-				bytes1(0x19),
-				bytes1(0x01),
-				GnosisSafe(payable(address(safe))).domainSeparator(),
-				keccak256(
-					abi.encode(
-						0x60b3cbf8b4a223d68d641b3b6ddf9a298e7f33710cf3d3a9d1146b5a6150fbca,
-						keccak256(message)
-					)
-				)
-			)
-		);
-		console.logBytes32(tmp);
-
-		// Check signature is valid
-		assertTrue(safe.signedMessages(tmp) == 1);
-
 		// create isValidSignature payload
 		bytes memory isValidSigPayload = abi.encodeWithSignature(
 			'isValidSignature(bytes32,bytes)',
-			tmp,
-			abi.encodePacked('0x', '0x', uint8(0))
+			keccak256(message),
+			''
 		);
 
-		(, bytes memory ret) = safeAddress.staticcall(isValidSigPayload);
-
-		//IERC1271Upgradeable(safeAddress).isValidSignature(tmp, '0x');
+		(, bytes memory ret) = safeAddress.call(isValidSigPayload);
 
 		// Check isValidSig on safe
-		//assertTrue(!safe.call(isValidSigPayload));
+		assertTrue(bytes4(ret) == UPDATED_MAGIC_VALUE);
 	}
 
 	function testSingleProposalViaSafe() public {
