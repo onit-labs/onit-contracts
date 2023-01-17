@@ -191,7 +191,9 @@ contract ForumSafeFactory is Owned {
 		address[] memory _initialExtensions = _createInitialExtensions(new address[](0));
 
 		// Encode the init params, and set up the module
-		forumGroup.setUp(abi.encode(_name, _symbol, msg.sender, _initialExtensions, _govSettings));
+		forumGroup.setUp(
+			abi.encode(_name, _symbol, address(this), _initialExtensions, _govSettings)
+		);
 
 		// Finally enable the module on the safe
 		// The extendSafeWithForumModule() method is delegate called from the safe,

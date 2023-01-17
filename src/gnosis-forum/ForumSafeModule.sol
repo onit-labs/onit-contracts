@@ -118,7 +118,6 @@ contract ForumSafeModule is
 
 		// Initialize ownership and transfer immediately to avatar
 		// Ownable Init reverts if already initialized
-		// TODO consider owner being safe
 		__Ownable_init();
 		transferOwnership(_safe);
 
@@ -144,8 +143,9 @@ contract ForumSafeModule is
 		// Set the remaining base extensions (fundriase, withdrawal, + any custom extensions beyond that)
 		// Cannot realistically overflow on human timescales
 		unchecked {
-			for (uint256 i = 1; i < _extensions.length; i++) {
+			for (uint256 i = 1; i < _extensions.length; ) {
 				extensions[_extensions[i]] = true;
+				++i;
 			}
 		}
 
@@ -261,15 +261,13 @@ contract ForumSafeModule is
 
 		if (creationTime == 0) revert NotCurrentProposal();
 
-		uint256 votes = getVotes(proposal, signatures, voteType);
-
-		didProposalPass = _countVotes(voteType, votes);
+		didProposalPass = _countVotes(voteType, _getVotes(proposal, signatures, voteType));
 
 		if (didProposalPass) {
 			// Cannot realistically overflow on human timescales
 			unchecked {
 				if (proposalType == ProposalType.CALL) {
-					for (uint256 i; i < prop.accounts.length; i++) {
+					for (uint256 i; i < prop.accounts.length; ) {
 						results = new bytes[](prop.accounts.length);
 
 						(bool successCall, bytes memory result) = execAndReturnData(
@@ -282,6 +280,7 @@ contract ForumSafeModule is
 						if (!successCall) revert CallError();
 
 						results[i] = result;
+						++i;
 					}
 
 					// If member limit is exceeed, revert
@@ -291,7 +290,6 @@ contract ForumSafeModule is
 				// Governance settings
 				if (proposalType == ProposalType.VPERIOD) votingPeriod = uint32(prop.amounts[0]);
 
-				// ! consider member limit when owners are on safe
 				if (proposalType == ProposalType.MEMBER_LIMIT)
 					memberLimit = uint32(prop.amounts[0]);
 
@@ -307,13 +305,14 @@ contract ForumSafeModule is
 				if (proposalType == ProposalType.PAUSE) _flipPause();
 
 				if (proposalType == ProposalType.EXTENSION)
-					for (uint256 i; i < prop.accounts.length; i++) {
+					for (uint256 i; i < prop.accounts.length; ) {
 						if (prop.amounts[i] != 0)
 							extensions[prop.accounts[i]] = !extensions[prop.accounts[i]];
 
 						if (prop.payloads[i].length > 3) {
 							IForumGroupExtension(prop.accounts[i]).setExtension(prop.payloads[i]);
 						}
+						++i;
 					}
 
 				if (proposalType == ProposalType.ESCAPE) delete proposals[prop.amounts[0]];
@@ -342,7 +341,7 @@ contract ForumSafeModule is
 	 * @param yesVotes number of votes for the proposal
 	 * @return bool true if the proposal passed, false otherwise
 	 */
-	function _countVotes(VoteType voteType, uint256 yesVotes) internal view virtual returns (bool) {
+	function _countVotes(VoteType voteType, uint256 yesVotes) private view returns (bool) {
 		if (voteType == VoteType.MEMBER)
 			if ((yesVotes * 100) / getOwners().length >= memberVoteThreshold) return true;
 
@@ -441,11 +440,11 @@ contract ForumSafeModule is
 		if (!success) revert CallError();
 	}
 
-	function getVotes(
+	function _getVotes(
 		uint256 proposal,
 		IForumSafeModuleTypes.Signature[] memory signatures,
 		IForumSafeModuleTypes.VoteType voteType
-	) internal view returns (uint256 votes) {
+	) private view returns (uint256 votes) {
 		// We keep track of the previous signer in the array to ensure there are no duplicates
 		address prevSigner;
 
