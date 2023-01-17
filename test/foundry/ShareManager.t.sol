@@ -48,14 +48,16 @@ contract TestShareManager is ForumSafeTestConfig {
 	/// -----------------------------------------------------------------------
 
 	function testSetShareManagerExt() public {
-		// Abi encoded payload of managers and booleans
-		bytes memory setExtensionPayload = abi.encode([moduleAddress], [true]);
+		address[] memory managers = new address[](1);
+		managers[0] = moduleAddress;
+		bool[] memory settings = new bool[](1);
+		settings[0] = true;
 
-		// Encode paylaod to set module as a manager
-		bytes memory payload = abi.encodeWithSignature('setExtension(bytes)', setExtensionPayload);
+		// Abi encoded payload of managers and booleans
+		bytes memory setExtensionPayload = abi.encode(managers, settings);
 
 		// Set extension
-		setExtensionWithSafeManager(payload, 0);
+		setExtensionWithSafeManager(setExtensionPayload, 0);
 
 		// Check that the extension is set, and module is manager
 		assertTrue(forumSafeModule.extensions(shareManagerAddress));
@@ -64,13 +66,13 @@ contract TestShareManager is ForumSafeTestConfig {
 
 	function testUnsetExtension() public {
 		// Unset extension
-		setExtensionWithSafeManager(new bytes(0), 0);
+		setExtensionWithSafeManager(new bytes(0), 1);
 
 		// Check that the extension is set, and module is manager
-		assertTrue(!forumSafeModule.extensions(shareManagerAddress));
+		assertFalse(forumSafeModule.extensions(shareManagerAddress));
 	}
 
-	function testCannotSetEArrayMissmatch() public {
+	function testCannotSetArrayMissmatch() public {
 		// Abi encoded payload of managers and booleans
 		bytes memory setExtensionPayload = abi.encode([moduleAddress], [true, false]);
 
@@ -84,7 +86,7 @@ contract TestShareManager is ForumSafeTestConfig {
 			Enum.Operation.Call,
 			[address(shareManager)],
 			[uint256(0)],
-			[new bytes(0)]
+			[payload]
 		);
 
 		processProposal(prop, forumSafeModule, false);
@@ -95,14 +97,19 @@ contract TestShareManager is ForumSafeTestConfig {
 	/// -----------------------------------------------------------------------
 
 	function testMintAliceShares() public {
+		address[] memory managers = new address[](1);
+		managers[0] = moduleAddress;
+		bool[] memory settings = new bool[](1);
+		settings[0] = true;
+
 		// Abi encoded payload of managers and booleans
-		bytes memory setExtensionPayload = abi.encode([moduleAddress], [true]);
+		bytes memory setExtensionPayload = abi.encode(managers, settings);
 
 		// Encode paylaod to set module as a manager
 		bytes memory payload = abi.encodeWithSignature('setExtension(bytes)', setExtensionPayload);
 
 		// Set extension
-		setExtensionWithSafeManager(payload, 0);
+		setExtensionWithSafeManager(setExtensionPayload, 0);
 
 		// Build payload to mint 100 shares for Alice
 		bytes memory mintPayload = abi.encode(alice, 1, true);
@@ -110,14 +117,14 @@ contract TestShareManager is ForumSafeTestConfig {
 		// Payload for callExtension proposal
 		bytes memory callExtPayload = abi.encodeWithSignature(
 			'callExtension(address, bytes[]',
-			shareManagerAddress,
+			moduleAddress,
 			[mintPayload]
 		);
 
 		uint256 prop = proposeToForum(
 			forumSafeModule,
 			IForumSafeModuleTypes.ProposalType.CALL,
-			Enum.Operation.Call,
+			Enum.Operation.DelegateCall,
 			[shareManagerAddress],
 			[uint256(0)],
 			[callExtPayload]
@@ -138,7 +145,7 @@ contract TestShareManager is ForumSafeTestConfig {
 		uint256 prop = proposeToForum(
 			forumSafeModule,
 			IForumSafeModuleTypes.ProposalType.EXTENSION,
-			Enum.Operation.DelegateCall,
+			Enum.Operation.Call,
 			[shareManagerAddress],
 			[active],
 			[payload]
