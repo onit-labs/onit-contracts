@@ -5,10 +5,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deployer } = await hre.getNamedAccounts()
 	const { deterministic } = hre.deployments
 
-	const WithdrawalTransferManager = await hre.ethers.getContract('WithdrawalTransferManager')
+	const WithdrawalTransferManager = await hre.ethers.getContract('WithdrawalTransferManagerV2')
 
-	const deterministicDeployment = await deterministic('ForumWithdrawal', {
-		contract: 'ForumWithdrawal',
+	const deterministicDeployment = await deterministic('ForumWithdrawalExtension', {
+		contract: 'ForumWithdrawalExtension',
 		from: deployer,
 		args: [WithdrawalTransferManager.address],
 		log: true,
@@ -20,6 +20,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	await deterministicDeployment.deploy()
 }
 export default func
-func.id = 'deploy_ForumWithdrawal' // id required to prevent reexecution
-func.tags = ['ForumWithdrawal', 'Forum', 'Extension']
-func.dependencies = ['WithdrawalTransferManager']
+func.id = 'deploy_ForumWithdrawalExtension' // id required to prevent reexecution
+func.tags = ['ForumWithdrawalExtension', 'Forum', 'Extension']
+func.dependencies = ['WithdrawalTransferManagerV2']

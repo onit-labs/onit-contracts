@@ -5,10 +5,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deployer } = await hre.getNamedAccounts()
 	const { deterministic } = hre.deployments
 
-	const deterministicDeployment = await deterministic('ForumGroup', {
-		contract: 'ForumGroup',
+	const PfpStore = await hre.ethers.getContract('PfpStore')
+
+	const deterministicDeployment = await deterministic('PfpSetter', {
+		contract: 'PfpSetter',
 		from: deployer,
-		args: [],
+		args: [PfpStore.address],
 		log: true,
 		autoMine: true, // speed up deployment on local network (ganache, hardhat), no effect on live networks
 		maxFeePerGas: hre.ethers.BigNumber.from('95000000000'),
@@ -18,5 +20,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	await deterministicDeployment.deploy()
 }
 export default func
-func.id = 'deploy_ForumGroup' // id required to prevent reexecution
-func.tags = ['ForumGroup', 'Multisig', 'Forum']
+func.id = 'deploy_PFP_Setter' // id required to prevent reexecution
+func.tags = ['PfpSetter', 'Extensions', 'Forum']
+func.dependencies = ['PfpStore']

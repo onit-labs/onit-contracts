@@ -1,16 +1,12 @@
 import { DeployFunction } from 'hardhat-deploy/types'
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
-import { ForumFactory, ForumGroup } from '../../typechain'
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deployer } = await hre.getNamedAccounts()
 	const { deterministic } = hre.deployments
 
-	// const ForumGroup = await hre.ethers.getContract('ForumGroup')
-	// const CommissionManager = await hre.ethers.getContract('CommissionManager')
-
-	const deterministicDeployment = await deterministic('ForumFactory', {
-		contract: 'ForumFactory',
+	const deterministicDeployment = await deterministic('PfpStore', {
+		contract: 'PfpStore',
 		from: deployer,
 		args: [deployer],
 		log: true,
@@ -21,8 +17,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 	await deterministicDeployment.deploy()
 }
-
 export default func
-func.id = 'deploy_ForumFactory' // id required to prevent reexecution
-func.tags = ['ForumFactory', 'Multisig', 'Forum']
-func.dependencies = ['ForumGroup', 'CommissionManager']
+func.id = 'deploy_PFP_Setter' // id required to prevent reexecution
+func.tags = ['PfpStore', 'Extensions', 'Forum']
