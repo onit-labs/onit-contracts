@@ -61,7 +61,7 @@ contract ForumSafeFactory is Owned {
 	address public immutable withdrawalExtension;
 	address public immutable pfpStaker;
 
-	uint256 internal immutable BASIC_EXTENSION_COUNT = 2;
+	uint256 internal immutable BASIC_EXTENSION_COUNT = 3;
 
 	/// ----------------------------------------------------------------------------------------
 	/// Constructor
@@ -248,15 +248,19 @@ contract ForumSafeFactory is Owned {
 		// Create initialExtensions array of correct length. Basic Forum extensions + customExtensions
 		initialExtensions = new address[](BASIC_EXTENSION_COUNT + _customExtensions.length);
 
-		// Set the base Forum extensions // todo add withdrawal extension as default
-		(initialExtensions[0], initialExtensions[1]) = (pfpStaker, fundraiseExtension);
+		// Set the base Forum extensions
+		(initialExtensions[0], initialExtensions[1], initialExtensions[2]) = (
+			pfpStaker,
+			fundraiseExtension,
+			withdrawalExtension
+		);
 
 		// Set the custom extensions
 		if (_customExtensions.length != 0) {
 			// Cannot realistically overflow on human timescales
 			unchecked {
 				for (uint256 i; i < _customExtensions.length; ) {
-					// +2 offsets the base Forum extensions
+					// +BASIC_EXTENSION_COUNT offsets the base Forum extensions
 					initialExtensions[i + BASIC_EXTENSION_COUNT] = _customExtensions[i];
 
 					++i;

@@ -102,8 +102,7 @@ contract ForumSafeModule is
 
 	/**
 	 * @notice init the group settings and mint membership for founders
-	 * @param _initializationParams for the group, decoded to:
-	 * 	(_name ,_symbol ,_extension ,_govSettings)
+	 * @param _initializationParams for the group
 	 */
 	function setUp(
 		bytes memory _initializationParams
