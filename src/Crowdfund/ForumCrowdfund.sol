@@ -2,13 +2,13 @@
 
 pragma solidity ^0.8.15;
 
-import {Owned} from '../utils/Owned.sol';
-import {NFTreceiver} from '../utils/NFTreceiver.sol';
-import {ReentrancyGuard} from '../utils/ReentrancyGuard.sol';
+import {Owned} from '@utils/Owned.sol';
+import {NFTreceiver} from '@utils/NFTreceiver.sol';
+import {ReentrancyGuard} from '@utils/ReentrancyGuard.sol';
 
-import {IForumGroup} from '../interfaces/IForumGroup.sol';
-import {IForumGroupFactory} from '../interfaces/IForumGroupFactory.sol';
-import {ICrowdfundExecutionManager} from '../interfaces/ICrowdfundExecutionManager.sol';
+import {IForumGroup} from '@interfaces/IForumGroup.sol';
+import {IForumGroupFactory} from '@interfaces/IForumGroupFactory.sol';
+import {ICrowdfundExecutionManager} from '@interfaces/ICrowdfundExecutionManager.sol';
 
 /**
  * @title Forum Crowdfund

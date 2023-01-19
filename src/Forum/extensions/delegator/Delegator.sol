@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.13;
 
-import {IForumGroup} from '../../../interfaces/IForumGroup.sol';
+import {IForumGroup} from '@interfaces/IForumGroup.sol';
 
-import {ReentrancyGuard} from '../../../utils/ReentrancyGuard.sol';
+import {ReentrancyGuard} from '@utils/ReentrancyGuard.sol';
 
 /**
  * @title Delegator
@@ -31,7 +31,11 @@ contract Delegator is ReentrancyGuard {
 		address indexed toDelegate
 	);
 
-	event DelegateVotesChanged(address indexed delegate, uint256 previousBalance, uint256 newBalance);
+	event DelegateVotesChanged(
+		address indexed delegate,
+		uint256 previousBalance,
+		uint256 newBalance
+	);
 
 	/// -----------------------------------------------------------------------
 	/// Errors
@@ -51,7 +55,10 @@ contract Delegator is ReentrancyGuard {
 	/// -----------------------------------------------------------------------
 
 	function DOMAIN_SEPARATOR() public view virtual returns (bytes32) {
-		return block.chainid == INITIAL_CHAIN_ID ? INITIAL_DOMAIN_SEPARATOR : _computeDomainSeparator();
+		return
+			block.chainid == INITIAL_CHAIN_ID
+				? INITIAL_DOMAIN_SEPARATOR
+				: _computeDomainSeparator();
 	}
 
 	function _computeDomainSeparator() internal view virtual returns (bytes32) {
@@ -354,16 +361,17 @@ contract Delegator is ReentrancyGuard {
 		}
 	}
 
-	function _delegate(
-		address dao,
-		address delegator,
-		address delegatee
-	) internal virtual {
+	function _delegate(address dao, address delegator, address delegatee) internal virtual {
 		address currentDelegate = delegates(dao, delegator);
 
 		_delegates[dao][delegator] = delegatee;
 
-		_moveDelegates(dao, currentDelegate, delegatee, IForumGroup(dao).balanceOf(delegator, TOKEN));
+		_moveDelegates(
+			dao,
+			currentDelegate,
+			delegatee,
+			IForumGroup(dao).balanceOf(delegator, TOKEN)
+		);
 
 		emit DelegateChanged(delegator, currentDelegate, delegatee);
 	}
@@ -378,7 +386,9 @@ contract Delegator is ReentrancyGuard {
 			if (srcRep != address(0)) {
 				uint256 srcRepNum = numCheckpoints[dao][srcRep];
 
-				uint256 srcRepOld = srcRepNum != 0 ? checkpoints[dao][srcRep][srcRepNum - 1].votes : 0;
+				uint256 srcRepOld = srcRepNum != 0
+					? checkpoints[dao][srcRep][srcRepNum - 1].votes
+					: 0;
 
 				uint256 srcRepNew = srcRepOld - amount;
 

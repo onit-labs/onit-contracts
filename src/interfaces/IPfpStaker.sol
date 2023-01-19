@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.15;
 
-// PFP allows groups to stake an NFT to use as their pfp
+// Sets the token uri for group tokens
 interface IPfpStaker {
 	function stakeNft(address, uint256) external;
 

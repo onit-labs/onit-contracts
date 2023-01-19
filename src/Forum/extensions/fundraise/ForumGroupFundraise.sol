@@ -2,11 +2,11 @@
 
 pragma solidity ^0.8.13;
 
-import {SafeTransferLib} from '../../../libraries/SafeTransferLib.sol';
+import {SafeTransferLib} from '@libraries/SafeTransferLib.sol';
 
-import {ReentrancyGuard} from '../../../utils/ReentrancyGuard.sol';
+import {ReentrancyGuard} from '@utils/ReentrancyGuard.sol';
 
-import {IForumGroup} from '../../../interfaces/IForumGroup.sol';
+import {IForumGroup} from '@interfaces/IForumGroup.sol';
 
 /**
  * @title ForumGroupFundraise
@@ -20,7 +20,11 @@ contract ForumGroupFundraise is ReentrancyGuard {
 	/// Events
 	/// -----------------------------------------------------------------------
 
-	event NewFundContribution(address indexed groupAddress, address indexed proposer, uint256 value);
+	event NewFundContribution(
+		address indexed groupAddress,
+		address indexed proposer,
+		uint256 value
+	);
 
 	event FundRoundCancelled(address indexed groupAddress);
 
@@ -125,7 +129,8 @@ contract ForumGroupFundraise is ReentrancyGuard {
 		Fund storage fund = funds[groupAddress];
 
 		// Only groupAddress or proposer can cancel the fundraise.
-		if (!(msg.sender == groupAddress || msg.sender == fund.contributors[0])) revert NotProposer();
+		if (!(msg.sender == groupAddress || msg.sender == fund.contributors[0]))
+			revert NotProposer();
 
 		// Return funds from escrow
 		for (uint256 i; i < fund.contributors.length; ) {

@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {PfpStaker} from '../../src/PfpStaker/PfpStaker.sol';
+import {PfpSetter} from '../../src/gnosis-forum/extensions/pfp-setter/PfpSetter.sol';
 
-import {ERC721Test} from '../../src/Test/ERC721Test.sol';
-import {ERC1155Test} from '../../src/Test/ERC1155Test.sol';
+import {ERC721Test} from '../../src/test-contracts/ERC721Test.sol';
+import {ERC1155Test} from '../../src/test-contracts/ERC1155Test.sol';
 
 import 'forge-std/Test.sol';
 import 'forge-std/StdCheats.sol';
 
 contract WithdrawalTest is Test {
-	PfpStaker public pfpStaker;
+	PfpSetter public pfpStaker;
 
 	ERC721Test public mockErc721;
 	ERC1155Test public mockErc1155;
@@ -22,7 +22,6 @@ contract WithdrawalTest is Test {
 
 	address[] internal tokens;
 
-	// TODO create contract for this
 	address internal pfpStore;
 
 	uint256 internal constant MEMBERSHIP = 0;
@@ -40,7 +39,7 @@ contract WithdrawalTest is Test {
 
 		pfpStore = address(0x1);
 
-		pfpStaker = new PfpStaker(alice);
+		pfpStaker = new PfpSetter(pfpStore);
 		mockErc721 = new ERC721Test('MockERC721', 'M721');
 		mockErc1155 = new ERC1155Test('MockERC1155', 'M1155');
 
@@ -55,14 +54,11 @@ contract WithdrawalTest is Test {
 	// Test setting the pfpStore address
 	function testSetPfpStore() public {
 		vm.prank(alice, alice);
-		pfpStaker.setPfpStore(pfpStore);
 		assertEq(pfpStaker.pfpStore(), pfpStore);
 
 		// Test that only the owner can set the pfpStore
 		vm.prank(bob, bob);
 		vm.expectRevert('UNAUTHORISED');
-		pfpStaker.setPfpStore(bob);
-		assertEq(pfpStaker.owner(), bob);
 		assertEq(pfpStaker.pfpStore(), pfpStore);
 	}
 
@@ -90,7 +86,7 @@ contract WithdrawalTest is Test {
 		vm.prank(alice, alice);
 		mockErc721.approve(address(pfpStaker), 1);
 
-		console.log(pfpStaker.getUri(alice, 'test'));
+		console.log(pfpStaker.getUri(alice, 'test', 0));
 	}
 
 	// When nft is staked
@@ -98,6 +94,6 @@ contract WithdrawalTest is Test {
 		vm.prank(alice, alice);
 		mockErc721.approve(address(pfpStaker), 1);
 
-		pfpStaker.getUri(alice, 'test');
+		pfpStaker.getUri(alice, 'test', 0);
 	}
 }
