@@ -9,13 +9,12 @@ import {SVG} from '@libraries/SVG.sol';
 import {JSON} from '@libraries/JSON.sol';
 
 import {ERC1155} from '@solbase/src/tokens/ERC1155/ERC1155.sol';
-import {Owned} from '@solbase/src/auth/Owned.sol';
 
 /**
  * @title PfpSetter
  * @notice Allows groups to stake an NFT to use as their pfp and generates token uri for group tokens
  */
-contract PfpSetter is IPfpSetter, NFTreceiver, Owned {
+contract PfpSetter is IPfpSetter, NFTreceiver {
 	/// ----------------------------------------------------------------------------------------
 	/// EVENTS
 	/// ----------------------------------------------------------------------------------------
@@ -28,6 +27,8 @@ contract PfpSetter is IPfpSetter, NFTreceiver, Owned {
 
 	error NotTokenHolder();
 
+	error Unauthorized();
+
 	/// ----------------------------------------------------------------------------------------
 	/// PFP STORAGE
 	/// ----------------------------------------------------------------------------------------
@@ -35,7 +36,7 @@ contract PfpSetter is IPfpSetter, NFTreceiver, Owned {
 	address private immutable THIS_ADDRESS;
 
 	// The erc1155 contract storing pfps
-	address public pfpStore;
+	address public immutable pfpStore;
 
 	// Staked Nft by address (all nfts are erc1155 tokens on the pfpStore contract)
 	mapping(address => uint256) public stakedNft;
@@ -44,20 +45,10 @@ contract PfpSetter is IPfpSetter, NFTreceiver, Owned {
 	/// CONSTRUCTOR
 	/// ----------------------------------------------------------------------------------------
 
-	constructor(address deployer) Owned(deployer) {
+	constructor(address _pfpStore) {
 		THIS_ADDRESS = address(this);
-	}
 
-	/// ----------------------------------------------------------------------------------------
-	/// Owner Interface
-	/// ----------------------------------------------------------------------------------------
-
-	/**
-	 * @notice Lets owner set the pfp store
-	 * @param contractAddress Address of the contract to add as store
-	 */
-	function setPfpStore(address contractAddress) external onlyOwner {
-		pfpStore = contractAddress;
+		pfpStore = _pfpStore;
 	}
 
 	/// ----------------------------------------------------------------------------------------

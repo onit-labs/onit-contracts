@@ -22,7 +22,6 @@ contract WithdrawalTest is Test {
 
 	address[] internal tokens;
 
-	// TODO create contract for this
 	address internal pfpStore;
 
 	uint256 internal constant MEMBERSHIP = 0;
@@ -40,7 +39,7 @@ contract WithdrawalTest is Test {
 
 		pfpStore = address(0x1);
 
-		pfpStaker = new PfpSetter(alice);
+		pfpStaker = new PfpSetter(pfpStore);
 		mockErc721 = new ERC721Test('MockERC721', 'M721');
 		mockErc1155 = new ERC1155Test('MockERC1155', 'M1155');
 
@@ -55,14 +54,11 @@ contract WithdrawalTest is Test {
 	// Test setting the pfpStore address
 	function testSetPfpStore() public {
 		vm.prank(alice, alice);
-		pfpStaker.setPfpStore(pfpStore);
 		assertEq(pfpStaker.pfpStore(), pfpStore);
 
 		// Test that only the owner can set the pfpStore
 		vm.prank(bob, bob);
 		vm.expectRevert('UNAUTHORISED');
-		pfpStaker.setPfpStore(bob);
-		assertEq(pfpStaker.owner(), bob);
 		assertEq(pfpStaker.pfpStore(), pfpStore);
 	}
 
