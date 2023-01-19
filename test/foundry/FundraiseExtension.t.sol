@@ -6,7 +6,7 @@ import './helpers/ForumSafeTestConfig.t.sol';
 
 import {ForumFundraiseExtension} from '../../src/gnosis-forum/extensions/fundraise/ForumFundraiseExtension.sol';
 
-contract TestFundraiseExtension is ForumSafeTestConfig {
+contract FundraiseExtensionTest is ForumSafeTestConfig {
 	// ForumFundraiseExtension fundraiseExtension;
 	ForumSafeModule internal forumModule;
 	GnosisSafe internal safe;

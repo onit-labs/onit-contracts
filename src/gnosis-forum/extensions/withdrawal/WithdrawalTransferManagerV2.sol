@@ -9,7 +9,7 @@ import {ReentrancyGuard} from '@utils/ReentrancyGuard.sol';
  * @title WithdrawalTransferManager
  * @notice It formats the payload needed to approve or executes transfer of an asset for the ForumCrowdfund contract
  */
-contract WithdrawalTransferManager is ReentrancyGuard {
+contract WithdrawalTransferManagerV2 is ReentrancyGuard {
 	/// ----------------------------------------------------------------------------------------
 	/// Withdrawl Storage
 	/// ----------------------------------------------------------------------------------------
