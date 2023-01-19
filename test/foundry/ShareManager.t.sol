@@ -96,35 +96,40 @@ contract TestShareManager is ForumSafeTestConfig {
 	/// Share Manager Management
 	/// -----------------------------------------------------------------------
 
-	function testMintAliceShares() public {
+	function testMintAliceShares(uint256 amount) public {
+		vm.assume(amount > 0 && amount <= 1 ether);
+
+		// Check balances
+		assertEq(forumSafeModule.balanceOf(alice, TOKEN), 0);
+		assertEq(forumSafeModule.totalSupply(), 0);
+
 		address[] memory managers = new address[](1);
-		managers[0] = moduleAddress;
+		managers[0] = safeAddress;
 		bool[] memory settings = new bool[](1);
 		settings[0] = true;
 
 		// Abi encoded payload of managers and booleans
 		bytes memory setExtensionPayload = abi.encode(managers, settings);
 
-		// Encode paylaod to set module as a manager
-		bytes memory payload = abi.encodeWithSignature('setExtension(bytes)', setExtensionPayload);
-
 		// Set extension
 		setExtensionWithSafeManager(setExtensionPayload, 0);
 
-		// Build payload to mint 100 shares for Alice
-		bytes memory mintPayload = abi.encode(alice, 1, true);
+		// Build payload to mint amount of shares for Alice
+		bytes memory mintPayload = abi.encode(alice, amount, TOKEN, true);
+		bytes[] memory mintPayloadArray = new bytes[](1);
+		mintPayloadArray[0] = mintPayload;
 
 		// Payload for callExtension proposal
 		bytes memory callExtPayload = abi.encodeWithSignature(
-			'callExtension(address, bytes[]',
+			'callExtension(address,bytes[])',
 			moduleAddress,
-			[mintPayload]
+			mintPayloadArray
 		);
 
 		uint256 prop = proposeToForum(
 			forumSafeModule,
 			IForumSafeModuleTypes.ProposalType.CALL,
-			Enum.Operation.DelegateCall,
+			Enum.Operation.Call,
 			[shareManagerAddress],
 			[uint256(0)],
 			[callExtPayload]
@@ -133,8 +138,37 @@ contract TestShareManager is ForumSafeTestConfig {
 		processProposal(prop, forumSafeModule, true);
 
 		// Check balances
-		assertEq(forumSafeModule.balanceOf(alice, TOKEN), 1 ether + 1);
-		assertEq(forumSafeModule.totalSupply(), 1 ether + 1);
+		assertEq(forumSafeModule.balanceOf(alice, TOKEN), amount);
+		assertEq(forumSafeModule.totalSupply(), amount);
+	}
+
+	function testOnlyManagerCanMint() public {
+		address[] memory managers = new address[](1);
+		managers[0] = safeAddress;
+		bool[] memory settings = new bool[](1);
+		settings[0] = true;
+
+		// Abi encoded payload of managers and booleans
+		bytes memory setExtensionPayload = abi.encode(managers, settings);
+
+		// Set extension
+		setExtensionWithSafeManager(setExtensionPayload, 0);
+
+		// Build payload to mint amount of shares for Alice
+		bytes memory mintPayload = abi.encode(alice, 1 ether, TOKEN, true);
+		bytes[] memory mintPayloadArray = new bytes[](1);
+		mintPayloadArray[0] = mintPayload;
+
+		// Payload for callExtension proposal
+		bytes memory callExtPayload = abi.encodeWithSignature(
+			'callExtension(address,bytes[])',
+			moduleAddress,
+			mintPayloadArray
+		);
+
+		vm.prank(alice);
+		vm.expectRevert(bytes4(keccak256('Forbidden()')));
+		shareManager.callExtension(moduleAddress, mintPayloadArray);
 	}
 
 	// -----------------------------------------------------------------------
