@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-
 pragma solidity ^0.8.15;
 
 import {ForumGovernance, EnumerableSet, Enum} from './ForumSafeGovernance.sol';
@@ -7,18 +6,31 @@ import {ForumGovernance, EnumerableSet, Enum} from './ForumSafeGovernance.sol';
 import {NFTreceiver} from '@utils/NFTreceiver.sol';
 import {ProposalPacker} from '@utils/ProposalPacker.sol';
 import {ReentrancyGuard} from '@utils/ReentrancyGuard.sol';
+import {Utils} from '@utils/Utils.sol';
 
 import {IForumSafeModuleTypes} from '@interfaces/IForumSafeModuleTypes.sol';
 import {IForumGroupExtension} from '@interfaces/IForumGroupExtension.sol';
+
+import {BaseAccount, UserOperation, IEntryPoint} from '@account-abstraction/core/BaseAccount.sol';
+import 'forge-std/console.sol';
 
 /**
  * @title ForumSafeModule
  * @notice Forum investment group governance extension for Gnosis Safe
  * @author Modified from KaliDAO (https://github.com/lexDAO/Kali/blob/main/contracts/KaliDAO.sol)
+ * @dev A first pass at integrating 4337 with ForumSafeModule
+ * - proposal function remains but will be removed in future
+ * - propose and process are restricted to entrypoint or sig count only
+ * - functions can be called if validateSig passes, or called directly
+ * - extensions and call extension etc exist as before
+ * - BaseAccount, ForumGovernace, and Safe Module logic are all in this contract
+ *   should attempt to remove these and use a logic contract with delegate
+ * - // ! need to consider role of nonce in relation to general module / safe transactions
  */
 contract ForumSafeModule is
 	IForumSafeModuleTypes,
 	ForumGovernance,
+	BaseAccount,
 	ReentrancyGuard,
 	ProposalPacker,
 	NFTreceiver
@@ -73,6 +85,8 @@ contract ForumSafeModule is
 	// Contract generating uri for group tokens
 	address private pfpExtension;
 
+	address _entryPoint;
+
 	uint256 public proposalCount;
 	uint32 public votingPeriod;
 	uint32 public memberLimit; // 1-100
@@ -124,6 +138,11 @@ contract ForumSafeModule is
 		avatar = _safe;
 		target = _safe; /*Set target to same address as avatar on setup - can be changed later via setTarget, though probably not a good idea*/
 
+		// SETUP ENTRYPOINT
+		// ! remove hardcoding and add an update function
+		_entryPoint = address(0xA12E9172eB5A8B9054F897cC231Cd7a2751D6D93);
+		console.log('entrypoint', _entryPoint);
+
 		/// SETUP FORUM GOVERNANCE ///
 		if (_govSettings[0] == 0 || _govSettings[0] > 365 days) revert PeriodBounds();
 
@@ -157,6 +176,128 @@ contract ForumSafeModule is
 		tokenVoteThreshold = _govSettings[3];
 
 		/// ALL PROPOSAL TYPES DEFAULT TO MEMBER VOTES ///
+	}
+
+	// ! potentially move this into seperate file
+	/// ----------------------------------------------------------------------------------------
+	///							4337 LOGIC
+	/// ----------------------------------------------------------------------------------------
+
+	// ! consider nonce in relation to general module / safe transactions
+	// do we increment it for each entry point tx only? or every tx including extensions?
+	function nonce() public view virtual override returns (uint256) {
+		// return _nonce;
+	}
+
+	// ! consider entry point and where it is set / how it is updated
+	function entryPoint() public view virtual override returns (IEntryPoint) {
+		return IEntryPoint(_entryPoint);
+	}
+
+	/// implement template method of BaseAccount
+	function _validateSignature(
+		UserOperation calldata userOp,
+		bytes32 userOpHash,
+		address
+	) internal virtual override returns (uint256 sigTimeRange) {
+		// userOp.sigs should be a hash of the userOpHash, and the proposal hash for this contract
+		console.log('_validateSignature');
+		// ! improve signature format, remove Signature type
+		// ! consider more general validation -> only process will work for now
+		// ! consider restrictions on what entrypoint can call?
+
+		// extract individual sigs from userOp.signature
+		// userOpHash to ethSignedMessageHash
+		// validate each sig against the eerecovered hash
+
+		// The calldata should be a call to process a proposal
+		// If called from entry point, sigs should be empty
+		(uint256 proposal, Signature[] memory signatures) = abi.decode(
+			userOp.callData[4:],
+			(uint256, Signature[])
+		);
+
+		console.log('proposal', proposal);
+
+		// Construct what the hash should be
+		bytes32 digest = keccak256(
+			abi.encodePacked(
+				'\x19\x01',
+				DOMAIN_SEPARATOR(),
+				keccak256(abi.encode(PROPOSAL_HASH, proposal))
+			)
+		);
+
+		// Full digest which the signatures from userOp should have signed
+		bytes32 fullDigest = keccak256(abi.encode(digest, userOpHash));
+
+		// How many sigs were sent in userOp
+		uint256 sigCount = userOp.signature.length / 65;
+
+		// unpack propdetails
+		(, uint8 p, ) = unpackProposal(proposals[proposal].proposalDetails);
+
+		VoteType voteType = VoteType(p);
+
+		address prevSigner;
+
+		uint256 votes;
+
+		// For each sig we check the recovered signer is a valid member and count thier vote
+		for (uint256 i; i < sigCount; ) {
+			// Recover the signer
+			address recoveredSigner = ecrecover(
+				fullDigest,
+				signatures[i].v,
+				signatures[i].r,
+				signatures[i].s
+			);
+
+			// If not a member, or the signer is out of order (used to prevent duplicates), revert
+			if (!isOwner(recoveredSigner) || prevSigner >= recoveredSigner) revert SignatureError();
+
+			// If the signer has not delegated their vote, we count, otherwise we skip
+			if (memberDelegatee[recoveredSigner] == address(0)) {
+				// If member vote we increment by 1 (for the signer) + the number of members who have delegated to the signer
+				// Else we calculate the number of votes based on share of the treasury
+				if (voteType == VoteType.MEMBER)
+					votes += 1 + EnumerableSet.length(memberDelegators[recoveredSigner]);
+				else {
+					uint256 len = EnumerableSet.length(memberDelegators[recoveredSigner]);
+					// Add the number of votes the signer holds
+					votes += balanceOf[recoveredSigner][TOKEN];
+					// If the signer has been delegated too,check the balances of anyone who has delegated to the current signer
+					if (len != 0)
+						for (uint256 j; j < len; ) {
+							votes += balanceOf[
+								EnumerableSet.at(memberDelegators[recoveredSigner], j)
+							][TOKEN];
+							++j;
+						}
+				}
+			}
+
+			// Increment the index and set the previous signer
+			++i;
+			prevSigner = recoveredSigner;
+		}
+
+		return _countVotes(voteType, votes) ? 0 : SIG_VALIDATION_FAILED;
+	}
+
+	/// implement template method of BaseAccount
+	function _validateAndUpdateNonce(UserOperation calldata userOp) internal override {
+		//require(_nonce++ == userOp.nonce, 'account: invalid nonce');
+	}
+
+	function getRequiredSignatures() public view virtual returns (uint256) {
+		// ! implement argent style check on allowed methods for single signer vs all sigs
+
+		// check functions on this contract
+		// check functions as the module
+		// check batched or multicall calls
+
+		return 0;
 	}
 
 	/// ----------------------------------------------------------------------------------------
