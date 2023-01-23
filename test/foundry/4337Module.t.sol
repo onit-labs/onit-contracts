@@ -56,25 +56,16 @@ contract Module4337Test is ForumSafeTestConfig, Helper4337 {
 
 		bytes memory processPropCalldata = abi.encodeWithSignature(
 			'processProposal(uint256,Signature[])',
-			0,
+			1,
 			ts
 		);
 
-		// (uint256 proposal, IForumSafeModuleTypes.Signature[] memory signatures) = abi.decode(
-		// 	processPropCalldata[4:],
-		// 	(uint256, IForumSafeModuleTypes.Signature[])
-		// );
-
-		// console.log(proposal);
-
-		//console.logBytes(processPropCalldata);
-
 		// build user operation
-		UserOperation memory tmp = buildUserOp(moduleAddress, processPropCalldata, alicePk);
+		UserOperation memory tmp = buildUserOp(forumSafeModule, processPropCalldata, alicePk);
 
 		UserOperation[] memory tmp1 = new UserOperation[](1);
 		tmp1[0] = tmp;
 
-		entryPoint.handleOps(tmp1, payable(address(this)));
+		entryPoint.handleOps(tmp1, payable(alice));
 	}
 }

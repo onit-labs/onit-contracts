@@ -4,6 +4,8 @@ pragma solidity ^0.8.15;
 import {EntryPoint} from '@account-abstraction/core/EntryPoint.sol';
 import {BaseAccount, UserOperation} from '@account-abstraction/core/BaseAccount.sol';
 
+import {ForumSafeModule} from '../../../src/gnosis-forum/ForumSafeModule.sol';
+
 import 'forge-std/Test.sol';
 
 contract Helper4337 is Test {
@@ -45,7 +47,7 @@ contract Helper4337 is Test {
 	}
 
 	function buildUserOp(
-		address sender,
+		ForumSafeModule forumSafeModule,
 		bytes memory callData,
 		uint256 signerPk
 	) public returns (UserOperation memory userOp) {
@@ -53,13 +55,12 @@ contract Helper4337 is Test {
 		userOp = userOpBase;
 
 		// Add sender and calldata to op
-		userOp.sender = sender;
+		userOp.sender = address(forumSafeModule);
 		userOp.callData = callData;
 
-		// Get sig and add to op
+		// Get sig and add to op (sign the hast of the userop)
 		bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
 		(uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, userOpHash);
-
 		userOp.signature = abi.encodePacked(r, s, v);
 	}
 }

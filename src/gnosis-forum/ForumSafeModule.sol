@@ -12,8 +12,10 @@ import {IForumSafeModuleTypes} from '@interfaces/IForumSafeModuleTypes.sol';
 import {IForumGroupExtension} from '@interfaces/IForumGroupExtension.sol';
 
 import {BaseAccount, UserOperation, IEntryPoint} from '@account-abstraction/core/BaseAccount.sol';
+
 import 'forge-std/console.sol';
 
+// !!! WARNING - NOT SECURE - IN DEVELOPMENT !!!
 /**
  * @title ForumSafeModule
  * @notice Forum investment group governance extension for Gnosis Safe
@@ -194,95 +196,19 @@ contract ForumSafeModule is
 		return IEntryPoint(_entryPoint);
 	}
 
-	/// implement template method of BaseAccount
+	// ! very minimal validation, not secure at all
 	function _validateSignature(
 		UserOperation calldata userOp,
 		bytes32 userOpHash,
 		address
 	) internal virtual override returns (uint256 sigTimeRange) {
 		// userOp.sigs should be a hash of the userOpHash, and the proposal hash for this contract
-		console.log('_validateSignature');
-		// ! improve signature format, remove Signature type
-		// ! consider more general validation -> only process will work for now
-		// ! consider restrictions on what entrypoint can call?
+		// consider restrictions on what entrypoint can call?
 
-		// extract individual sigs from userOp.signature
-		// userOpHash to ethSignedMessageHash
-		// validate each sig against the eerecovered hash
+		// Recover the signer
+		address recoveredSigner = Utils.recoverSigner(userOpHash, userOp.signature, 0);
 
-		// The calldata should be a call to process a proposal
-		// If called from entry point, sigs should be empty
-		(uint256 proposal, Signature[] memory signatures) = abi.decode(
-			userOp.callData[4:],
-			(uint256, Signature[])
-		);
-
-		console.log('proposal', proposal);
-
-		// Construct what the hash should be
-		bytes32 digest = keccak256(
-			abi.encodePacked(
-				'\x19\x01',
-				DOMAIN_SEPARATOR(),
-				keccak256(abi.encode(PROPOSAL_HASH, proposal))
-			)
-		);
-
-		// Full digest which the signatures from userOp should have signed
-		bytes32 fullDigest = keccak256(abi.encode(digest, userOpHash));
-
-		// How many sigs were sent in userOp
-		uint256 sigCount = userOp.signature.length / 65;
-
-		// unpack propdetails
-		(, uint8 p, ) = unpackProposal(proposals[proposal].proposalDetails);
-
-		VoteType voteType = VoteType(p);
-
-		address prevSigner;
-
-		uint256 votes;
-
-		// For each sig we check the recovered signer is a valid member and count thier vote
-		for (uint256 i; i < sigCount; ) {
-			// Recover the signer
-			address recoveredSigner = ecrecover(
-				fullDigest,
-				signatures[i].v,
-				signatures[i].r,
-				signatures[i].s
-			);
-
-			// If not a member, or the signer is out of order (used to prevent duplicates), revert
-			if (!isOwner(recoveredSigner) || prevSigner >= recoveredSigner) revert SignatureError();
-
-			// If the signer has not delegated their vote, we count, otherwise we skip
-			if (memberDelegatee[recoveredSigner] == address(0)) {
-				// If member vote we increment by 1 (for the signer) + the number of members who have delegated to the signer
-				// Else we calculate the number of votes based on share of the treasury
-				if (voteType == VoteType.MEMBER)
-					votes += 1 + EnumerableSet.length(memberDelegators[recoveredSigner]);
-				else {
-					uint256 len = EnumerableSet.length(memberDelegators[recoveredSigner]);
-					// Add the number of votes the signer holds
-					votes += balanceOf[recoveredSigner][TOKEN];
-					// If the signer has been delegated too,check the balances of anyone who has delegated to the current signer
-					if (len != 0)
-						for (uint256 j; j < len; ) {
-							votes += balanceOf[
-								EnumerableSet.at(memberDelegators[recoveredSigner], j)
-							][TOKEN];
-							++j;
-						}
-				}
-			}
-
-			// Increment the index and set the previous signer
-			++i;
-			prevSigner = recoveredSigner;
-		}
-
-		return _countVotes(voteType, votes) ? 0 : SIG_VALIDATION_FAILED;
+		return isOwner(recoveredSigner) ? 0 : SIG_VALIDATION_FAILED;
 	}
 
 	/// implement template method of BaseAccount
@@ -401,7 +327,9 @@ contract ForumSafeModule is
 
 		if (creationTime == 0) revert NotCurrentProposal();
 
-		didProposalPass = _countVotes(voteType, _getVotes(proposal, signatures, voteType));
+		didProposalPass = msg.sender == _entryPoint
+			? true
+			: _countVotes(voteType, _getVotes(proposal, signatures, voteType));
 
 		if (didProposalPass) {
 			// Cannot realistically overflow on human timescales
@@ -473,6 +401,7 @@ contract ForumSafeModule is
 				delete proposals[proposal];
 			}
 		}
+		console.log('here');
 	}
 
 	/**
