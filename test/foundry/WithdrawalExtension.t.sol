@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import {TestShareManager} from '../../src/test-contracts/TestShareManager.sol';
 import {ForumWithdrawalExtension} from '../../src/gnosis-forum/extensions/withdrawal/ForumWithdrawalExtension.sol';
-import {WithdrawalTransferManager} from '../../src/gnosis-forum/extensions/withdrawal/WithdrawalTransferManager.sol';
+import {WithdrawalTransferManagerV2} from '../../src/gnosis-forum/extensions/withdrawal/WithdrawalTransferManagerV2.sol';
 
 import {IForumSafeModule} from '../../src/interfaces/IForumSafeModule.sol';
 
@@ -16,7 +16,7 @@ contract WithdrawalTest is ForumSafeTestConfig {
 	// Extension to handle withdrawal from safe based on ownership of treasury
 	ForumWithdrawalExtension public forumWithdrawal;
 	// Creates payloads for withdrawals
-	WithdrawalTransferManager public withdrawalTransferManager;
+	WithdrawalTransferManagerV2 public withdrawalTransferManager;
 	// Handles the distribution of group shares (makes testing easier than doing fundraises)
 	TestShareManager public groupShareManager;
 
@@ -35,7 +35,7 @@ contract WithdrawalTest is ForumSafeTestConfig {
 
 	function setUp() public {
 		// Contracts used in withdrawal tests
-		withdrawalTransferManager = new WithdrawalTransferManager();
+		withdrawalTransferManager = new WithdrawalTransferManagerV2();
 		forumWithdrawal = new ForumWithdrawalExtension(address(withdrawalTransferManager));
 		groupShareManager = new TestShareManager();
 
