@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.15;
 
-import {ForumGovernance, EnumerableSet, Enum} from './ForumSafeGovernance.sol';
+import {ForumGovernance, EnumerableSet, Enum} from './ForumSafe4337Governance.sol';
 
 import {NFTreceiver} from '@utils/NFTreceiver.sol';
 import {ProposalPacker} from '@utils/ProposalPacker.sol';
@@ -16,7 +16,7 @@ import {IForumGroupExtension} from '@interfaces/IForumGroupExtension.sol';
  * @notice Forum investment group governance extension for Gnosis Safe
  * @author Modified from KaliDAO (https://github.com/lexDAO/Kali/blob/main/contracts/KaliDAO.sol)
  */
-contract ForumSafeModule is
+contract ForumSafeBaseModule is
 	IForumSafeModuleTypes,
 	ForumGovernance,
 	ReentrancyGuard,
