@@ -41,8 +41,6 @@ contract ForumSafeBaseModule is
 
 	error CallError();
 
-	error AvatarOnly();
-
 	/// ----------------------------------------------------------------------------------------
 	///							DAO STORAGE
 	/// ----------------------------------------------------------------------------------------
@@ -132,7 +130,7 @@ contract ForumSafeBaseModule is
 	}
 
 	/// ----------------------------------------------------------------------------------------
-	///							PROPOSAL LOGIC
+	///							MODULE LOGIC
 	/// ----------------------------------------------------------------------------------------
 	/**
 	 * @notice Manage admin of module
@@ -160,6 +158,7 @@ contract ForumSafeBaseModule is
 		)
 			if (amounts[0] == 0 || amounts[0] > 100) revert VoteThresholdBounds();
 
+		// ! correct count based on new struct
 		if (proposalType == ProposalType.TYPE)
 			if (amounts[0] > 13 || amounts[1] > 2 || amounts.length != 2) revert TypeBounds();
 
@@ -199,7 +198,7 @@ contract ForumSafeBaseModule is
 	 * @return results from any calls
 	 * @dev signatures must be in ascending order
 	 */
-	function _execute(
+	function execute(
 		bytes calldata proposal
 	) public virtual nonReentrant returns (bytes[] memory results) {
 		// ! count votes and limit to entrypoint or passed vote or module
@@ -296,11 +295,6 @@ contract ForumSafeBaseModule is
 	///							UTILITIES
 	/// ----------------------------------------------------------------------------------------
 
-	modifier avatarOnly() {
-		if (msg.sender != avatar) revert AvatarOnly();
-		_;
-	}
-
 	function uri(uint256 tokenId) public view override returns (string memory) {
 		(, bytes memory pfp) = pfpExtension.staticcall(
 			abi.encodeWithSignature('getUri(address,string,uint256)', address(this), name, tokenId)
@@ -308,27 +302,13 @@ contract ForumSafeBaseModule is
 		return string(pfp);
 	}
 
-	/**
-	 * @notice Execute a transaction as a module
-	 * @dev Can be used to execute arbitrary code if needed, only when called by safe
-	 * @param _to address to send transaction to
-	 * @param _value value to send with transaction
-	 * @param _data data to send with transaction
-	 */
-	function executeAsModule(
-		address _to,
-		uint256 _value,
-		bytes calldata _data
-	) external avatarOnly {
-		(bool success, ) = _to.call{value: _value}(_data);
-		if (!success) revert CallError();
-	}
-
 	// Workaround to importing basewallet here
 	function getEntryPoint() internal view returns (address) {
 		(, bytes memory res) = address(this).staticcall(abi.encodeWithSignature('entryPoint()'));
 		return abi.decode(res, (address));
 	}
+
+	function allowExecution() private view {}
 
 	// ! consider moving the below 2 functions to a library
 	/**
