@@ -24,12 +24,6 @@ contract ForumSafeBaseModule is
 	NFTreceiver
 {
 	/// ----------------------------------------------------------------------------------------
-	///							EVENTS
-	/// ----------------------------------------------------------------------------------------
-
-	event ProposalProcessed(ProposalType indexed proposalType, bool indexed didProposalPass);
-
-	/// ----------------------------------------------------------------------------------------
 	///							ERRORS
 	/// ----------------------------------------------------------------------------------------
 
@@ -140,75 +134,36 @@ contract ForumSafeBaseModule is
 	/// ----------------------------------------------------------------------------------------
 	///							PROPOSAL LOGIC
 	/// ----------------------------------------------------------------------------------------
-
 	/**
-	 * @notice Process a proposal
-	 * @param proposal encoded proposal details
-	 * @return didProposalPass check if proposal passed
-	 * @return results from any calls
-	 * @dev signatures must be in ascending order
+	 * @notice Manage admin of module
 	 */
-	function _execute(
-		bytes calldata proposal
-	) internal virtual nonReentrant returns (bool didProposalPass, bytes[] memory results) {
+	function manageAdmin(
+		IForumSafeModuleTypes.ProposalType proposalType,
+		address[] memory accounts,
+		uint256[] memory amounts,
+		bytes[] memory payloads
+	) external payable {
+		// ! count votes and limit to entrypoint or passed vote
+
+		require(msg.sender == getEntryPoint(), 'Only entrypoint can execute');
+
 		// Consider these checks which used to happen in propose function
-		// 		if (accounts.length != amounts.length || amounts.length != payloads.length)
-		// 	revert NoArrayParity();
+		if (accounts.length != amounts.length || amounts.length != payloads.length)
+			revert NoArrayParity();
 
-		// if (proposalType == ProposalType.MEMBER_LIMIT)
-		// 	if (amounts[0] > 100 || amounts[0] < getOwners().length) revert MemberLimitExceeded();
+		if (proposalType == ProposalType.MEMBER_LIMIT)
+			if (amounts[0] > 100 || amounts[0] < getOwners().length) revert MemberLimitExceeded();
 
-		// if (
-		// 	proposalType == ProposalType.MEMBER_THRESHOLD ||
-		// 	proposalType == ProposalType.TOKEN_THRESHOLD
-		// )
-		// 	if (amounts[0] == 0 || amounts[0] > 100) revert VoteThresholdBounds();
+		if (
+			proposalType == ProposalType.MEMBER_THRESHOLD ||
+			proposalType == ProposalType.TOKEN_THRESHOLD
+		)
+			if (amounts[0] == 0 || amounts[0] > 100) revert VoteThresholdBounds();
 
-		// if (proposalType == ProposalType.TYPE)
-		// 	if (amounts[0] > 13 || amounts[1] > 2 || amounts.length != 2) revert TypeBounds();
+		if (proposalType == ProposalType.TYPE)
+			if (amounts[0] > 13 || amounts[1] > 2 || amounts.length != 2) revert TypeBounds();
 
-		(
-			IForumSafeModuleTypes.ProposalType proposalType,
-			Enum.Operation operationType,
-			address[] memory accounts,
-			uint256[] memory amounts,
-			bytes[] memory payloads
-		) = abi.decode(
-				proposal,
-				(IForumSafeModuleTypes.ProposalType, Enum.Operation, address[], uint256[], bytes[])
-			);
-
-		// Get the vote type for the proposal
-		//VoteType voteType = proposalVoteTypes[proposalType];
-
-		//didProposalPass = _countVotes(voteType, _getVotes(proposal, signatures, voteType));
-
-		//if (didProposalPass) {
-		// Cannot realistically overflow on human timescales
 		unchecked {
-			if (proposalType == ProposalType.CALL) {
-				for (uint256 i; i < accounts.length; ) {
-					results = new bytes[](accounts.length);
-
-					(bool successCall, bytes memory result) = execAndReturnData(
-						accounts[i],
-						amounts[i],
-						payloads[i],
-						Enum.Operation(operationType)
-					);
-
-					console.logBytes(result);
-
-					if (!successCall) revert CallError();
-
-					results[i] = result;
-					++i;
-				}
-
-				// If member limit is exceeed, revert
-				if (getOwners().length > memberLimit) revert MemberLimitExceeded();
-			}
-
 			if (proposalType == ProposalType.MEMBER_LIMIT) memberLimit = uint32(amounts[0]);
 
 			if (proposalType == ProposalType.MEMBER_THRESHOLD)
@@ -234,12 +189,53 @@ contract ForumSafeBaseModule is
 
 			if (proposalType == ProposalType.DOCS) docs = string(payloads[0]);
 
-			// ! consider not emitting anything here
-			emit ProposalProcessed(proposalType, didProposalPass);
+			// ! consider a nonce or similar to prevent replies (if sigs are used)
+		}
+	}
+
+	/**
+	 * @notice Execute a proposal
+	 * @param proposal encoded proposal details
+	 * @return results from any calls
+	 * @dev signatures must be in ascending order
+	 */
+	function _execute(
+		bytes calldata proposal
+	) public virtual nonReentrant returns (bytes[] memory results) {
+		// ! count votes and limit to entrypoint or passed vote or module
+
+		require(msg.sender == getEntryPoint(), 'Only entrypoint can execute');
+
+		(
+			Enum.Operation operationType,
+			address[] memory accounts,
+			uint256[] memory amounts,
+			bytes[] memory payloads
+		) = abi.decode(proposal, (Enum.Operation, address[], uint256[], bytes[]));
+
+		unchecked {
+			// ! consider need for for loop, as opposed to only multisend via safe (maybe useful for extensions)
+			for (uint256 i; i < accounts.length; ) {
+				results = new bytes[](accounts.length);
+
+				(bool successCall, bytes memory result) = execAndReturnData(
+					accounts[i],
+					amounts[i],
+					payloads[i],
+					Enum.Operation(operationType)
+				);
+
+				if (!successCall) revert CallError();
+
+				results[i] = result;
+				++i;
+			}
+
+			// If member limit is exceeed, revert
+			if (getOwners().length > memberLimit) revert MemberLimitExceeded();
 
 			// ! consider a nonce or similar to prevent replies (if sigs are used)
 		}
-		//}
 	}
 
 	/// ----------------------------------------------------------------------------------------
@@ -328,6 +324,13 @@ contract ForumSafeBaseModule is
 		if (!success) revert CallError();
 	}
 
+	// Workaround to importing basewallet here
+	function getEntryPoint() internal view returns (address) {
+		(, bytes memory res) = address(this).staticcall(abi.encodeWithSignature('entryPoint()'));
+		return abi.decode(res, (address));
+	}
+
+	// ! consider moving the below 2 functions to a library
 	/**
 	 * @notice Count votes on a proposal
 	 * @param voteType voteType to count

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.15;
 
-// import {UserOperation} from '@account-abstraction/interfaces/UserOperation.sol';
-
 import {Utils} from '@utils/Utils.sol';
 
 import {BaseAccount, IAccount, IEntryPoint, UserOperation} from '@account-abstraction/core/BaseAccount.sol';
@@ -13,8 +11,7 @@ import {ForumSafeBaseModule, IForumSafeModuleTypes, Enum} from './ForumSafeBaseM
  * @notice 4337 Account implementation for ForumSafeModule
  * @author Forum
  * @dev A first pass at integrating 4337 with ForumSafeModule
- * - proposal function remains but will be removed in future
- * - propose and process are restricted to entrypoint only
+ * - execute and manageAdmin function restricted to entrypoint only
  * - functions can only be called if validateSig passes
  * - extensions and call extension etc exist as before
  * - BaseAccount, ForumGovernace, and Safe Module logic are all in this contract
@@ -46,6 +43,7 @@ contract ForumSafe4337Module is BaseAccount, ForumSafeBaseModule {
 	///							CONSTRUCTOR
 	/// ----------------------------------------------------------------------------------------
 
+	// ! consider use of constructor if used in proxy
 	constructor(IEntryPoint anEntryPoint) {
 		_entryPoint = anEntryPoint;
 	}
@@ -53,15 +51,6 @@ contract ForumSafe4337Module is BaseAccount, ForumSafeBaseModule {
 	/// ----------------------------------------------------------------------------------------
 	///							ACCOUNT LOGIC
 	/// ----------------------------------------------------------------------------------------
-
-	/**
-	 * @notice Execute a proposal on the module
-	 * @param proposal The proposal to execute
-	 * @dev currently only entrypoint can call this. Add option to pass signatures to call directly
-	 */
-	function execute(bytes calldata proposal) public {
-		if (msg.sender == address(entryPoint())) _execute(proposal);
-	}
 
 	// Incremented for each execute called here (not for extension based called for now)
 	function nonce() public view virtual override returns (uint256) {

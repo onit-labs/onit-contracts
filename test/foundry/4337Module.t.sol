@@ -33,27 +33,21 @@ contract Module4337Test is Helper4337 {
 	/// Tests
 	/// -----------------------------------------------------------------------
 
-	function testProcessPropViaEntryPoint() public {
-		console.log(entryPointAddress);
-		console.log(address(forumSafeModule.entryPoint()));
-
-		// check alices balance before
+	function testExecutionViaEntryPoint() public {
+		// check balance before
 		assertTrue(address(alice).balance == 1 ether);
 		assertTrue(address(safe).balance == 1 ether);
 
 		// build a proposal
-		bytes memory exe = buildExecution(
-			IForumSafeModuleTypes.ProposalType.CALL,
+		bytes memory executeCalldata = buildExecutionPayload(
 			Enum.Operation.Call,
 			[alice],
 			[uint256(0.5 ether)],
 			[new bytes(0)]
 		);
 
-		bytes memory processPropCalldata = abi.encodeWithSignature('execute(bytes)', exe);
-
 		// build user operation
-		UserOperation memory tmp = buildUserOp(forumSafeModule, processPropCalldata, alicePk);
+		UserOperation memory tmp = buildUserOp(forumSafeModule, executeCalldata, alicePk);
 
 		UserOperation[] memory tmp1 = new UserOperation[](1);
 		tmp1[0] = tmp;
@@ -61,5 +55,29 @@ contract Module4337Test is Helper4337 {
 		entryPoint.handleOps(tmp1, payable(alice));
 
 		assertTrue(address(alice).balance == 1.5 ether);
+		assertTrue(address(safe).balance == 0.5 ether);
+	}
+
+	function testManageAdminViaEntryPoint() public {
+		// check balance before
+		assertTrue(forumSafeModule.memberLimit() == 12);
+
+		// build a proposal
+		bytes memory manageAdminCalldata = buildManageAdminPayload(
+			IForumSafeModuleTypes.ProposalType.MEMBER_LIMIT,
+			[address(0)],
+			[uint256(22)],
+			[new bytes(0)]
+		);
+
+		// build user operation
+		UserOperation memory tmp = buildUserOp(forumSafeModule, manageAdminCalldata, alicePk);
+
+		UserOperation[] memory tmp1 = new UserOperation[](1);
+		tmp1[0] = tmp;
+
+		entryPoint.handleOps(tmp1, payable(alice));
+
+		assertTrue(forumSafeModule.memberLimit() == 22);
 	}
 }

@@ -157,8 +157,7 @@ contract Helper4337 is Test, BasicTestConfig {
 	}
 
 	// For now this works for simple, 1 account, 1 amount, 1 payload peoposals
-	function buildExecution(
-		IForumSafeModuleTypes.ProposalType proposalType,
+	function buildExecutionPayload(
 		Enum.Operation operationType,
 		address[1] memory accounts,
 		uint256[1] memory amounts,
@@ -170,6 +169,35 @@ contract Helper4337 is Test, BasicTestConfig {
 			bytes[] memory _payloads
 		) = buildDynamicArraysForProposal(accounts, amounts, payloads);
 
-		return abi.encode(proposalType, operationType, _accounts, _amounts, _payloads);
+		return
+			abi.encodeWithSignature(
+				'execute(bytes)',
+				abi.encode(operationType, _accounts, _amounts, _payloads)
+			);
+		// abi.encode(operationType, _accounts, _amounts, _payloads);
+	}
+
+	// For now this works for simple, 1 account, 1 amount, 1 payload peoposals
+	function buildManageAdminPayload(
+		IForumSafeModuleTypes.ProposalType proposalType,
+		address[1] memory accounts,
+		uint256[1] memory amounts,
+		bytes[1] memory payloads
+	) internal returns (bytes memory) {
+		(
+			address[] memory _accounts,
+			uint256[] memory _amounts,
+			bytes[] memory _payloads
+		) = buildDynamicArraysForProposal(accounts, amounts, payloads);
+
+		return
+			abi.encodeWithSignature(
+				'manageAdmin(uint8,address[],uint256[],bytes[])',
+				proposalType,
+				_accounts,
+				_amounts,
+				_payloads
+			);
+		//return abi.encode(proposalType, _accounts, _amounts, _payloads);
 	}
 }
