@@ -22,7 +22,7 @@ contract ForumSafe4337Factory is Owned {
 		string name,
 		string symbol,
 		address[] voters,
-		uint32[4] govSettings
+		uint32[3] govSettings
 	);
 
 	event ForumSafeEnabled(
@@ -30,7 +30,7 @@ contract ForumSafe4337Factory is Owned {
 		address indexed gnosisSafe,
 		string name,
 		string symbol,
-		uint32[4] govSettings
+		uint32[3] govSettings
 	);
 
 	error NullDeploy();
@@ -107,7 +107,7 @@ contract ForumSafe4337Factory is Owned {
 	function deployForumSafe(
 		string calldata _name,
 		string calldata _symbol,
-		uint32[4] calldata _govSettings,
+		uint32[3] calldata _govSettings,
 		address[] calldata _owners,
 		address[] calldata _customExtensions
 	) external payable virtual returns (ForumSafe4337Module forumModule, GnosisSafe _safe) {
@@ -177,13 +177,13 @@ contract ForumSafe4337Factory is Owned {
 	function extendSafeWithForumModule(
 		string calldata _name,
 		string calldata _symbol,
-		uint32[4] calldata _govSettings
+		uint32[3] calldata _govSettings
 	) external returns (ForumSafe4337Module forumGroup) {
 		if (address(this) == forumFactory) revert DelegateCallOnly();
 
 		// Groups are limited to 100 members, and member limit must be greater than current owners
 		uint256 ownerCount = GnosisSafe(payable(msg.sender)).getOwners().length;
-		if (ownerCount > _govSettings[1] || ownerCount > 100) revert MemberLimitExceeded();
+		if (ownerCount > _govSettings[0] || ownerCount > 100) revert MemberLimitExceeded();
 
 		// Deploy new Forum group
 		forumGroup = ForumSafe4337Module(_cloneAsMinimalProxy(forumSafeSingleton, _name));

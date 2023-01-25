@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.15;
 
-import '@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
+// import {UserOperation} from '@account-abstraction/interfaces/UserOperation.sol';
 
-import {IEntryPoint} from '@account-abstraction/interfaces/IEntryPoint.sol';
-import {IAccount} from '@account-abstraction/interfaces/IAccount.sol';
-import {UserOperation} from '@account-abstraction/interfaces/UserOperation.sol';
+import {Utils} from '@utils/Utils.sol';
 
-import {BaseAccount} from '@account-abstraction/core/BaseAccount.sol';
+import {BaseAccount, IAccount, IEntryPoint, UserOperation} from '@account-abstraction/core/BaseAccount.sol';
 
-import {ForumSafeBaseModule} from './ForumSafeBaseModule.sol';
+import {ForumSafeBaseModule, IForumSafeModuleTypes, Enum} from './ForumSafeBaseModule.sol';
 
 /**
  * @notice 4337 Account implementation for ForumSafeModule
@@ -27,8 +25,6 @@ import {ForumSafeBaseModule} from './ForumSafeBaseModule.sol';
 // Would allow validation and execution to be called on a logic contract,
 // and this to be called from the forum module, or maybe safe
 contract ForumSafe4337Module is BaseAccount, ForumSafeBaseModule {
-	using ECDSA for bytes32;
-
 	/// ----------------------------------------------------------------------------------------
 	///							EVENTS
 	/// ----------------------------------------------------------------------------------------
@@ -39,10 +35,10 @@ contract ForumSafe4337Module is BaseAccount, ForumSafeBaseModule {
 	///							ACCOUNT STORAGE
 	/// ----------------------------------------------------------------------------------------
 
-	//explicit sizes of nonce, to fit a single storage cell with "owner"
-	uint96 private _nonce;
-	// ! consider owner here -> module? safe? member?
-	//address public owner;
+	uint256 private _nonce;
+
+	// 2d version used to allow out of order execution
+	mapping(bytes32 => uint256) public usedNonces;
 
 	IEntryPoint private immutable _entryPoint;
 
@@ -58,8 +54,16 @@ contract ForumSafe4337Module is BaseAccount, ForumSafeBaseModule {
 	///							ACCOUNT LOGIC
 	/// ----------------------------------------------------------------------------------------
 
-	// ! consider nonce in relation to general module / safe transactions
-	// do we increment it for each entry point tx only? or every tx including extensions?
+	/**
+	 * @notice Execute a proposal on the module
+	 * @param proposal The proposal to execute
+	 * @dev currently only entrypoint can call this. Add option to pass signatures to call directly
+	 */
+	function execute(bytes calldata proposal) public {
+		if (msg.sender == address(entryPoint())) _execute(proposal);
+	}
+
+	// Incremented for each execute called here (not for extension based called for now)
 	function nonce() public view virtual override returns (uint256) {
 		return _nonce;
 	}
@@ -68,26 +72,36 @@ contract ForumSafe4337Module is BaseAccount, ForumSafeBaseModule {
 		return _entryPoint;
 	}
 
-	/// implement template method of BaseAccount
+	// ! very minimal validation, not secure at all
 	function _validateSignature(
 		UserOperation calldata userOp,
 		bytes32 userOpHash,
 		address
 	) internal virtual override returns (uint256 sigTimeRange) {
-		// bytes32 hash = userOpHash.toEthSignedMessageHash();
-		// if (owner != hash.recover(userOp.signature))
-		//     return SIG_VALIDATION_FAILED;
-		// return 0;
-		// Implement validation logic here
+		// userOp.sigs should be a hash of the userOpHash, and the proposal hash for this contract
+		// consider restrictions on what entrypoint can call?
+
+		// Recover the signer
+		address recoveredSigner = Utils.recoverSigner(userOpHash, userOp.signature, 0);
+
+		return isOwner(recoveredSigner) ? 0 : SIG_VALIDATION_FAILED;
 	}
 
 	/// implement template method of BaseAccount
 	function _validateAndUpdateNonce(UserOperation calldata userOp) internal override {
-		require(_nonce++ == userOp.nonce, 'account: invalid nonce');
+		bytes32 userOpHash = _entryPoint.getUserOpHash(userOp);
+		require(usedNonces[userOpHash] == 0, 'op already used');
+		usedNonces[userOpHash] = 1;
+		++_nonce;
 	}
 
 	function getRequiredSignatures() public view virtual returns (uint256) {
-		// ! implement
+		// ! implement argent style check on allowed methods for single signer vs all sigs
+
+		// check functions on this contract
+		// check functions as the module
+		// check batched or multicall calls
+
 		return 0;
 	}
 }

@@ -5,11 +5,12 @@ pragma solidity ^0.8.15;
 import {ForumGovernance, EnumerableSet, Enum} from './ForumSafe4337Governance.sol';
 
 import {NFTreceiver} from '@utils/NFTreceiver.sol';
-import {ProposalPacker} from '@utils/ProposalPacker.sol';
 import {ReentrancyGuard} from '@utils/ReentrancyGuard.sol';
 
-import {IForumSafeModuleTypes} from '@interfaces/IForumSafeModuleTypes.sol';
+import {IForumSafeModuleTypes} from '@interfaces/IForumSafe4337ModuleTypes.sol';
 import {IForumGroupExtension} from '@interfaces/IForumGroupExtension.sol';
+
+import 'forge-std/console.sol';
 
 /**
  * @title ForumSafeModule
@@ -20,27 +21,13 @@ contract ForumSafeBaseModule is
 	IForumSafeModuleTypes,
 	ForumGovernance,
 	ReentrancyGuard,
-	ProposalPacker,
 	NFTreceiver
 {
 	/// ----------------------------------------------------------------------------------------
 	///							EVENTS
 	/// ----------------------------------------------------------------------------------------
 
-	event NewProposal(
-		address indexed proposer,
-		uint256 indexed proposal,
-		ProposalType indexed proposalType,
-		address[] accounts,
-		uint256[] amounts,
-		bytes[] payloads
-	);
-
-	event ProposalProcessed(
-		ProposalType indexed proposalType,
-		uint256 indexed proposal,
-		bool indexed didProposalPass
-	);
+	event ProposalProcessed(ProposalType indexed proposalType, bool indexed didProposalPass);
 
 	/// ----------------------------------------------------------------------------------------
 	///							ERRORS
@@ -48,15 +35,11 @@ contract ForumSafeBaseModule is
 
 	error MemberLimitExceeded();
 
-	error PeriodBounds();
-
 	error VoteThresholdBounds();
 
 	error TypeBounds();
 
 	error NoArrayParity();
-
-	error NotCurrentProposal();
 
 	error NotExtension();
 
@@ -73,8 +56,6 @@ contract ForumSafeBaseModule is
 	// Contract generating uri for group tokens
 	address private pfpExtension;
 
-	uint256 public proposalCount;
-	uint32 public votingPeriod;
 	uint32 public memberLimit; // 1-100
 	uint32 public tokenVoteThreshold; // 1-100
 	uint32 public memberVoteThreshold; // 1-100
@@ -85,7 +66,8 @@ contract ForumSafeBaseModule is
 
 	// Enabled extensions which can interact with this contract
 	mapping(address => bool) public extensions;
-	mapping(uint256 => Proposal) public proposals;
+
+	// Vote type for each proposal type. eg. Member Limit Change = Token Vote (set to X% of token supply)
 	mapping(ProposalType => VoteType) public proposalVoteTypes;
 
 	/// ----------------------------------------------------------------------------------------
@@ -112,8 +94,8 @@ contract ForumSafeBaseModule is
 			string memory _symbol,
 			address _safe,
 			address[] memory _extensions,
-			uint32[4] memory _govSettings
-		) = abi.decode(_initializationParams, (string, string, address, address[], uint32[4]));
+			uint32[3] memory _govSettings
+		) = abi.decode(_initializationParams, (string, string, address, address[], uint32[3]));
 
 		// Initialize ownership and transfer immediately to avatar
 		// Ownable Init reverts if already initialized
@@ -125,14 +107,12 @@ contract ForumSafeBaseModule is
 		target = _safe; /*Set target to same address as avatar on setup - can be changed later via setTarget, though probably not a good idea*/
 
 		/// SETUP FORUM GOVERNANCE ///
-		if (_govSettings[0] == 0 || _govSettings[0] > 365 days) revert PeriodBounds();
-
-		if (_govSettings[1] > 100 || _govSettings[1] < getOwners().length)
+		if (_govSettings[0] > 100 || _govSettings[0] < getOwners().length)
 			revert MemberLimitExceeded();
 
-		if (_govSettings[2] < 1 || _govSettings[2] > 100) revert VoteThresholdBounds();
+		if (_govSettings[1] < 1 || _govSettings[1] > 100) revert VoteThresholdBounds();
 
-		if (_govSettings[3] < 1 || _govSettings[3] > 100) revert VoteThresholdBounds();
+		if (_govSettings[2] < 1 || _govSettings[2] > 100) revert VoteThresholdBounds();
 
 		ForumGovernance._init(_name, _symbol);
 
@@ -148,13 +128,11 @@ contract ForumSafeBaseModule is
 			}
 		}
 
-		votingPeriod = _govSettings[0];
+		memberLimit = _govSettings[0];
 
-		memberLimit = _govSettings[1];
+		memberVoteThreshold = _govSettings[1];
 
-		memberVoteThreshold = _govSettings[2];
-
-		tokenVoteThreshold = _govSettings[3];
+		tokenVoteThreshold = _govSettings[2];
 
 		/// ALL PROPOSAL TYPES DEFAULT TO MEMBER VOTES ///
 	}
@@ -164,193 +142,104 @@ contract ForumSafeBaseModule is
 	/// ----------------------------------------------------------------------------------------
 
 	/**
-	 * @notice Get the proposal details for a given proposal
-	 * @param proposal Index of the proposal
-	 */
-	function getProposalArrays(
-		uint256 proposal
-	)
-		external
-		view
-		virtual
-		returns (address[] memory accounts, uint256[] memory amounts, bytes[] memory payloads)
-	{
-		Proposal storage prop = proposals[proposal];
-
-		(accounts, amounts, payloads) = (prop.accounts, prop.amounts, prop.payloads);
-	}
-
-	/**
-	 * @notice Make a proposal to the group
-	 * @param proposalType type of proposal on module
-	 * @param operationType type of operation if executed on safe
-	 * @param accounts target accounts
-	 * @param amounts to be sent
-	 * @param payloads for target accounts
-	 * @return proposal index of the created proposal
-	 */
-	function propose(
-		IForumSafeModuleTypes.ProposalType proposalType,
-		Enum.Operation operationType,
-		address[] calldata accounts,
-		uint256[] calldata amounts,
-		bytes[] calldata payloads
-	) public payable virtual nonReentrant returns (uint256 proposal) {
-		if (accounts.length != amounts.length || amounts.length != payloads.length)
-			revert NoArrayParity();
-
-		if (proposalType == ProposalType.VPERIOD)
-			if (amounts[0] == 0 || amounts[0] > 365 days) revert PeriodBounds();
-
-		if (proposalType == ProposalType.MEMBER_LIMIT)
-			if (amounts[0] > 100 || amounts[0] < getOwners().length) revert MemberLimitExceeded();
-
-		if (
-			proposalType == ProposalType.MEMBER_THRESHOLD ||
-			proposalType == ProposalType.TOKEN_THRESHOLD
-		)
-			if (amounts[0] == 0 || amounts[0] > 100) revert VoteThresholdBounds();
-
-		if (proposalType == ProposalType.TYPE)
-			if (amounts[0] > 13 || amounts[1] > 2 || amounts.length != 2) revert TypeBounds();
-
-		// Cannot realistically overflow on human timescales
-		unchecked {
-			++proposalCount;
-		}
-
-		proposal = proposalCount;
-
-		proposals[proposal] = Proposal({
-			proposalDetails: packProposal(
-				uint32(block.timestamp),
-				uint8(proposalType),
-				uint8(operationType)
-			),
-			accounts: accounts,
-			amounts: amounts,
-			payloads: payloads
-		});
-
-		emit NewProposal(msg.sender, proposal, proposalType, accounts, amounts, payloads);
-	}
-
-	/**
 	 * @notice Process a proposal
-	 * @param proposal index of proposal
-	 * @param signatures array of sigs of members who have voted for the proposal
+	 * @param proposal encoded proposal details
 	 * @return didProposalPass check if proposal passed
 	 * @return results from any calls
 	 * @dev signatures must be in ascending order
 	 */
-	function processProposal(
-		uint256 proposal,
-		Signature[] calldata signatures
-	) public payable virtual nonReentrant returns (bool didProposalPass, bytes[] memory results) {
-		Proposal storage prop = proposals[proposal];
+	function _execute(
+		bytes calldata proposal
+	) internal virtual nonReentrant returns (bool didProposalPass, bytes[] memory results) {
+		// Consider these checks which used to happen in propose function
+		// 		if (accounts.length != amounts.length || amounts.length != payloads.length)
+		// 	revert NoArrayParity();
 
-		// Unpack the proposal details
-		(uint32 creationTime, uint8 proposalTypeUint, uint8 operation) = unpackProposal(
-			prop.proposalDetails
-		);
-		// Convert the proposal type to an enum
-		ProposalType proposalType = ProposalType(proposalTypeUint);
+		// if (proposalType == ProposalType.MEMBER_LIMIT)
+		// 	if (amounts[0] > 100 || amounts[0] < getOwners().length) revert MemberLimitExceeded();
+
+		// if (
+		// 	proposalType == ProposalType.MEMBER_THRESHOLD ||
+		// 	proposalType == ProposalType.TOKEN_THRESHOLD
+		// )
+		// 	if (amounts[0] == 0 || amounts[0] > 100) revert VoteThresholdBounds();
+
+		// if (proposalType == ProposalType.TYPE)
+		// 	if (amounts[0] > 13 || amounts[1] > 2 || amounts.length != 2) revert TypeBounds();
+
+		(
+			IForumSafeModuleTypes.ProposalType proposalType,
+			Enum.Operation operationType,
+			address[] memory accounts,
+			uint256[] memory amounts,
+			bytes[] memory payloads
+		) = abi.decode(
+				proposal,
+				(IForumSafeModuleTypes.ProposalType, Enum.Operation, address[], uint256[], bytes[])
+			);
+
 		// Get the vote type for the proposal
-		VoteType voteType = proposalVoteTypes[proposalType];
+		//VoteType voteType = proposalVoteTypes[proposalType];
 
-		if (creationTime == 0) revert NotCurrentProposal();
+		//didProposalPass = _countVotes(voteType, _getVotes(proposal, signatures, voteType));
 
-		didProposalPass = _countVotes(voteType, _getVotes(proposal, signatures, voteType));
+		//if (didProposalPass) {
+		// Cannot realistically overflow on human timescales
+		unchecked {
+			if (proposalType == ProposalType.CALL) {
+				for (uint256 i; i < accounts.length; ) {
+					results = new bytes[](accounts.length);
 
-		if (didProposalPass) {
-			// Cannot realistically overflow on human timescales
-			unchecked {
-				if (proposalType == ProposalType.CALL) {
-					for (uint256 i; i < prop.accounts.length; ) {
-						results = new bytes[](prop.accounts.length);
+					(bool successCall, bytes memory result) = execAndReturnData(
+						accounts[i],
+						amounts[i],
+						payloads[i],
+						Enum.Operation(operationType)
+					);
 
-						(bool successCall, bytes memory result) = execAndReturnData(
-							prop.accounts[i],
-							prop.amounts[i],
-							prop.payloads[i],
-							Enum.Operation(operation)
-						);
+					console.logBytes(result);
 
-						if (!successCall) revert CallError();
+					if (!successCall) revert CallError();
 
-						results[i] = result;
-						++i;
-					}
-
-					// If member limit is exceeed, revert
-					if (getOwners().length > memberLimit) revert MemberLimitExceeded();
+					results[i] = result;
+					++i;
 				}
 
-				// Governance settings
-				if (proposalType == ProposalType.VPERIOD) votingPeriod = uint32(prop.amounts[0]);
+				// If member limit is exceeed, revert
+				if (getOwners().length > memberLimit) revert MemberLimitExceeded();
+			}
 
-				if (proposalType == ProposalType.MEMBER_LIMIT)
-					memberLimit = uint32(prop.amounts[0]);
+			if (proposalType == ProposalType.MEMBER_LIMIT) memberLimit = uint32(amounts[0]);
 
-				if (proposalType == ProposalType.MEMBER_THRESHOLD)
-					memberVoteThreshold = uint32(prop.amounts[0]);
+			if (proposalType == ProposalType.MEMBER_THRESHOLD)
+				memberVoteThreshold = uint32(amounts[0]);
 
-				if (proposalType == ProposalType.TOKEN_THRESHOLD)
-					tokenVoteThreshold = uint32(prop.amounts[0]);
+			if (proposalType == ProposalType.TOKEN_THRESHOLD)
+				tokenVoteThreshold = uint32(amounts[0]);
 
-				if (proposalType == ProposalType.TYPE)
-					proposalVoteTypes[ProposalType(prop.amounts[0])] = VoteType(prop.amounts[1]);
+			if (proposalType == ProposalType.TYPE)
+				proposalVoteTypes[ProposalType(amounts[0])] = VoteType(amounts[1]);
 
-				if (proposalType == ProposalType.PAUSE) _flipPause();
+			if (proposalType == ProposalType.PAUSE) _flipPause();
 
-				if (proposalType == ProposalType.EXTENSION)
-					for (uint256 i; i < prop.accounts.length; ) {
-						if (prop.amounts[i] != 0)
-							extensions[prop.accounts[i]] = !extensions[prop.accounts[i]];
+			if (proposalType == ProposalType.EXTENSION)
+				for (uint256 i; i < accounts.length; ) {
+					if (amounts[i] != 0) extensions[accounts[i]] = !extensions[accounts[i]];
 
-						if (prop.payloads[i].length > 3) {
-							IForumGroupExtension(prop.accounts[i]).setExtension(prop.payloads[i]);
-						}
-						++i;
+					if (payloads[i].length > 3) {
+						IForumGroupExtension(accounts[i]).setExtension(payloads[i]);
 					}
+					++i;
+				}
 
-				if (proposalType == ProposalType.ESCAPE) delete proposals[prop.amounts[0]];
+			if (proposalType == ProposalType.DOCS) docs = string(payloads[0]);
 
-				if (proposalType == ProposalType.DOCS) docs = string(prop.payloads[0]);
+			// ! consider not emitting anything here
+			emit ProposalProcessed(proposalType, didProposalPass);
 
-				emit ProposalProcessed(proposalType, proposal, didProposalPass);
-
-				// Delete proposal now that it has been processed
-				delete proposals[proposal];
-			}
-		} else {
-			// Only delete and update the proposal settings if there are not enough votes AND the time limit has passed
-			// This prevents deleting proposals unfairly
-			if (block.timestamp > creationTime + votingPeriod) {
-				emit ProposalProcessed(proposalType, proposal, didProposalPass);
-
-				delete proposals[proposal];
-			}
+			// ! consider a nonce or similar to prevent replies (if sigs are used)
 		}
-	}
-
-	/**
-	 * @notice Count votes on a proposal
-	 * @param voteType voteType to count
-	 * @param yesVotes number of votes for the proposal
-	 * @return bool true if the proposal passed, false otherwise
-	 */
-	function _countVotes(VoteType voteType, uint256 yesVotes) private view returns (bool) {
-		if (voteType == VoteType.MEMBER)
-			if ((yesVotes * 100) / getOwners().length >= memberVoteThreshold) return true;
-
-		if (voteType == VoteType.SIMPLE_MAJORITY)
-			if (yesVotes > ((totalSupply * 50) / 100)) return true;
-
-		if (voteType == VoteType.TOKEN_MAJORITY)
-			if (yesVotes >= (totalSupply * tokenVoteThreshold) / 100) return true;
-
-		return false;
+		//}
 	}
 
 	/// ----------------------------------------------------------------------------------------
@@ -439,14 +328,34 @@ contract ForumSafeBaseModule is
 		if (!success) revert CallError();
 	}
 
+	/**
+	 * @notice Count votes on a proposal
+	 * @param voteType voteType to count
+	 * @param yesVotes number of votes for the proposal
+	 * @return bool true if the proposal passed, false otherwise
+	 */
+	function _countVotes(VoteType voteType, uint256 yesVotes) internal view returns (bool) {
+		if (voteType == VoteType.MEMBER)
+			if ((yesVotes * 100) / getOwners().length >= memberVoteThreshold) return true;
+
+		if (voteType == VoteType.SIMPLE_MAJORITY)
+			if (yesVotes > ((totalSupply * 50) / 100)) return true;
+
+		if (voteType == VoteType.TOKEN_MAJORITY)
+			if (yesVotes >= (totalSupply * tokenVoteThreshold) / 100) return true;
+
+		return false;
+	}
+
 	function _getVotes(
-		uint256 proposal,
+		bytes calldata proposal,
 		IForumSafeModuleTypes.Signature[] memory signatures,
 		IForumSafeModuleTypes.VoteType voteType
-	) private view returns (uint256 votes) {
+	) internal view returns (uint256 votes) {
 		// We keep track of the previous signer in the array to ensure there are no duplicates
 		address prevSigner;
 
+		// ! consider some digest to secure executions - maybe using nonce
 		bytes32 digest = keccak256(
 			abi.encodePacked(
 				'\x19\x01',

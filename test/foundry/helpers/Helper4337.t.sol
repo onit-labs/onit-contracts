@@ -22,7 +22,7 @@ import {ForumFundraiseExtension} from '../../../src/gnosis-forum/extensions/fund
 import {ForumWithdrawalExtension} from '../../../src/gnosis-forum/extensions/withdrawal/ForumWithdrawalExtension.sol';
 
 // Forum interfaces
-import {IForumSafeModuleTypes} from '../../../src/interfaces/IForumSafeModuleTypes.sol';
+import {IForumSafeModuleTypes} from '../../../src/interfaces/IForumSafe4337ModuleTypes.sol';
 
 import './BasicTestConfig.t.sol';
 
@@ -130,5 +130,46 @@ contract Helper4337 is Test, BasicTestConfig {
 		bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
 		(uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, userOpHash);
 		userOp.signature = abi.encodePacked(r, s, v);
+	}
+
+	// -----------------------------------------------------------------------
+	// Updated from safe test config
+	// -----------------------------------------------------------------------
+
+	function buildDynamicArraysForProposal(
+		address[1] memory _accounts,
+		uint256[1] memory _amounts,
+		bytes[1] memory _payloads
+	)
+		internal
+		pure
+		returns (address[] memory accounts, uint256[] memory amounts, bytes[] memory payloads)
+	{
+		accounts = new address[](_accounts.length);
+		amounts = new uint256[](_amounts.length);
+		payloads = new bytes[](_payloads.length);
+
+		for (uint256 i = 0; i < _accounts.length; i++) {
+			accounts[i] = _accounts[i];
+			amounts[i] = _amounts[i];
+			payloads[i] = _payloads[i];
+		}
+	}
+
+	// For now this works for simple, 1 account, 1 amount, 1 payload peoposals
+	function buildExecution(
+		IForumSafeModuleTypes.ProposalType proposalType,
+		Enum.Operation operationType,
+		address[1] memory accounts,
+		uint256[1] memory amounts,
+		bytes[1] memory payloads
+	) internal returns (bytes memory) {
+		(
+			address[] memory _accounts,
+			uint256[] memory _amounts,
+			bytes[] memory _payloads
+		) = buildDynamicArraysForProposal(accounts, amounts, payloads);
+
+		return abi.encode(proposalType, operationType, _accounts, _amounts, _payloads);
 	}
 }
