@@ -17,7 +17,7 @@ contract Module4337Test is Helper4337 {
 		(forumSafeModule, safe) = forumSafe4337Factory.deployForumSafe(
 			'test',
 			'T',
-			[uint32(12), uint32(50), uint32(80)],
+			[uint32(50), uint32(80)],
 			voters,
 			initialExtensions
 		);
@@ -60,13 +60,13 @@ contract Module4337Test is Helper4337 {
 
 	function testManageAdminViaEntryPoint() public {
 		// check balance before
-		assertTrue(forumSafeModule.memberLimit() == 12);
+		assertTrue(forumSafeModule.memberVoteThreshold() == 50);
 
 		// build a proposal
 		bytes memory manageAdminCalldata = buildManageAdminPayload(
-			IForumSafeModuleTypes.ProposalType.MEMBER_LIMIT,
+			IForumSafeModuleTypes.ProposalType.MEMBER_THRESHOLD,
 			[address(0)],
-			[uint256(22)],
+			[uint256(60)],
 			[new bytes(0)]
 		);
 
@@ -78,6 +78,6 @@ contract Module4337Test is Helper4337 {
 
 		entryPoint.handleOps(tmp1, payable(alice));
 
-		assertTrue(forumSafeModule.memberLimit() == 22);
+		assertTrue(forumSafeModule.memberVoteThreshold() == 60);
 	}
 }

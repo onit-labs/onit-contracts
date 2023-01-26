@@ -64,8 +64,6 @@ contract ForumSafeModule is
 
 	error CallError();
 
-	error AvatarOnly();
-
 	/// ----------------------------------------------------------------------------------------
 	///							DAO STORAGE
 	/// ----------------------------------------------------------------------------------------
@@ -411,32 +409,11 @@ contract ForumSafeModule is
 	///							UTILITIES
 	/// ----------------------------------------------------------------------------------------
 
-	modifier avatarOnly() {
-		if (msg.sender != avatar) revert AvatarOnly();
-		_;
-	}
-
 	function uri(uint256 tokenId) public view override returns (string memory) {
 		(, bytes memory pfp) = pfpExtension.staticcall(
 			abi.encodeWithSignature('getUri(address,string,uint256)', address(this), name, tokenId)
 		);
 		return string(pfp);
-	}
-
-	/**
-	 * @notice Execute a transaction as a module
-	 * @dev Can be used to execute arbitrary code if needed, only when called by safe
-	 * @param _to address to send transaction to
-	 * @param _value value to send with transaction
-	 * @param _data data to send with transaction
-	 */
-	function executeAsModule(
-		address _to,
-		uint256 _value,
-		bytes calldata _data
-	) external avatarOnly {
-		(bool success, ) = _to.call{value: _value}(_data);
-		if (!success) revert CallError();
 	}
 
 	function _getVotes(

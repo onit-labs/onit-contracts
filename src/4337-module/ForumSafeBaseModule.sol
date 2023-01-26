@@ -48,7 +48,6 @@ contract ForumSafeBaseModule is
 	// Contract generating uri for group tokens
 	address private pfpExtension;
 
-	uint32 public memberLimit; // 1-100
 	uint32 public tokenVoteThreshold; // 1-100
 	uint32 public memberVoteThreshold; // 1-100
 
@@ -86,8 +85,8 @@ contract ForumSafeBaseModule is
 			string memory _symbol,
 			address _safe,
 			address[] memory _extensions,
-			uint32[3] memory _govSettings
-		) = abi.decode(_initializationParams, (string, string, address, address[], uint32[3]));
+			uint32[2] memory _govSettings
+		) = abi.decode(_initializationParams, (string, string, address, address[], uint32[2]));
 
 		// Initialize ownership and transfer immediately to avatar
 		// Ownable Init reverts if already initialized
@@ -99,12 +98,9 @@ contract ForumSafeBaseModule is
 		target = _safe; /*Set target to same address as avatar on setup - can be changed later via setTarget, though probably not a good idea*/
 
 		/// SETUP FORUM GOVERNANCE ///
-		if (_govSettings[0] > 100 || _govSettings[0] < getOwners().length)
-			revert MemberLimitExceeded();
+		if (_govSettings[0] < 1 || _govSettings[0] > 100) revert VoteThresholdBounds();
 
 		if (_govSettings[1] < 1 || _govSettings[1] > 100) revert VoteThresholdBounds();
-
-		if (_govSettings[2] < 1 || _govSettings[2] > 100) revert VoteThresholdBounds();
 
 		ForumGovernance._init(_name, _symbol);
 
@@ -120,11 +116,9 @@ contract ForumSafeBaseModule is
 			}
 		}
 
-		memberLimit = _govSettings[0];
+		memberVoteThreshold = _govSettings[0];
 
-		memberVoteThreshold = _govSettings[1];
-
-		tokenVoteThreshold = _govSettings[2];
+		tokenVoteThreshold = _govSettings[1];
 
 		/// ALL PROPOSAL TYPES DEFAULT TO MEMBER VOTES ///
 	}
@@ -149,9 +143,6 @@ contract ForumSafeBaseModule is
 		if (accounts.length != amounts.length || amounts.length != payloads.length)
 			revert NoArrayParity();
 
-		if (proposalType == ProposalType.MEMBER_LIMIT)
-			if (amounts[0] > 100 || amounts[0] < getOwners().length) revert MemberLimitExceeded();
-
 		if (
 			proposalType == ProposalType.MEMBER_THRESHOLD ||
 			proposalType == ProposalType.TOKEN_THRESHOLD
@@ -163,8 +154,6 @@ contract ForumSafeBaseModule is
 			if (amounts[0] > 13 || amounts[1] > 2 || amounts.length != 2) revert TypeBounds();
 
 		unchecked {
-			if (proposalType == ProposalType.MEMBER_LIMIT) memberLimit = uint32(amounts[0]);
-
 			if (proposalType == ProposalType.MEMBER_THRESHOLD)
 				memberVoteThreshold = uint32(amounts[0]);
 
@@ -229,9 +218,6 @@ contract ForumSafeBaseModule is
 				results[i] = result;
 				++i;
 			}
-
-			// If member limit is exceeed, revert
-			if (getOwners().length > memberLimit) revert MemberLimitExceeded();
 
 			// ! consider a nonce or similar to prevent replies (if sigs are used)
 		}
@@ -307,8 +293,6 @@ contract ForumSafeBaseModule is
 		(, bytes memory res) = address(this).staticcall(abi.encodeWithSignature('entryPoint()'));
 		return abi.decode(res, (address));
 	}
-
-	function allowExecution() private view {}
 
 	// ! consider moving the below 2 functions to a library
 	/**
