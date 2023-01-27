@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.15;
 
-import {EntryPoint} from '@account-abstraction/core/EntryPoint.sol';
-import {BaseAccount, UserOperation} from '@account-abstraction/core/BaseAccount.sol';
+import {EntryPoint} from '@eip4337/contracts/core/EntryPoint.sol';
+import {BaseAccount, UserOperation} from '@eip4337/contracts/core/BaseAccount.sol';
 
 import {Module, Enum} from '@gnosis.pm/zodiac/contracts/core/Module.sol';
 
@@ -14,8 +14,8 @@ import {GnosisSafeProxyFactory} from '@gnosis/proxies/GnosisSafeProxyFactory.sol
 import {SignMessageLib} from '@gnosis/examples/libraries/SignMessage.sol';
 
 // Forum imports
-import {ForumSafe4337Factory} from '../../../src/4337-module/ForumSafe4337Factory.sol';
-import {ForumSafe4337Module} from '../../../src/4337-module/ForumSafe4337Module.sol';
+import {ForumSafe4337Factory} from '../../../src/eip4337-module/ForumSafe4337Factory.sol';
+import {ForumSafe4337Module} from '../../../src/eip4337-module/ForumSafe4337Module.sol';
 
 // Forum extension imports
 import {ForumFundraiseExtension} from '../../../src/gnosis-forum/extensions/fundraise/ForumFundraiseExtension.sol';
