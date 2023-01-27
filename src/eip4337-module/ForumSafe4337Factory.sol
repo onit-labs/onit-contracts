@@ -7,7 +7,7 @@ import {GnosisSafeProxyFactory} from '@gnosis/proxies/GnosisSafeProxyFactory.sol
 
 import {Owned} from '@utils/Owned.sol';
 
-import {ForumSafe4337Module} from './ForumSafe4337Module.sol';
+import {ForumSafeBaseModule} from './ForumSafeBaseModule.sol';
 import {SafeHelper, Enum} from '@utils/SafeHelper.sol';
 
 /// @notice Factory to deploy forum group.
@@ -17,7 +17,7 @@ contract ForumSafe4337Factory is Owned {
 	/// ----------------------------------------------------------------------------------------
 
 	event ForumSafeDeployed(
-		ForumSafe4337Module indexed forumGroup,
+		ForumSafeBaseModule indexed forumGroup,
 		address indexed gnosisSafe,
 		string name,
 		string symbol,
@@ -26,7 +26,7 @@ contract ForumSafe4337Factory is Owned {
 	);
 
 	event ForumSafeEnabled(
-		ForumSafe4337Module indexed forumGroup,
+		ForumSafeBaseModule indexed forumGroup,
 		address indexed gnosisSafe,
 		string name,
 		string symbol,
@@ -58,11 +58,13 @@ contract ForumSafe4337Factory is Owned {
 	// Template contract to use for new forum groups
 	address public immutable forumSafeSingleton;
 	// Forum initial extensions
+	address public immutable entryPoint;
+	address public immutable validaitonLogic;
 	address public immutable fundraiseExtension;
 	address public immutable withdrawalExtension;
 	address public immutable pfpStaker;
 
-	uint256 internal immutable BASIC_EXTENSION_COUNT = 3;
+	uint256 internal immutable BASIC_EXTENSION_COUNT = 5;
 
 	/// ----------------------------------------------------------------------------------------
 	/// Constructor
@@ -75,6 +77,8 @@ contract ForumSafe4337Factory is Owned {
 		address _gnosisFallbackLibrary,
 		address _gnosisMultisendLibrary,
 		address _gnosisSafeProxyFactory,
+		address _entryPoint,
+		address _validaitonLogic,
 		address _fundraiseExtension,
 		address _withdrawalExtension,
 		address _pfpStaker
@@ -85,6 +89,8 @@ contract ForumSafe4337Factory is Owned {
 		gnosisFallbackLibrary = _gnosisFallbackLibrary;
 		gnosisMultisendLibrary = _gnosisMultisendLibrary;
 		gnosisSafeProxyFactory = GnosisSafeProxyFactory(_gnosisSafeProxyFactory);
+		entryPoint = _entryPoint;
+		validaitonLogic = _validaitonLogic;
 		fundraiseExtension = _fundraiseExtension;
 		withdrawalExtension = _withdrawalExtension;
 		pfpStaker = _pfpStaker;
@@ -110,7 +116,7 @@ contract ForumSafe4337Factory is Owned {
 		uint32[2] calldata _govSettings,
 		address[] calldata _owners,
 		address[] calldata _customExtensions
-	) external payable virtual returns (ForumSafe4337Module forumModule, GnosisSafe _safe) {
+	) external payable virtual returns (ForumSafeBaseModule forumModule, GnosisSafe _safe) {
 		if (_owners.length > 100) revert MemberLimitExceeded();
 
 		// Deploy new safe but do not set it up yet
@@ -119,7 +125,7 @@ contract ForumSafe4337Factory is Owned {
 		);
 
 		// Deploy new Forum group but do not set it up yet
-		forumModule = ForumSafe4337Module(_cloneAsMinimalProxy(forumSafeSingleton, _name));
+		forumModule = ForumSafeBaseModule(_cloneAsMinimalProxy(forumSafeSingleton, _name));
 
 		{
 			// Payload to enable the forum group module on the safe
@@ -178,11 +184,11 @@ contract ForumSafe4337Factory is Owned {
 		string calldata _name,
 		string calldata _symbol,
 		uint32[2] calldata _govSettings
-	) external returns (ForumSafe4337Module forumGroup) {
+	) external returns (ForumSafeBaseModule forumGroup) {
 		if (address(this) == forumFactory) revert DelegateCallOnly();
 
 		// Deploy new Forum group
-		forumGroup = ForumSafe4337Module(_cloneAsMinimalProxy(forumSafeSingleton, _name));
+		forumGroup = ForumSafeBaseModule(_cloneAsMinimalProxy(forumSafeSingleton, _name));
 
 		// Create initialExtensions array - no custom extensions, therefore empty array
 		address[] memory _initialExtensions = _createInitialExtensions(new address[](0));
@@ -246,11 +252,13 @@ contract ForumSafe4337Factory is Owned {
 		initialExtensions = new address[](BASIC_EXTENSION_COUNT + _customExtensions.length);
 
 		// Set the base Forum extensions
-		(initialExtensions[0], initialExtensions[1], initialExtensions[2]) = (
-			pfpStaker,
-			fundraiseExtension,
-			withdrawalExtension
-		);
+		(
+			initialExtensions[0],
+			initialExtensions[1],
+			initialExtensions[2],
+			initialExtensions[3],
+			initialExtensions[4]
+		) = (entryPoint, validaitonLogic, pfpStaker, fundraiseExtension, withdrawalExtension);
 
 		// Set the custom extensions
 		if (_customExtensions.length != 0) {

@@ -24,14 +24,14 @@ using ECDSA for bytes32;
  * holds an immutable reference to the EntryPoint
  * Inherits ForumSafe4337Module so that it can reference the memory storage
  */
-contract EIP4337Manager is ForumSafeBaseModule, IAccount {
-	// address public immutable eip4337Fallback;
-	address public immutable entryPoint;
+contract EIP4337Manager is ForumSafeBaseModule {
+	// // address public immutable eip4337Fallback;
+	// address public immutable entryPoint;
 
-	constructor(address anEntryPoint) {
-		entryPoint = anEntryPoint;
-		//eip4337Fallback = address(new EIP4337Fallback(address(this)));
-	}
+	// constructor(address anEntryPoint) {
+	// 	entryPoint = anEntryPoint;
+	// 	//eip4337Fallback = address(new EIP4337Fallback(address(this)));
+	// }
 
 	/**
 	 * delegate-called (using execFromModule) through the fallback, so "real" msg.sender is attached as last 20 bytes
@@ -43,7 +43,7 @@ contract EIP4337Manager is ForumSafeBaseModule, IAccount {
 		uint256 missingAccountFunds
 	) external override returns (uint256 sigTimeRange) {
 		address _msgSender = address(bytes20(msg.data[msg.data.length - 20:]));
-		require(_msgSender == entryPoint, 'account: not from entrypoint');
+		require(_msgSender == address(entryPoint()), 'account: not from entrypoint');
 
 		// !convert to forum based checks & sig validation - using non ecdsa
 		// GnosisSafe pThis = GnosisSafe(payable(address(this)));
@@ -61,6 +61,85 @@ contract EIP4337Manager is ForumSafeBaseModule, IAccount {
 			//ignore failure (its EntryPoint's job to verify, not account.)
 		}
 		return 0;
+	}
+
+	// ! consider moving the below 2 functions to a library
+	/**
+	 * @notice Count votes on a proposal
+	 * @param voteType voteType to count
+	 * @param yesVotes number of votes for the proposal
+	 * @return bool true if the proposal passed, false otherwise
+	 */
+	function _countVotes(VoteType voteType, uint256 yesVotes) internal view returns (bool) {
+		if (voteType == VoteType.MEMBER)
+			if ((yesVotes * 100) / getOwners().length >= memberVoteThreshold) return true;
+
+		if (voteType == VoteType.SIMPLE_MAJORITY)
+			if (yesVotes > ((totalSupply * 50) / 100)) return true;
+
+		if (voteType == VoteType.TOKEN_MAJORITY)
+			if (yesVotes >= (totalSupply * tokenVoteThreshold) / 100) return true;
+
+		return false;
+	}
+
+	function _getVotes(
+		bytes calldata proposal,
+		IForumSafeModuleTypes.Signature[] memory signatures,
+		IForumSafeModuleTypes.VoteType voteType
+	) internal view returns (uint256 votes) {
+		// We keep track of the previous signer in the array to ensure there are no duplicates
+		address prevSigner;
+
+		// ! consider some digest to secure executions - maybe using nonce
+		bytes32 digest = keccak256(
+			abi.encodePacked(
+				'\x19\x01',
+				DOMAIN_SEPARATOR(),
+				keccak256(abi.encode(PROPOSAL_HASH, proposal))
+			)
+		);
+
+		uint256 sigCount = signatures.length;
+
+		// For each sig we check the recovered signer is a valid member and count thier vote
+		for (uint256 i; i < sigCount; ) {
+			// Recover the signer
+			address recoveredSigner = ecrecover(
+				digest,
+				signatures[i].v,
+				signatures[i].r,
+				signatures[i].s
+			);
+
+			// If not a member, or the signer is out of order (used to prevent duplicates), revert
+			if (!isOwner(recoveredSigner) || prevSigner >= recoveredSigner) revert SignatureError();
+
+			// If the signer has not delegated their vote, we count, otherwise we skip
+			if (memberDelegatee[recoveredSigner] == address(0)) {
+				// If member vote we increment by 1 (for the signer) + the number of members who have delegated to the signer
+				// Else we calculate the number of votes based on share of the treasury
+				if (voteType == VoteType.MEMBER)
+					votes += 1 + EnumerableSet.length(memberDelegators[recoveredSigner]);
+				else {
+					uint256 len = EnumerableSet.length(memberDelegators[recoveredSigner]);
+					// Add the number of votes the signer holds
+					votes += balanceOf[recoveredSigner][TOKEN];
+					// If the signer has been delegated too,check the balances of anyone who has delegated to the current signer
+					if (len != 0)
+						for (uint256 j; j < len; ) {
+							votes += balanceOf[
+								EnumerableSet.at(memberDelegators[recoveredSigner], j)
+							][TOKEN];
+							++j;
+						}
+				}
+			}
+
+			// Increment the index and set the previous signer
+			++i;
+			prevSigner = recoveredSigner;
+		}
 	}
 
 	// ! consider similar fn to assit factory, or setup new 4337 modules
@@ -110,52 +189,52 @@ contract EIP4337Manager is ForumSafeBaseModule, IAccount {
 	// 	validateEip4337(pThis, newManager);
 	// }
 
-	/**
-	 * Validate this gnosisSafe is callable through the EntryPoint.
-	 * the test is might be incomplete: we check that we reach our validateUserOp and fail on signature.
-	 *  we don't test full transaction
-	 */
-	function validateEip4337(GnosisSafe safe, EIP4337Manager manager) public {
-		// this prevent mistaken replaceEIP4337Manager to disable the module completely.
-		// minimal signature that pass "recover"
-		bytes memory sig = new bytes(65);
-		sig[64] = bytes1(uint8(27));
-		sig[2] = bytes1(uint8(1));
-		sig[35] = bytes1(uint8(1));
-		UserOperation memory userOp = UserOperation(
-			address(safe),
-			0,
-			'',
-			'',
-			0,
-			1000000,
-			0,
-			0,
-			0,
-			'',
-			sig
-		);
-		UserOperation[] memory userOps = new UserOperation[](1);
-		userOps[0] = userOp;
-		IEntryPoint _entryPoint = IEntryPoint(payable(manager.entryPoint()));
-		try _entryPoint.handleOps(userOps, payable(msg.sender)) {
-			revert('validateEip4337: handleOps must fail');
-		} catch (bytes memory error) {
-			if (
-				keccak256(error) !=
-				keccak256(
-					abi.encodeWithSignature(
-						'FailedOp(uint256,address,string)',
-						0,
-						address(0),
-						'account: wrong signature'
-					)
-				)
-			) {
-				revert(string(error));
-			}
-		}
-	}
+	// /**
+	//  * Validate this gnosisSafe is callable through the EntryPoint.
+	//  * the test is might be incomplete: we check that we reach our validateUserOp and fail on signature.
+	//  *  we don't test full transaction
+	//  */
+	// function validateEip4337(GnosisSafe safe, EIP4337Manager manager) public {
+	// 	// this prevent mistaken replaceEIP4337Manager to disable the module completely.
+	// 	// minimal signature that pass "recover"
+	// 	bytes memory sig = new bytes(65);
+	// 	sig[64] = bytes1(uint8(27));
+	// 	sig[2] = bytes1(uint8(1));
+	// 	sig[35] = bytes1(uint8(1));
+	// 	UserOperation memory userOp = UserOperation(
+	// 		address(safe),
+	// 		0,
+	// 		'',
+	// 		'',
+	// 		0,
+	// 		1000000,
+	// 		0,
+	// 		0,
+	// 		0,
+	// 		'',
+	// 		sig
+	// 	);
+	// 	UserOperation[] memory userOps = new UserOperation[](1);
+	// 	userOps[0] = userOp;
+	// 	IEntryPoint _entryPoint = IEntryPoint(payable(manager.entryPoint()));
+	// 	try _entryPoint.handleOps(userOps, payable(msg.sender)) {
+	// 		revert('validateEip4337: handleOps must fail');
+	// 	} catch (bytes memory error) {
+	// 		if (
+	// 			keccak256(error) !=
+	// 			keccak256(
+	// 				abi.encodeWithSignature(
+	// 					'FailedOp(uint256,address,string)',
+	// 					0,
+	// 					address(0),
+	// 					'account: wrong signature'
+	// 				)
+	// 			)
+	// 		) {
+	// 			revert(string(error));
+	// 		}
+	// 	}
+	// }
 
 	// ! maybe not needed in module version
 	// function delegateCall(address to, bytes memory data) internal {

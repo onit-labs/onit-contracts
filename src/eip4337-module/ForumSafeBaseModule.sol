@@ -3,6 +3,7 @@
 pragma solidity ^0.8.15;
 
 import {ForumGovernance, EnumerableSet, Enum} from './ForumSafe4337Governance.sol';
+import {ForumSafe4337Module, IEntryPoint, IAccount} from './ForumSafe4337Module.sol';
 
 import {NFTreceiver} from '@utils/NFTreceiver.sol';
 import {ReentrancyGuard} from '@utils/ReentrancyGuard.sol';
@@ -19,6 +20,7 @@ import 'forge-std/console.sol';
  */
 contract ForumSafeBaseModule is
 	IForumSafeModuleTypes,
+	ForumSafe4337Module,
 	ForumGovernance,
 	ReentrancyGuard,
 	NFTreceiver
@@ -97,6 +99,10 @@ contract ForumSafeBaseModule is
 		avatar = _safe;
 		target = _safe; /*Set target to same address as avatar on setup - can be changed later via setTarget, though probably not a good idea*/
 
+		/// SETUP 4337 STORAGE ///
+		_entryPoint = IEntryPoint(_extensions[0]);
+		validationLogic = IAccount(_extensions[1]);
+
 		/// SETUP FORUM GOVERNANCE ///
 		if (_govSettings[0] < 1 || _govSettings[0] > 100) revert VoteThresholdBounds();
 
@@ -105,12 +111,12 @@ contract ForumSafeBaseModule is
 		ForumGovernance._init(_name, _symbol);
 
 		// Set the pfpSetter - determines uri of group token
-		pfpExtension = _extensions[0];
+		pfpExtension = _extensions[2];
 
 		// Set the remaining base extensions (fundriase, withdrawal, + any custom extensions beyond that)
 		// Cannot realistically overflow on human timescales
 		unchecked {
-			for (uint256 i = 1; i < _extensions.length; ) {
+			for (uint256 i = 3; i < _extensions.length; ) {
 				extensions[_extensions[i]] = true;
 				++i;
 			}
@@ -137,7 +143,7 @@ contract ForumSafeBaseModule is
 	) external payable {
 		// ! count votes and limit to entrypoint or passed vote
 
-		require(msg.sender == getEntryPoint(), 'Only entrypoint can execute');
+		require(msg.sender == address(_entryPoint), 'Only entrypoint can execute');
 
 		// Consider these checks which used to happen in propose function
 		if (accounts.length != amounts.length || amounts.length != payloads.length)
@@ -192,7 +198,7 @@ contract ForumSafeBaseModule is
 	) public virtual nonReentrant returns (bytes[] memory results) {
 		// ! count votes and limit to entrypoint or passed vote or module
 
-		require(msg.sender == getEntryPoint(), 'Only entrypoint can execute');
+		require(msg.sender == address(_entryPoint), 'Only entrypoint can execute');
 
 		(
 			Enum.Operation operationType,
@@ -288,90 +294,90 @@ contract ForumSafeBaseModule is
 		return string(pfp);
 	}
 
-	// Workaround to importing basewallet here
-	function getEntryPoint() internal view returns (address) {
-		(, bytes memory res) = address(this).staticcall(abi.encodeWithSignature('entryPoint()'));
-		return abi.decode(res, (address));
-	}
+	// // Workaround to importing basewallet here
+	// function getEntryPoint() internal view returns (address) {
+	// 	(, bytes memory res) = address(this).staticcall(abi.encodeWithSignature('entryPoint()'));
+	// 	return abi.decode(res, (address));
+	// }
 
-	// ! consider moving the below 2 functions to a library
-	/**
-	 * @notice Count votes on a proposal
-	 * @param voteType voteType to count
-	 * @param yesVotes number of votes for the proposal
-	 * @return bool true if the proposal passed, false otherwise
-	 */
-	function _countVotes(VoteType voteType, uint256 yesVotes) internal view returns (bool) {
-		if (voteType == VoteType.MEMBER)
-			if ((yesVotes * 100) / getOwners().length >= memberVoteThreshold) return true;
+	// // ! consider moving the below 2 functions to a library
+	// /**
+	//  * @notice Count votes on a proposal
+	//  * @param voteType voteType to count
+	//  * @param yesVotes number of votes for the proposal
+	//  * @return bool true if the proposal passed, false otherwise
+	//  */
+	// function _countVotes(VoteType voteType, uint256 yesVotes) internal view returns (bool) {
+	// 	if (voteType == VoteType.MEMBER)
+	// 		if ((yesVotes * 100) / getOwners().length >= memberVoteThreshold) return true;
 
-		if (voteType == VoteType.SIMPLE_MAJORITY)
-			if (yesVotes > ((totalSupply * 50) / 100)) return true;
+	// 	if (voteType == VoteType.SIMPLE_MAJORITY)
+	// 		if (yesVotes > ((totalSupply * 50) / 100)) return true;
 
-		if (voteType == VoteType.TOKEN_MAJORITY)
-			if (yesVotes >= (totalSupply * tokenVoteThreshold) / 100) return true;
+	// 	if (voteType == VoteType.TOKEN_MAJORITY)
+	// 		if (yesVotes >= (totalSupply * tokenVoteThreshold) / 100) return true;
 
-		return false;
-	}
+	// 	return false;
+	// }
 
-	function _getVotes(
-		bytes calldata proposal,
-		IForumSafeModuleTypes.Signature[] memory signatures,
-		IForumSafeModuleTypes.VoteType voteType
-	) internal view returns (uint256 votes) {
-		// We keep track of the previous signer in the array to ensure there are no duplicates
-		address prevSigner;
+	// function _getVotes(
+	// 	bytes calldata proposal,
+	// 	IForumSafeModuleTypes.Signature[] memory signatures,
+	// 	IForumSafeModuleTypes.VoteType voteType
+	// ) internal view returns (uint256 votes) {
+	// 	// We keep track of the previous signer in the array to ensure there are no duplicates
+	// 	address prevSigner;
 
-		// ! consider some digest to secure executions - maybe using nonce
-		bytes32 digest = keccak256(
-			abi.encodePacked(
-				'\x19\x01',
-				DOMAIN_SEPARATOR(),
-				keccak256(abi.encode(PROPOSAL_HASH, proposal))
-			)
-		);
+	// 	// ! consider some digest to secure executions - maybe using nonce
+	// 	bytes32 digest = keccak256(
+	// 		abi.encodePacked(
+	// 			'\x19\x01',
+	// 			DOMAIN_SEPARATOR(),
+	// 			keccak256(abi.encode(PROPOSAL_HASH, proposal))
+	// 		)
+	// 	);
 
-		uint256 sigCount = signatures.length;
+	// 	uint256 sigCount = signatures.length;
 
-		// For each sig we check the recovered signer is a valid member and count thier vote
-		for (uint256 i; i < sigCount; ) {
-			// Recover the signer
-			address recoveredSigner = ecrecover(
-				digest,
-				signatures[i].v,
-				signatures[i].r,
-				signatures[i].s
-			);
+	// 	// For each sig we check the recovered signer is a valid member and count thier vote
+	// 	for (uint256 i; i < sigCount; ) {
+	// 		// Recover the signer
+	// 		address recoveredSigner = ecrecover(
+	// 			digest,
+	// 			signatures[i].v,
+	// 			signatures[i].r,
+	// 			signatures[i].s
+	// 		);
 
-			// If not a member, or the signer is out of order (used to prevent duplicates), revert
-			if (!isOwner(recoveredSigner) || prevSigner >= recoveredSigner) revert SignatureError();
+	// 		// If not a member, or the signer is out of order (used to prevent duplicates), revert
+	// 		if (!isOwner(recoveredSigner) || prevSigner >= recoveredSigner) revert SignatureError();
 
-			// If the signer has not delegated their vote, we count, otherwise we skip
-			if (memberDelegatee[recoveredSigner] == address(0)) {
-				// If member vote we increment by 1 (for the signer) + the number of members who have delegated to the signer
-				// Else we calculate the number of votes based on share of the treasury
-				if (voteType == VoteType.MEMBER)
-					votes += 1 + EnumerableSet.length(memberDelegators[recoveredSigner]);
-				else {
-					uint256 len = EnumerableSet.length(memberDelegators[recoveredSigner]);
-					// Add the number of votes the signer holds
-					votes += balanceOf[recoveredSigner][TOKEN];
-					// If the signer has been delegated too,check the balances of anyone who has delegated to the current signer
-					if (len != 0)
-						for (uint256 j; j < len; ) {
-							votes += balanceOf[
-								EnumerableSet.at(memberDelegators[recoveredSigner], j)
-							][TOKEN];
-							++j;
-						}
-				}
-			}
+	// 		// If the signer has not delegated their vote, we count, otherwise we skip
+	// 		if (memberDelegatee[recoveredSigner] == address(0)) {
+	// 			// If member vote we increment by 1 (for the signer) + the number of members who have delegated to the signer
+	// 			// Else we calculate the number of votes based on share of the treasury
+	// 			if (voteType == VoteType.MEMBER)
+	// 				votes += 1 + EnumerableSet.length(memberDelegators[recoveredSigner]);
+	// 			else {
+	// 				uint256 len = EnumerableSet.length(memberDelegators[recoveredSigner]);
+	// 				// Add the number of votes the signer holds
+	// 				votes += balanceOf[recoveredSigner][TOKEN];
+	// 				// If the signer has been delegated too,check the balances of anyone who has delegated to the current signer
+	// 				if (len != 0)
+	// 					for (uint256 j; j < len; ) {
+	// 						votes += balanceOf[
+	// 							EnumerableSet.at(memberDelegators[recoveredSigner], j)
+	// 						][TOKEN];
+	// 						++j;
+	// 					}
+	// 			}
+	// 		}
 
-			// Increment the index and set the previous signer
-			++i;
-			prevSigner = recoveredSigner;
-		}
-	}
+	// 		// Increment the index and set the previous signer
+	// 		++i;
+	// 		prevSigner = recoveredSigner;
+	// 	}
+	// }
 
 	receive() external payable virtual {}
 }

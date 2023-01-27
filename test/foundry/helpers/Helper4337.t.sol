@@ -3,6 +3,7 @@ pragma solidity ^0.8.15;
 
 import {EntryPoint} from '@eip4337/contracts/core/EntryPoint.sol';
 import {BaseAccount, UserOperation} from '@eip4337/contracts/core/BaseAccount.sol';
+import {EIP4337Manager} from '../../../src/eip4337-manager/EIP4337Manager.sol';
 
 import {Module, Enum} from '@gnosis.pm/zodiac/contracts/core/Module.sol';
 
@@ -31,6 +32,7 @@ import 'forge-std/Test.sol';
 // !! a lot of repetition here, need to create factory with new 4337 contracts in a cleaner way
 contract Helper4337 is Test, BasicTestConfig {
 	EntryPoint public entryPoint;
+	EIP4337Manager public eip4337Manager;
 
 	address public entryPointAddress;
 
@@ -70,7 +72,9 @@ contract Helper4337 is Test, BasicTestConfig {
 		safeProxyFactory = new GnosisSafeProxyFactory();
 		signMessageLib = new SignMessageLib();
 
-		forumSafe4337ModuleSingleton = new ForumSafe4337Module(entryPoint);
+		eip4337Manager = new EIP4337Manager();
+
+		//forumSafe4337ModuleSingleton = new ForumSafe4337Module(entryPoint);
 		forumSafe4337Factory = new ForumSafe4337Factory(
 			alice,
 			payable(address(forumSafe4337ModuleSingleton)),
@@ -78,6 +82,8 @@ contract Helper4337 is Test, BasicTestConfig {
 			address(handler),
 			address(multisend),
 			address(safeProxyFactory),
+			entryPointAddress,
+			address(eip4337Manager),
 			address(fundraiseExtension),
 			address(withdrawalExtension),
 			address(0) // pfpSetter - not used in tests
