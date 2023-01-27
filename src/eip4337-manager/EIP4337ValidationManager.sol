@@ -13,7 +13,7 @@ import '@eip4337/contracts/interfaces/IEntryPoint.sol';
 
 // import './EIP4337Fallback.sol';
 
-import '../eip4337-module/ForumSafeBaseModule.sol';
+import '../eip4337-module/ForumSafe4337Module.sol';
 
 using ECDSA for bytes32;
 
@@ -24,7 +24,7 @@ using ECDSA for bytes32;
  * holds an immutable reference to the EntryPoint
  * Inherits ForumSafe4337Module so that it can reference the memory storage
  */
-contract EIP4337Manager is ForumSafeBaseModule {
+contract EIP4337ValidationManager is ForumSafe4337Module {
 	// // address public immutable eip4337Fallback;
 	// address public immutable entryPoint;
 

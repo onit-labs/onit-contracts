@@ -4,21 +4,15 @@ pragma solidity ^0.8.15;
 // import './helpers/ForumSafeTestConfig.t.sol';
 import './helpers/Helper4337.t.sol';
 
-import {EIP4337Manager} from '../../src/eip4337-manager/EIP4337Manager.sol';
-
 contract Module4337Test is Helper4337 {
 	ForumSafe4337Module private forumSafeModule;
 	GnosisSafe private safe;
-
-	EIP4337Manager private validationLogic;
 
 	/// -----------------------------------------------------------------------
 	/// Setup
 	/// -----------------------------------------------------------------------
 
 	function setUp() public {
-		initialExtensions[0] = entryPointAddress;
-		initialExtensions.push(address(validationLogic));
 		(
 			// Deploy a forum safe from the factory
 			forumSafeModule,

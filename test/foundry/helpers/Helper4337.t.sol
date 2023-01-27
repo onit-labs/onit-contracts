@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.15;
 
+// 4337 imports
 import {EntryPoint} from '@eip4337/contracts/core/EntryPoint.sol';
 import {BaseAccount, UserOperation} from '@eip4337/contracts/core/BaseAccount.sol';
-import {EIP4337Manager} from '../../../src/eip4337-manager/EIP4337Manager.sol';
-
-import {Module, Enum} from '@gnosis.pm/zodiac/contracts/core/Module.sol';
+import {EIP4337ValidationManager} from '../../../src/eip4337-manager/EIP4337ValidationManager.sol';
 
 // Gnosis Safe imports
 import {GnosisSafe} from '@gnosis/GnosisSafe.sol';
@@ -13,6 +12,7 @@ import {CompatibilityFallbackHandler} from '@gnosis/handler/CompatibilityFallbac
 import {MultiSend} from '@gnosis/libraries/MultiSend.sol';
 import {GnosisSafeProxyFactory} from '@gnosis/proxies/GnosisSafeProxyFactory.sol';
 import {SignMessageLib} from '@gnosis/examples/libraries/SignMessage.sol';
+import {Module, Enum} from '@gnosis.pm/zodiac/contracts/core/Module.sol';
 
 // Forum imports
 import {ForumSafe4337Factory} from '../../../src/eip4337-module/ForumSafe4337Factory.sol';
@@ -31,10 +31,9 @@ import 'forge-std/Test.sol';
 
 // !! a lot of repetition here, need to create factory with new 4337 contracts in a cleaner way
 contract Helper4337 is Test, BasicTestConfig {
+	// 4337 account types
 	EntryPoint public entryPoint;
-	EIP4337Manager public eip4337Manager;
-
-	address public entryPointAddress;
+	EIP4337ValidationManager public eip4337ValidationManager;
 
 	// Safe contract types
 	GnosisSafe internal safeSingleton;
@@ -61,18 +60,21 @@ contract Helper4337 is Test, BasicTestConfig {
 	address internal safeAddress;
 	address internal moduleAddress;
 	address internal fundraiseAddress;
+	address internal entryPointAddress;
+	address internal eip4337ValidationManagerAddress;
 
 	constructor() {
 		entryPoint = new EntryPoint();
 		entryPointAddress = address(entryPoint);
+
+		eip4337ValidationManager = new EIP4337ValidationManager();
+		eip4337ValidationManagerAddress = address(eip4337ValidationManager);
 
 		safeSingleton = new GnosisSafe();
 		multisend = new MultiSend();
 		handler = new CompatibilityFallbackHandler();
 		safeProxyFactory = new GnosisSafeProxyFactory();
 		signMessageLib = new SignMessageLib();
-
-		eip4337Manager = new EIP4337Manager();
 
 		//forumSafe4337ModuleSingleton = new ForumSafe4337Module(entryPoint);
 		forumSafe4337Factory = new ForumSafe4337Factory(
@@ -83,10 +85,10 @@ contract Helper4337 is Test, BasicTestConfig {
 			address(multisend),
 			address(safeProxyFactory),
 			entryPointAddress,
-			address(eip4337Manager),
+			eip4337ValidationManagerAddress,
 			address(fundraiseExtension),
 			address(withdrawalExtension),
-			address(0) // pfpSetter - not used in tests
+			zeroAddress // pfpSetter - not used in tests
 		);
 
 		voters[0] = alice;
