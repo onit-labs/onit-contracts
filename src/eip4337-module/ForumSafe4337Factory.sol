@@ -34,8 +34,6 @@ contract ForumSafe4337Factory {
 
 	error EnableModuleFailed();
 
-	error MemberLimitExceeded();
-
 	error DelegateCallOnly();
 
 	/// ----------------------------------------------------------------------------------------
@@ -113,8 +111,6 @@ contract ForumSafe4337Factory {
 		address[] calldata _owners,
 		address[] calldata _customExtensions
 	) external payable virtual returns (ForumSafe4337Module forumModule, GnosisSafe _safe) {
-		if (_owners.length > 100) revert MemberLimitExceeded();
-
 		// Deploy new safe but do not set it up yet
 		_safe = GnosisSafe(
 			payable(gnosisSafeProxyFactory.createProxy(gnosisSingleton, abi.encodePacked(_name)))

@@ -76,9 +76,8 @@ contract Helper4337 is Test, BasicTestConfig {
 		safeProxyFactory = new GnosisSafeProxyFactory();
 		signMessageLib = new SignMessageLib();
 
-		//forumSafe4337ModuleSingleton = new ForumSafe4337Module(entryPoint);
+		forumSafe4337ModuleSingleton = new ForumSafe4337Module();
 		forumSafe4337Factory = new ForumSafe4337Factory(
-			alice,
 			payable(address(forumSafe4337ModuleSingleton)),
 			address(safeSingleton),
 			address(handler),

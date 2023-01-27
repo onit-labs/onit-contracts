@@ -40,6 +40,7 @@ contract Module4337Test is Helper4337 {
 		// check balance before
 		assertTrue(address(alice).balance == 1 ether);
 		assertTrue(address(safe).balance == 1 ether);
+		assertTrue(forumSafeModule.nonce() == 0);
 
 		// build a proposal
 		bytes memory executeCalldata = buildExecutionPayload(
@@ -57,8 +58,11 @@ contract Module4337Test is Helper4337 {
 
 		entryPoint.handleOps(tmp1, payable(alice));
 
+		// Transfer has been made, nonce incremented, used nonce set
 		assertTrue(address(alice).balance == 1.5 ether);
 		assertTrue(address(safe).balance == 0.5 ether);
+		assertTrue(forumSafeModule.nonce() == 1);
+		assertTrue(forumSafeModule.usedNonces(entryPoint.getUserOpHash(tmp)) == 1);
 	}
 
 	// function testManageAdminViaEntryPoint() public {
