@@ -15,7 +15,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 		contract: 'ForumSafeFactory',
 		from: deployer,
 		args: [
-			deployer,
 			ForumSafeModule.address,
 			GnosisContracts.gnosisSingleton,
 			GnosisContracts.gnosisFallback,

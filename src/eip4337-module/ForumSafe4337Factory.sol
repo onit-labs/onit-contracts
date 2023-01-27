@@ -2,22 +2,19 @@
 
 pragma solidity ^0.8.15;
 
-import {GnosisSafe} from '@gnosis/GnosisSafe.sol';
+import {GnosisSafe, Enum} from '@gnosis/GnosisSafe.sol';
 import {GnosisSafeProxyFactory} from '@gnosis/proxies/GnosisSafeProxyFactory.sol';
 
-import {Owned} from '@utils/Owned.sol';
-
-import {ForumSafeBaseModule} from './ForumSafeBaseModule.sol';
-import {SafeHelper, Enum} from '@utils/SafeHelper.sol';
+import {ForumSafe4337Module} from './ForumSafe4337Module.sol';
 
 /// @notice Factory to deploy forum group.
-contract ForumSafe4337Factory is Owned {
+contract ForumSafe4337Factory {
 	/// ----------------------------------------------------------------------------------------
 	/// Errors and Events
 	/// ----------------------------------------------------------------------------------------
 
 	event ForumSafeDeployed(
-		ForumSafeBaseModule indexed forumGroup,
+		ForumSafe4337Module indexed forumGroup,
 		address indexed gnosisSafe,
 		string name,
 		string symbol,
@@ -26,7 +23,7 @@ contract ForumSafe4337Factory is Owned {
 	);
 
 	event ForumSafeEnabled(
-		ForumSafeBaseModule indexed forumGroup,
+		ForumSafe4337Module indexed forumGroup,
 		address indexed gnosisSafe,
 		string name,
 		string symbol,
@@ -71,7 +68,6 @@ contract ForumSafe4337Factory is Owned {
 	/// ----------------------------------------------------------------------------------------
 
 	constructor(
-		address _deployer,
 		address payable _forumSafeSingleton,
 		address _gnosisSingleton,
 		address _gnosisFallbackLibrary,
@@ -82,7 +78,7 @@ contract ForumSafe4337Factory is Owned {
 		address _fundraiseExtension,
 		address _withdrawalExtension,
 		address _pfpStaker
-	) Owned(_deployer) {
+	) {
 		forumFactory = address(this);
 		forumSafeSingleton = _forumSafeSingleton;
 		gnosisSingleton = _gnosisSingleton;
@@ -116,7 +112,7 @@ contract ForumSafe4337Factory is Owned {
 		uint32[2] calldata _govSettings,
 		address[] calldata _owners,
 		address[] calldata _customExtensions
-	) external payable virtual returns (ForumSafeBaseModule forumModule, GnosisSafe _safe) {
+	) external payable virtual returns (ForumSafe4337Module forumModule, GnosisSafe _safe) {
 		if (_owners.length > 100) revert MemberLimitExceeded();
 
 		// Deploy new safe but do not set it up yet
@@ -125,7 +121,7 @@ contract ForumSafe4337Factory is Owned {
 		);
 
 		// Deploy new Forum group but do not set it up yet
-		forumModule = ForumSafeBaseModule(_cloneAsMinimalProxy(forumSafeSingleton, _name));
+		forumModule = ForumSafe4337Module(_cloneAsMinimalProxy(forumSafeSingleton, _name));
 
 		{
 			// Payload to enable the forum group module on the safe
@@ -184,11 +180,11 @@ contract ForumSafe4337Factory is Owned {
 		string calldata _name,
 		string calldata _symbol,
 		uint32[2] calldata _govSettings
-	) external returns (ForumSafeBaseModule forumGroup) {
+	) external returns (ForumSafe4337Module forumGroup) {
 		if (address(this) == forumFactory) revert DelegateCallOnly();
 
 		// Deploy new Forum group
-		forumGroup = ForumSafeBaseModule(_cloneAsMinimalProxy(forumSafeSingleton, _name));
+		forumGroup = ForumSafe4337Module(_cloneAsMinimalProxy(forumSafeSingleton, _name));
 
 		// Create initialExtensions array - no custom extensions, therefore empty array
 		address[] memory _initialExtensions = _createInitialExtensions(new address[](0));
