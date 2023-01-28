@@ -5,8 +5,6 @@ pragma solidity ^0.8.15;
 interface IForumSafeModuleTypes {
 	enum ProposalType {
 		CALL, // call contracts
-		VPERIOD, // set `votingPeriod`
-		MEMBER_LIMIT, // set `memberLimit`
 		MEMBER_THRESHOLD, // set `memberVoteThreshold`
 		TOKEN_THRESHOLD, // set `tokenVoteThreshold`
 		TYPE, // set `VoteType` to `ProposalType`
@@ -19,11 +17,5 @@ interface IForumSafeModuleTypes {
 		MEMBER, // % of members required to pass
 		SIMPLE_MAJORITY, // over 50% total votes required to pass
 		TOKEN_MAJORITY // user set % of total votes required to pass
-	}
-
-	struct Signature {
-		uint8 v;
-		bytes32 r;
-		bytes32 s;
 	}
 }
