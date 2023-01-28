@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.15;
 
-import {Utils} from '@utils/Utils.sol';
-
 import {BaseAccount, IEntryPoint, IAccount, UserOperation} from '@eip4337/contracts/core/BaseAccount.sol';
 
 /**
@@ -53,8 +51,17 @@ contract EIP4337Account is BaseAccount {
 		// userOp.sigs should be a hash of the userOpHash, and the proposal hash for this contract
 		// consider restrictions on what entrypoint can call?
 
-		return _validationManager.validateUserOp(userOp, userOpHash, address(this), 0);
-
+		(bool success, bytes memory validationResponse) = address(_validationManager).delegatecall(
+			abi.encodeWithSignature(
+				'validateUserOp((address,uint256,bytes,bytes,uint256,uint256,uint256,uint256,uint256,bytes,bytes),bytes32,address,uint256)',
+				userOp,
+				userOpHash,
+				address(0),
+				0
+			)
+		);
+		require(success, 'validation failed');
+		return abi.decode(validationResponse, (uint256));
 		//return isOwner(recoveredSigner) ? 0 : SIG_VALIDATION_FAILED;
 	}
 

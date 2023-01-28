@@ -50,9 +50,11 @@ contract ForumSafe4337Module is
 	// Contract generating uri for group tokens
 	address private pfpExtension;
 
+	// Thresholds for vote types to pass
 	uint32 public tokenVoteThreshold; // 1-100
 	uint32 public memberVoteThreshold; // 1-100
 
+	// Docs allowing the group to link to external resources
 	string public docs;
 
 	bytes32 public constant PROPOSAL_HASH = keccak256('SignProposal(uint256 proposal)');

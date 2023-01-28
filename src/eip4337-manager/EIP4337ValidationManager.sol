@@ -5,6 +5,9 @@ pragma solidity ^0.8.15;
 /* solhint-disable no-inline-assembly */
 /* solhint-disable reason-string */
 
+// ! tmp sig method
+import {Utils} from '@utils/Utils.sol';
+
 import '@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
 import '@gnosis.pm/safe-contracts/contracts/GnosisSafe.sol';
 
@@ -14,6 +17,8 @@ import '@eip4337/contracts/interfaces/IEntryPoint.sol';
 // import './EIP4337Fallback.sol';
 
 import '../eip4337-module/ForumSafe4337Module.sol';
+
+import 'forge-std/console.sol';
 
 using ECDSA for bytes32;
 
@@ -42,8 +47,9 @@ contract EIP4337ValidationManager is ForumSafe4337Module {
 		address /*aggregator*/,
 		uint256 missingAccountFunds
 	) external override returns (uint256 sigTimeRange) {
-		address _msgSender = address(bytes20(msg.data[msg.data.length - 20:]));
-		require(_msgSender == address(entryPoint()), 'account: not from entrypoint');
+		// ! consider checks on caller
+		//address _msgSender = address(bytes20(msg.data[msg.data.length - 20:]));
+		//require(_msgSender == address(entryPoint()), 'account: not from entrypoint');
 
 		// !convert to forum based checks & sig validation - using non ecdsa
 		// GnosisSafe pThis = GnosisSafe(payable(address(this)));
@@ -52,15 +58,25 @@ contract EIP4337ValidationManager is ForumSafe4337Module {
 		// require(threshold == 1, 'account: only threshold 1');
 		// require(pThis.isOwner(recovered), 'account: wrong signature');
 
+		// ! decode calldata, determine vote type to count
+
 		// ! need to add nonce to forumgroup
 
 		if (missingAccountFunds > 0) {
 			//TODO: MAY pay more than the minimum, to deposit for future transactions
-			(bool success, ) = payable(_msgSender).call{value: missingAccountFunds}('');
+			(bool success, ) = payable(address(entryPoint())).call{value: missingAccountFunds}('');
 			(success);
 			//ignore failure (its EntryPoint's job to verify, not account.)
 		}
-		return 0;
+
+		// ! DEFAULTING TO MEMBER VOTE FOR TESTING
+		return
+			_countVotes(
+				IForumSafeModuleTypes.VoteType.MEMBER,
+				_getVotes(userOp.signature, IForumSafeModuleTypes.VoteType.MEMBER)
+			)
+				? 0
+				: 1;
 	}
 
 	// ! consider moving the below 2 functions to a library
@@ -84,8 +100,7 @@ contract EIP4337ValidationManager is ForumSafe4337Module {
 	}
 
 	function _getVotes(
-		bytes calldata proposal,
-		IForumSafeModuleTypes.Signature[] memory signatures,
+		bytes memory signatures,
 		IForumSafeModuleTypes.VoteType voteType
 	) internal view returns (uint256 votes) {
 		// We keep track of the previous signer in the array to ensure there are no duplicates
@@ -96,24 +111,21 @@ contract EIP4337ValidationManager is ForumSafe4337Module {
 			abi.encodePacked(
 				'\x19\x01',
 				DOMAIN_SEPARATOR(),
-				keccak256(abi.encode(PROPOSAL_HASH, proposal))
+				keccak256(abi.encode(PROPOSAL_HASH, _nonce))
 			)
 		);
 
-		uint256 sigCount = signatures.length;
+		// ! need to divide up sig input
+		uint256 sigCount = 1;
 
 		// For each sig we check the recovered signer is a valid member and count thier vote
 		for (uint256 i; i < sigCount; ) {
 			// Recover the signer
-			address recoveredSigner = ecrecover(
-				digest,
-				signatures[i].v,
-				signatures[i].r,
-				signatures[i].s
-			);
+			console.logBytes(signatures);
+			address recoveredSigner = Utils.recoverSigner(digest, signatures, i);
 
 			// If not a member, or the signer is out of order (used to prevent duplicates), revert
-			if (!isOwner(recoveredSigner) || prevSigner >= recoveredSigner) revert SignatureError();
+			//if (!isOwner(recoveredSigner) || prevSigner >= recoveredSigner) revert SignatureError();
 
 			// If the signer has not delegated their vote, we count, otherwise we skip
 			if (memberDelegatee[recoveredSigner] == address(0)) {
