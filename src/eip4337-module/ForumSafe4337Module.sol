@@ -164,6 +164,8 @@ contract ForumSafe4337Module is
 			if (amounts[0] > 13 || amounts[1] > 2 || amounts.length != 2) revert TypeBounds();
 
 		unchecked {
+			// Add / remove members + update gnosis threshold
+
 			if (proposalType == ProposalType.MEMBER_THRESHOLD)
 				memberVoteThreshold = uint32(amounts[0]);
 

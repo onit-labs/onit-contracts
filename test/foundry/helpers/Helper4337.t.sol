@@ -4,7 +4,7 @@ pragma solidity ^0.8.15;
 // 4337 imports
 import {EntryPoint} from '@eip4337/contracts/core/EntryPoint.sol';
 import {BaseAccount, UserOperation} from '@eip4337/contracts/core/BaseAccount.sol';
-import {EIP4337ValidationManager} from '../../../src/eip4337-manager/EIP4337ValidationManager.sol';
+import {EIP4337ValidationManager} from '../../../src/eip4337-account/EIP4337ValidationManager.sol';
 
 // Gnosis Safe imports
 import {GnosisSafe} from '@gnosis/GnosisSafe.sol';
