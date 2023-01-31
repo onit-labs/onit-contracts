@@ -11,50 +11,76 @@ import {EntryPoint} from '@eip4337/contracts/core/EntryPoint.sol';
 // Gnosis Safe contracts
 import {CompatibilityFallbackHandler} from '@gnosis/handler/CompatibilityFallbackHandler.sol';
 
-import {BasicTestConfig} from './helpers/BasicTestConfig.t.sol';
+import './helpers/Helper4337.t.sol';
 
-// factory to create proxy. check init, check address (especially cross chain)
-
-contract Module4337Test is BasicTestConfig {
-	EIP4337Account private eip4337Singleton;
-	EIP4337AccountFactory private eip4337AccountFactory;
-	EntryPoint private entryPoint;
-	CompatibilityFallbackHandler private compatibilityFallbackHandler;
-
+contract Module4337Test is Helper4337 {
 	/// -----------------------------------------------------------------------
 	/// Setup
 	/// -----------------------------------------------------------------------
 
 	function setUp() public {
-		eip4337Singleton = new EIP4337Account();
-		compatibilityFallbackHandler = new CompatibilityFallbackHandler();
-		eip4337AccountFactory = new EIP4337AccountFactory(
-			eip4337Singleton,
-			address(compatibilityFallbackHandler)
+		// Check 4337 singelton is set in factory
+		assertEq(
+			address(eip4337AccountFactory.eip4337AccountSingleton()),
+			address(eip4337Singleton),
+			'factory already set'
+		);
+		// Check 4337 gnosis fallback is set in factory
+		assertEq(
+			address(eip4337AccountFactory.gnosisFallbackLibrary()),
+			address(handler),
+			'factory already set'
 		);
 	}
 
 	/// -----------------------------------------------------------------------
-	/// Tests
+	/// Deployment tests
 	/// -----------------------------------------------------------------------
 
 	function testFactoryDeploy() public {
-		eip4337AccountFactory.createAccount(
-			1,
-			[
-				0xd3c6949ab309ff80296ffb17cd2a5298ec23ad7f1fda03ca70f12353987303de,
-				0x42c164839f37f10fb2e6e5649c046a473a8d4db61d0602433fe32484d1c2d8d3
-			]
+		address payable account = eip4337AccountFactory.createAccount(1, testSig1.signer);
+
+		EIP4337Account deployed4337Account = EIP4337Account(account);
+
+		// Check that the account is deployed and data is set on account, and safe
+		assertEq(deployed4337Account.owner()[0], testSig1.signer[0], 'owner not set');
+		assertEq(deployed4337Account.owner()[1], testSig1.signer[1], 'owner not set');
+		assertEq(
+			deployed4337Account.getOwners()[0],
+			address(uint160(testSig1.signer[0])),
+			'owner not set on safe'
+		);
+		assertEq(
+			address(deployed4337Account.entryPoint()),
+			address(entryPoint),
+			'entry point not set'
 		);
 	}
 
-	function testFactoryDeployFromEntryPoint() public {}
-}
+	function testFactoryDeployFromEntryPoint() public {
+		// Encode the calldata for the factory
+		bytes memory factoryCalldata = abi.encodeWithSignature(
+			'createAccount(uint,uint[2])',
+			1,
+			testSig1.signer
+		);
 
-// {
-//     "r": "0x535b670719b8510bcf71a9713c23f0dadff3ec73bca56e472d01976ca16d88b7",
-//     "s": "0xb4b64109a6a35302be6297bc0c7444e117c6e0185caa71d11486ad04f33f8ddd",
-//     "x": "0xd3c6949ab309ff80296ffb17cd2a5298ec23ad7f1fda03ca70f12353987303de",
-//     "y": "0x42c164839f37f10fb2e6e5649c046a473a8d4db61d0602433fe32484d1c2d8d3",
-//     "messageHash": "0xf2424746de28d3e593fb6af9c8dff6d24de434350366e60312aacfe79dae94a8"
-// }
+		// Prepend the address of the factory
+		bytes memory initCode = abi.encodePacked(
+			abi.encodePacked(eip4337AccountFactory),
+			factoryCalldata
+		);
+
+		// static call factory to get address to use as sender
+		address tmp = (eip4337AccountFactory).getAddress(1, testSig1.signer);
+
+		console.log(tmp);
+	}
+
+	/// -----------------------------------------------------------------------
+	/// Execution tests
+	/// -----------------------------------------------------------------------
+
+	// Test a basic transfer and check nonce
+	function testTransfer() public {}
+}

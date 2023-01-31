@@ -5,7 +5,7 @@ pragma solidity ^0.8.15;
 import './helpers/Helper4337.t.sol';
 
 contract Module4337Test is Helper4337 {
-	ForumSafe4337Module private forumSafeModule;
+	EIP4337GroupAccount private forumSafeModule;
 	GnosisSafe private safe;
 
 	/// -----------------------------------------------------------------------
@@ -51,7 +51,7 @@ contract Module4337Test is Helper4337 {
 		);
 
 		// build user operation
-		UserOperation memory tmp = buildUserOp(forumSafeModule, executeCalldata, alicePk);
+		UserOperation memory tmp = buildUserOp(address(forumSafeModule), executeCalldata, alicePk);
 
 		UserOperation[] memory tmp1 = new UserOperation[](1);
 		tmp1[0] = tmp;
