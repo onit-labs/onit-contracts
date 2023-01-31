@@ -3,7 +3,7 @@
 pragma solidity ^0.8.15;
 
 import {ForumGovernance, EnumerableSet, Enum} from './ForumSafe4337Governance.sol';
-import {EIP4337Account, IEntryPoint, IAccount} from './EIP4337Account.sol';
+import {EIP4337GroupAccount, IEntryPoint, IAccount} from './EIP4337GroupAccount.sol';
 
 import {NFTreceiver} from '@utils/NFTreceiver.sol';
 import {ReentrancyGuard} from '@utils/ReentrancyGuard.sol';
@@ -20,7 +20,7 @@ import 'forge-std/console.sol';
  */
 contract ForumSafe4337Module is
 	IForumSafeModuleTypes,
-	EIP4337Account,
+	EIP4337GroupAccount,
 	ForumGovernance,
 	ReentrancyGuard,
 	NFTreceiver
