@@ -8,7 +8,7 @@ import {NFTreceiver} from '@utils/NFTreceiver.sol';
 import {SVG} from '@libraries/SVG.sol';
 import {JSON} from '@libraries/JSON.sol';
 
-import {ERC1155} from '@solbase/src/tokens/ERC1155/ERC1155.sol';
+import {ERC1155} from '@solbase/tokens/ERC1155/ERC1155.sol';
 
 /**
  * @title PfpSetter
