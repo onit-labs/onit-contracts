@@ -1,15 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.15;
 
-//import {BaseAccount, IEntryPoint, IAccount, UserOperation} from '@eip4337/contracts/core/BaseAccount.sol';
-
 import {GnosisSafe, Enum} from '@gnosis/GnosisSafe.sol';
 import {ERC20} from '@solbase/tokens/ERC20/ERC20.sol';
 
-/* solhint-disable avoid-low-level-calls */
-/* solhint-disable no-inline-assembly */
-/* solhint-disable reason-string */
-
+// Modified interface with nonce removed
 import '@interfaces/BaseAccount.sol';
 
 /**
@@ -22,6 +17,8 @@ contract EIP4337Account is GnosisSafe, BaseAccount {
 	/// ----------------------------------------------------------------------------------------
 	///							ACCOUNT STORAGE
 	/// ----------------------------------------------------------------------------------------
+
+	error Initialised();
 
 	error Unauthorized();
 
@@ -39,12 +36,31 @@ contract EIP4337Account is GnosisSafe, BaseAccount {
 	IEntryPoint internal _entryPoint;
 
 	/// ----------------------------------------------------------------------------------------
-	///							ACCOUNT LOGIC
+	///							CONSTRUCTOR
 	/// ----------------------------------------------------------------------------------------
 
+	/**
+	 * @notice Constructor
+	 * @dev This contract should be deployed using a proxy, the constructor should not be called
+	 */
+	constructor() {
+		_owner = [1, 1];
+	}
+
+	/**
+	 * @notice Initialize the account
+	 * @param anOwner Public key for secp256r1 signer
+	 * @dev This method should only be called
+	 */
 	function initialize(uint[2] calldata anOwner) public virtual {
+		if (_owner[0] != 0 || _owner[1] != 0 || _eoaOwner != address(0)) revert Initialised();
+
 		_owner = anOwner;
 	}
+
+	/// ----------------------------------------------------------------------------------------
+	///							ACCOUNT LOGIC
+	/// ----------------------------------------------------------------------------------------
 
 	function entryPoint() public view virtual override returns (IEntryPoint) {
 		return _entryPoint;
