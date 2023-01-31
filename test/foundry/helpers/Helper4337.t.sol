@@ -113,6 +113,7 @@ contract Helper4337 is Test, SafeTestConfig, ForumModuleTestConfig {
 
 	function buildUserOp(
 		address sender,
+		bytes memory initCode,
 		bytes memory callData,
 		uint256 signerPk
 	) public returns (UserOperation memory userOp) {
@@ -121,6 +122,7 @@ contract Helper4337 is Test, SafeTestConfig, ForumModuleTestConfig {
 
 		// Add sender and calldata to op
 		userOp.sender = sender;
+		userOp.initCode = initCode;
 		userOp.callData = callData;
 
 		// ! get new sig type

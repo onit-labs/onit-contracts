@@ -75,6 +75,24 @@ contract Module4337Test is Helper4337 {
 		address tmp = (eip4337AccountFactory).getAddress(1, testSig1.signer);
 
 		console.log(tmp);
+
+		// deal funds to account
+		deal(tmp, 1 ether);
+
+		// Create payload to transfer 0.5 eth
+		bytes memory payload = abi.encodeWithSignature(
+			'transfer(address,uint256)',
+			alice,
+			0.5 ether
+		);
+
+		// Build userop
+		UserOperation memory userOp = buildUserOp(tmp, initCode, payload, alicePk);
+		UserOperation[] memory userOps = new UserOperation[](1);
+		userOps[0] = userOp;
+
+		// Handle userOp
+		entryPoint.handleOps(userOps, payable(alice));
 	}
 
 	/// -----------------------------------------------------------------------
