@@ -22,6 +22,9 @@ abstract contract BasicTestConfig is Test {
 	address internal carl;
 	uint256 internal carlPk;
 
+	address internal zeroAddress = address(0);
+	address internal oneAddress = address(1);
+
 	/// -----------------------------------------------------------------------
 	/// Setup
 	/// -----------------------------------------------------------------------

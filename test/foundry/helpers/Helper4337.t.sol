@@ -54,9 +54,6 @@ contract Helper4337 is Test, BasicTestConfig {
 	address[] internal voters = new address[](1);
 	address[] internal initialExtensions = new address[](1);
 
-	address internal zeroAddress = address(0);
-	address internal oneAddress = address(1);
-
 	address internal safeAddress;
 	address internal moduleAddress;
 	address internal fundraiseAddress;
