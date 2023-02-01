@@ -51,7 +51,11 @@ contract Helper4337 is Test, SafeTestConfig, ForumModuleTestConfig {
 		eip4337Singleton = new EIP4337Account();
 		eip4337GroupSingleton = new EIP4337GroupAccount();
 
-		eip4337AccountFactory = new EIP4337AccountFactory(eip4337Singleton, address(handler));
+		eip4337AccountFactory = new EIP4337AccountFactory(
+			eip4337Singleton,
+			entryPoint,
+			address(handler)
+		);
 		forumSafe4337Factory = new ForumSafe4337Factory(
 			payable(address(eip4337GroupSingleton)),
 			address(safeSingleton),
@@ -77,10 +81,10 @@ contract Helper4337 is Test, SafeTestConfig, ForumModuleTestConfig {
 			nonce: 0,
 			initCode: new bytes(0),
 			callData: new bytes(0),
-			callGasLimit: 2100000,
-			verificationGasLimit: 1000000,
-			preVerificationGas: 2100000,
-			maxFeePerGas: 0,
+			callGasLimit: 100000,
+			verificationGasLimit: 100000,
+			preVerificationGas: 210000,
+			maxFeePerGas: 2,
 			maxPriorityFeePerGas: 1e9,
 			paymasterAndData: new bytes(0),
 			signature: new bytes(0)
@@ -133,24 +137,39 @@ contract Helper4337 is Test, SafeTestConfig, ForumModuleTestConfig {
 		userOp.signature = abi.encodePacked(r, s, v);
 	}
 
-	// For now this works for simple, 1 account, 1 amount, 1 payload peoposals
+	// Build payload which the entryPoint will call on the sender 4337 account
 	function buildExecutionPayload(
-		Enum.Operation operationType,
-		address[1] memory accounts,
-		uint256[1] memory amounts,
-		bytes[1] memory payloads
-	) internal returns (bytes memory) {
-		(
-			address[] memory _accounts,
-			uint256[] memory _amounts,
-			bytes[] memory _payloads
-		) = buildDynamicArraysForProposal(accounts, amounts, payloads);
-
+		address to,
+		uint256 value,
+		bytes memory data,
+		Enum.Operation operation,
+		address paymaster,
+		address approveToken,
+		uint256 approveAmount
+	) internal pure returns (bytes memory) {
 		return
 			abi.encodeWithSignature(
-				'execute(bytes)',
-				abi.encode(operationType, _accounts, _amounts, _payloads)
+				'execute(address,uint256,bytes,uint8,address,address,uint256)',
+				to,
+				value,
+				data,
+				operation,
+				paymaster,
+				approveToken,
+				approveAmount
 			);
 		// abi.encode(operationType, _accounts, _amounts, _payloads);
+	}
+
+	// Calculate gas used by sender of userOp
+	// ! currently only works when paymaster set to 0 - hence 'address(0) != address(0)'
+	function calculateGas(UserOperation memory userOp) internal pure returns (uint256) {
+		uint256 mul = address(0) != address(0) ? 3 : 1;
+		uint256 requiredGas = userOp.callGasLimit +
+			userOp.verificationGasLimit *
+			mul +
+			userOp.preVerificationGas;
+
+		return requiredGas * userOp.maxFeePerGas;
 	}
 }

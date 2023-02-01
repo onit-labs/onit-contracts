@@ -7,7 +7,7 @@ import {GnosisSafe, Enum} from '@gnosis/GnosisSafe.sol';
 import '@openzeppelin/contracts/utils/Create2.sol';
 import '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
 
-import {EIP4337Account} from './EIP4337Account.sol';
+import {EIP4337Account, IEntryPoint} from './EIP4337Account.sol';
 
 /// @notice Factory to deploy forum group.
 contract EIP4337AccountFactory {
@@ -32,18 +32,27 @@ contract EIP4337AccountFactory {
 	/// Factory Storage
 	/// ----------------------------------------------------------------------------------------
 
-	// Template contract to use for new forum account
+	// Template contract to use for new individual 4337 forum accounts
 	EIP4337Account public immutable eip4337AccountSingleton;
 
-	// Forum initial extensions
+	// Entry point used for 4337 accounts
+	IEntryPoint public immutable entryPoint;
+
+	// Fallback handler for Gnosis Safe
 	address public immutable gnosisFallbackLibrary;
 
 	/// ----------------------------------------------------------------------------------------
 	/// Constructor
 	/// ----------------------------------------------------------------------------------------
 
-	constructor(EIP4337Account _eip4337AccountSingleton, address _gnosisFallbackLibrary) {
+	constructor(
+		EIP4337Account _eip4337AccountSingleton,
+		IEntryPoint _entryPoint,
+		address _gnosisFallbackLibrary
+	) {
 		eip4337AccountSingleton = _eip4337AccountSingleton;
+
+		entryPoint = _entryPoint;
 
 		gnosisFallbackLibrary = _gnosisFallbackLibrary;
 	}
@@ -70,7 +79,7 @@ contract EIP4337AccountFactory {
 		account = payable(
 			new ERC1967Proxy{salt: bytes32(salt)}(
 				address(eip4337AccountSingleton),
-				abi.encodeCall(eip4337AccountSingleton.initialize, owner)
+				abi.encodeCall(eip4337AccountSingleton.initialize, (entryPoint, owner))
 			)
 		);
 
@@ -106,7 +115,7 @@ contract EIP4337AccountFactory {
 						type(ERC1967Proxy).creationCode,
 						abi.encode(
 							address(eip4337AccountSingleton),
-							abi.encodeCall(eip4337AccountSingleton.initialize, (owner))
+							abi.encodeCall(eip4337AccountSingleton.initialize, (entryPoint, owner))
 						)
 					)
 				)

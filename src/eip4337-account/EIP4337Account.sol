@@ -22,15 +22,8 @@ contract EIP4337Account is GnosisSafe, BaseAccount {
 
 	error Unauthorized();
 
-	// ! test nonce can be updated via safe instead of here
-	// Transaction nonce on the account
-	//uint256 internal _nonce;
-
 	// Public key for secp256r1 signer
 	uint[2] internal _owner;
-
-	// Optional EOA owner which can be set used instead of the entrypoint based secp256r1 owner
-	address internal _eoaOwner;
 
 	// Entry point allowed to call methods directly on this contract
 	IEntryPoint internal _entryPoint;
@@ -52,10 +45,11 @@ contract EIP4337Account is GnosisSafe, BaseAccount {
 	 * @param anOwner Public key for secp256r1 signer
 	 * @dev This method should only be called
 	 */
-	function initialize(uint[2] calldata anOwner) public virtual {
-		if (_owner[0] != 0 || _owner[1] != 0 || _eoaOwner != address(0)) revert Initialised();
+	function initialize(IEntryPoint anEntryPoint, uint[2] calldata anOwner) public virtual {
+		if (_owner[0] != 0 || _owner[1] != 0) revert Initialised();
 
 		_owner = anOwner;
+		_entryPoint = anEntryPoint;
 	}
 
 	/// ----------------------------------------------------------------------------------------
@@ -68,10 +62,6 @@ contract EIP4337Account is GnosisSafe, BaseAccount {
 
 	function owner() public view virtual returns (uint[2] memory) {
 		return _owner;
-	}
-
-	function eoaOwner() public view virtual returns (address) {
-		return _eoaOwner;
 	}
 
 	function execute(
@@ -87,11 +77,12 @@ contract EIP4337Account is GnosisSafe, BaseAccount {
 
 		// Execute transaction without further confirmations.
 		execute(to, value, data, operation, gasleft());
+	}
 
-		// // Instead of sending a separate transaction to approve tokens
-		// // for the paymaster for each transaction, it can be approved here
-		// if (paymaster != 0x0000000000000000000000000000000000000000)
-		// 	ERC20(approveToken).approve(paymaster, approveAmount);
+	function setEntryPoint(IEntryPoint anEntryPoint) external virtual {
+		_requireFromEntryPointOrOwner();
+
+		_entryPoint = anEntryPoint;
 	}
 
 	/// ----------------------------------------------------------------------------------------
@@ -99,8 +90,7 @@ contract EIP4337Account is GnosisSafe, BaseAccount {
 	/// ----------------------------------------------------------------------------------------
 
 	function _requireFromEntryPointOrOwner() internal view {
-		if (!(msg.sender == address(entryPoint()) || msg.sender == _eoaOwner))
-			revert Unauthorized();
+		if (msg.sender != address(entryPoint())) revert Unauthorized();
 	}
 
 	// ! very minimal validation, not secure at all

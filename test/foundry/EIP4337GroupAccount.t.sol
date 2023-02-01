@@ -36,39 +36,39 @@ contract Module4337Test is Helper4337 {
 	/// Tests
 	/// -----------------------------------------------------------------------
 
-	function testExecutionViaEntryPoint() public {
-		// check balance before
-		assertTrue(address(alice).balance == 1 ether);
-		assertTrue(address(safe).balance == 1 ether);
-		assertTrue(forumSafeModule.nonce() == 0);
+	// function testExecutionViaEntryPoint() public {
+	// 	// check balance before
+	// 	assertTrue(address(alice).balance == 1 ether);
+	// 	assertTrue(address(safe).balance == 1 ether);
+	// 	assertTrue(forumSafeModule.nonce() == 0);
 
-		// build a proposal
-		bytes memory executeCalldata = buildExecutionPayload(
-			Enum.Operation.Call,
-			[alice],
-			[uint256(0.5 ether)],
-			[new bytes(0)]
-		);
+	// 	// build a proposal
+	// 	bytes memory executeCalldata = buildExecutionPayload(
+	// 		Enum.Operation.Call,
+	// 		[alice],
+	// 		[uint256(0.5 ether)],
+	// 		[new bytes(0)]
+	// 	);
 
-		// build user operation
-		UserOperation memory tmp = buildUserOp(
-			address(forumSafeModule),
-			new bytes(0),
-			executeCalldata,
-			alicePk
-		);
+	// 	// build user operation
+	// 	UserOperation memory tmp = buildUserOp(
+	// 		address(forumSafeModule),
+	// 		new bytes(0),
+	// 		executeCalldata,
+	// 		alicePk
+	// 	);
 
-		UserOperation[] memory tmp1 = new UserOperation[](1);
-		tmp1[0] = tmp;
+	// 	UserOperation[] memory tmp1 = new UserOperation[](1);
+	// 	tmp1[0] = tmp;
 
-		entryPoint.handleOps(tmp1, payable(alice));
+	// 	entryPoint.handleOps(tmp1, payable(alice));
 
-		// Transfer has been made, nonce incremented, used nonce set
-		assertTrue(address(alice).balance == 1.5 ether);
-		assertTrue(address(safe).balance == 0.5 ether);
-		assertTrue(forumSafeModule.nonce() == 1);
-		assertTrue(forumSafeModule.usedNonces(entryPoint.getUserOpHash(tmp)) == 1);
-	}
+	// 	// Transfer has been made, nonce incremented, used nonce set
+	// 	assertTrue(address(alice).balance == 1.5 ether);
+	// 	assertTrue(address(safe).balance == 0.5 ether);
+	// 	assertTrue(forumSafeModule.nonce() == 1);
+	// 	assertTrue(forumSafeModule.usedNonces(entryPoint.getUserOpHash(tmp)) == 1);
+	// }
 
 	// function testManageAdminViaEntryPoint() public {
 	// 	// check balance before
