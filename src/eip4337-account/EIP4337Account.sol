@@ -7,13 +7,15 @@ import {ERC20} from '@solbase/tokens/ERC20/ERC20.sol';
 // Modified interface with nonce removed
 import '@interfaces/BaseAccount.sol';
 
+import {EllipticCurve} from '@utils/EllipticCurve.sol';
+
 /**
  * @notice EIP4337 Managed Gnosis Safe Account Implementation
  * @author Forum (https://forumdaos.com)
  * @dev Uses infinitism style base 4337 interface, with gnosis safe account
  */
 
-contract EIP4337Account is GnosisSafe, BaseAccount {
+contract EIP4337Account is GnosisSafe, BaseAccount, EllipticCurve {
 	/// ----------------------------------------------------------------------------------------
 	///							ACCOUNT STORAGE
 	/// ----------------------------------------------------------------------------------------
@@ -102,6 +104,11 @@ contract EIP4337Account is GnosisSafe, BaseAccount {
 		// userOp.sigs should be a hash of the userOpHash, and the proposal hash for this contract
 		// consider restrictions on what entrypoint can call?
 		//return isOwner(recoveredSigner) ? 0 : SIG_VALIDATION_FAILED;
+
+		// ! tmp solution to get a single, simple sig
+		uint[2] memory sig = abi.decode(userOp.signature, (uint[2]));
+
+		return validateSignature(userOpHash, sig, _owner) ? 0 : SIG_VALIDATION_FAILED;
 	}
 
 	/**
