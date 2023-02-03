@@ -2,12 +2,12 @@
 pragma solidity ^0.8.15;
 
 import {GnosisSafe, Enum} from '@gnosis/GnosisSafe.sol';
-import {ERC20} from '@solbase/tokens/ERC20/ERC20.sol';
 
-// Modified interface with nonce removed
-import '@interfaces/BaseAccount.sol';
+// Modified BaseAccount interface with nonce removed
+import {BaseAccount, IEntryPoint, UserOperation} from '@interfaces/BaseAccount.sol';
+import {IEllipticCurveValidator} from '@interfaces/IEllipticCurveValidator.sol';
 
-import {EllipticCurve} from '@utils/EllipticCurve.sol';
+import 'forge-std/console.sol';
 
 /**
  * @notice EIP4337 Managed Gnosis Safe Account Implementation
@@ -15,7 +15,7 @@ import {EllipticCurve} from '@utils/EllipticCurve.sol';
  * @dev Uses infinitism style base 4337 interface, with gnosis safe account
  */
 
-contract EIP4337Account is GnosisSafe, BaseAccount, EllipticCurve {
+contract EIP4337Account is GnosisSafe, BaseAccount {
 	/// ----------------------------------------------------------------------------------------
 	///							ACCOUNT STORAGE
 	/// ----------------------------------------------------------------------------------------
@@ -30,6 +30,9 @@ contract EIP4337Account is GnosisSafe, BaseAccount, EllipticCurve {
 	// Entry point allowed to call methods directly on this contract
 	IEntryPoint internal _entryPoint;
 
+	// Contract used to validate the signature was signed by the owner
+	IEllipticCurveValidator internal immutable _ellipticCurveValidator;
+
 	/// ----------------------------------------------------------------------------------------
 	///							CONSTRUCTOR
 	/// ----------------------------------------------------------------------------------------
@@ -37,9 +40,12 @@ contract EIP4337Account is GnosisSafe, BaseAccount, EllipticCurve {
 	/**
 	 * @notice Constructor
 	 * @dev This contract should be deployed using a proxy, the constructor should not be called
+	 *		Pre set the entryPoint and ellipticCurveValidator to save gas on deployments
 	 */
-	constructor() {
+	constructor(IEllipticCurveValidator aValidator) GnosisSafe() {
 		_owner = [1, 1];
+
+		_ellipticCurveValidator = aValidator;
 	}
 
 	/**
@@ -50,8 +56,9 @@ contract EIP4337Account is GnosisSafe, BaseAccount, EllipticCurve {
 	function initialize(IEntryPoint anEntryPoint, uint[2] calldata anOwner) public virtual {
 		if (_owner[0] != 0 || _owner[1] != 0) revert Initialised();
 
-		_owner = anOwner;
 		_entryPoint = anEntryPoint;
+
+		_owner = anOwner;
 	}
 
 	/// ----------------------------------------------------------------------------------------
@@ -105,10 +112,19 @@ contract EIP4337Account is GnosisSafe, BaseAccount, EllipticCurve {
 		// consider restrictions on what entrypoint can call?
 		//return isOwner(recoveredSigner) ? 0 : SIG_VALIDATION_FAILED;
 
-		// ! tmp solution to get a single, simple sig
-		uint[2] memory sig = abi.decode(userOp.signature, (uint[2]));
+		// ! create method to deconstruct the sigs array
 
-		return validateSignature(userOpHash, sig, _owner) ? 0 : SIG_VALIDATION_FAILED;
+		// ! create test function to create proper p256 sigs
+		_ellipticCurveValidator.validateSignature(
+			0xf2424746de28d3e593fb6af9c8dff6d24de434350366e60312aacfe79dae94a8,
+			_owner,
+			[
+				0xd3c6949ab309ff80296ffb17cd2a5298ec23ad7f1fda03ca70f12353987303de,
+				0x42c164839f37f10fb2e6e5649c046a473a8d4db61d0602433fe32484d1c2d8d3
+			]
+		);
+
+		return true ? 0 : SIG_VALIDATION_FAILED;
 	}
 
 	/**

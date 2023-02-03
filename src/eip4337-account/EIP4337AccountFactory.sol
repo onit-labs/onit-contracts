@@ -83,8 +83,10 @@ contract EIP4337AccountFactory {
 			)
 		);
 
+		// Owner must be passed to safe setup as an array
 		address[] memory arrayOwner = new address[](1);
-		arrayOwner[0] = address(uint160(owner[0]));
+		// Take the last 20 bytes of the public key as the address
+		arrayOwner[0] = address(bytes20(keccak256(abi.encodePacked(owner[0], owner[1])) << 96));
 
 		// Call setup on safe adding owner and threshold
 		EIP4337Account(account).setup(

@@ -23,7 +23,7 @@ contract Module4337Test is Helper4337 {
 	/// -----------------------------------------------------------------------
 
 	function setUp() public {
-		// Check 4337 singelton is set in factory
+		// Check 4337 singelton is set in factory (base implementation for Forum 4337 accounts)
 		assertEq(
 			address(eip4337AccountFactory.eip4337AccountSingleton()),
 			address(eip4337Singleton),
@@ -41,6 +41,10 @@ contract Module4337Test is Helper4337 {
 			address(handler),
 			'handler not set'
 		);
+		// Check 4337 entryPoint is set in the singleton
+		//assertEq(address(eip4337Singleton.entryPoint()), address(entryPoint), 'entryPoint not set');
+
+		// Should also check validator but that is not public in 4337Account
 
 		// Deploy an account to be used in tests later
 		deployed4337AccountAddress = eip4337AccountFactory.createAccount(1, testSig1.signer);

@@ -12,6 +12,11 @@ import {EIP4337ValidationManager} from '../../../src/eip4337-account/EIP4337Vali
 import {EIP4337GroupAccount} from '../../../src/eip4337-module/EIP4337GroupAccount.sol';
 import {ForumSafe4337Factory} from '../../../src/eip4337-module/ForumSafe4337Factory.sol';
 
+// EllipticCurve validator used for p256 curves - compiled with v0.5.0
+/// @dev To save changes to folder structure, this is built elsewhere and added to the ./out folder
+///		 The file is the same as utils/EllipticCurve.sol, except uses 'pragma solidity 0.5.0;'
+import {IEllipticCurveValidator} from '@interfaces/IEllipticCurveValidator.sol';
+
 import './SafeTestConfig.t.sol';
 import './ForumModuleTestConfig.t.sol';
 
@@ -29,6 +34,8 @@ contract Helper4337 is Test, SafeTestConfig, ForumModuleTestConfig {
 	EIP4337AccountFactory public eip4337AccountFactory;
 	// Factory for 4337 group accounts
 	ForumSafe4337Factory public forumSafe4337Factory;
+	// Elliptic curve validator
+	IEllipticCurveValidator public ellipticCurveValidator;
 
 	// Addresses for easy use in tests
 	address internal entryPointAddress;
@@ -48,7 +55,12 @@ contract Helper4337 is Test, SafeTestConfig, ForumModuleTestConfig {
 		eip4337ValidationManager = new EIP4337ValidationManager();
 		eip4337ValidationManagerAddress = address(eip4337ValidationManager);
 
-		eip4337Singleton = new EIP4337Account();
+		// Validator used for p256 curves
+		ellipticCurveValidator = IEllipticCurveValidator(
+			deployCode('EllipticCurve5.sol:EllipticCurve5')
+		);
+
+		eip4337Singleton = new EIP4337Account(ellipticCurveValidator);
 		eip4337GroupSingleton = new EIP4337GroupAccount();
 
 		eip4337AccountFactory = new EIP4337AccountFactory(
@@ -75,6 +87,7 @@ contract Helper4337 is Test, SafeTestConfig, ForumModuleTestConfig {
 	// -----------------------------------------------------------------------
 
 	// Base for a  User Operation
+	// ! create multiple with gas profiles to match tests
 	UserOperation public userOpBase =
 		UserOperation({
 			sender: address(0),
@@ -82,8 +95,8 @@ contract Helper4337 is Test, SafeTestConfig, ForumModuleTestConfig {
 			initCode: new bytes(0),
 			callData: new bytes(0),
 			callGasLimit: 100000,
-			verificationGasLimit: 100000,
-			preVerificationGas: 210000,
+			verificationGasLimit: 10000000,
+			preVerificationGas: 21000000,
 			maxFeePerGas: 2,
 			maxPriorityFeePerGas: 1e9,
 			paymasterAndData: new bytes(0),
