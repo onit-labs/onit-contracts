@@ -133,7 +133,7 @@ contract Helper4337 is Test, SafeTestConfig, ForumModuleTestConfig {
 		bytes memory initCode,
 		bytes memory callData,
 		uint256 signerPk
-	) public returns (UserOperation memory userOp) {
+	) public view returns (UserOperation memory userOp) {
 		// Build on top of base op
 		userOp = userOpBase;
 
@@ -141,13 +141,9 @@ contract Helper4337 is Test, SafeTestConfig, ForumModuleTestConfig {
 		userOp.sender = sender;
 		userOp.initCode = initCode;
 		userOp.callData = callData;
+		userOp.signature = abi.encodePacked(testSig1.sig[0], testSig1.sig[1]);
 
 		// ! get new sig type
-
-		// Get sig and add to op (sign the hast of the userop)
-		bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
-		(uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, userOpHash);
-		userOp.signature = abi.encodePacked(r, s, v);
 	}
 
 	// Build payload which the entryPoint will call on the sender 4337 account

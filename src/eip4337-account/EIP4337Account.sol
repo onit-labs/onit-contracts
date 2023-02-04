@@ -3,9 +3,10 @@ pragma solidity ^0.8.15;
 
 import {GnosisSafe, Enum} from '@gnosis/GnosisSafe.sol';
 
-// Modified BaseAccount interface with nonce removed
-import {BaseAccount, IEntryPoint, UserOperation} from '@interfaces/BaseAccount.sol';
+// Interface of the elliptic curve validator contract
 import {IEllipticCurveValidator} from '@interfaces/IEllipticCurveValidator.sol';
+// Modified BaseAccount with nonce removed
+import {BaseAccount, IEntryPoint, UserOperation} from '@interfaces/BaseAccount.sol';
 
 import 'forge-std/console.sol';
 
@@ -62,6 +63,24 @@ contract EIP4337Account is GnosisSafe, BaseAccount {
 	}
 
 	/// ----------------------------------------------------------------------------------------
+	///							EIP-712 STYLE LOGIC
+	/// ----------------------------------------------------------------------------------------
+
+	function DOMAIN_SEPARATOR() public view virtual returns (bytes32) {
+		return
+			keccak256(
+				abi.encode(
+					// keccak256('EIP712Domain(string version,uint256 chainId,address verifyingContract)')
+					0x8990460956f759a70e263603272cebd0a6ac6dc523b7334ddce05daee4d94d83,
+					//keccak256('0.1.0'),
+					0x20c949dc33efc49625bfe13e8da716e725117224147d54a7f00c902f6bf68693,
+					block.chainid,
+					address(this)
+				)
+			);
+	}
+
+	/// ----------------------------------------------------------------------------------------
 	///							ACCOUNT LOGIC
 	/// ----------------------------------------------------------------------------------------
 
@@ -108,23 +127,18 @@ contract EIP4337Account is GnosisSafe, BaseAccount {
 		bytes32 userOpHash,
 		address
 	) internal virtual override returns (uint256 sigTimeRange) {
-		// userOp.sigs should be a hash of the userOpHash, and the proposal hash for this contract
-		// consider restrictions on what entrypoint can call?
-		//return isOwner(recoveredSigner) ? 0 : SIG_VALIDATION_FAILED;
-
-		// ! create method to deconstruct the sigs array
-
 		// ! create test function to create proper p256 sigs
-		_ellipticCurveValidator.validateSignature(
-			0xf2424746de28d3e593fb6af9c8dff6d24de434350366e60312aacfe79dae94a8,
-			_owner,
-			[
-				0xd3c6949ab309ff80296ffb17cd2a5298ec23ad7f1fda03ca70f12353987303de,
-				0x42c164839f37f10fb2e6e5649c046a473a8d4db61d0602433fe32484d1c2d8d3
-			]
-		);
+		// ! TESTING WITH SET MESSAGE BELOW IN VALIDATE SIGNATURE
+		bytes32 hash = keccak256(abi.encodePacked(userOpHash, DOMAIN_SEPARATOR()));
 
-		return true ? 0 : SIG_VALIDATION_FAILED;
+		return
+			_ellipticCurveValidator.validateSignature(
+				0xf2424746de28d3e593fb6af9c8dff6d24de434350366e60312aacfe79dae94a8,
+				_owner,
+				abi.decode(userOp.signature, (uint[2]))
+			)
+				? 0
+				: SIG_VALIDATION_FAILED;
 	}
 
 	/**
