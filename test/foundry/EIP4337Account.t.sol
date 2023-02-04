@@ -100,8 +100,7 @@ contract Module4337Test is Helper4337 {
 		UserOperation memory userOp = buildUserOp(
 			preCalculatedAccountAddress,
 			initCode,
-			new bytes(0),
-			alicePk
+			new bytes(0)
 		);
 		UserOperation[] memory userOps = new UserOperation[](1);
 		userOps[0] = userOp;
@@ -142,8 +141,7 @@ contract Module4337Test is Helper4337 {
 		UserOperation memory userOp = buildUserOp(
 			deployed4337AccountAddress,
 			new bytes(0),
-			abi.encodeWithSignature('setEntryPoint(address)', address(this)),
-			alicePk
+			abi.encodeWithSignature('setEntryPoint(address)', address(this))
 		);
 		UserOperation[] memory userOps = new UserOperation[](1);
 		userOps[0] = userOp;
@@ -164,18 +162,14 @@ contract Module4337Test is Helper4337 {
 			alice,
 			0.5 ether,
 			new bytes(0),
-			Enum.Operation.Call,
-			address(0),
-			address(0),
-			0
+			Enum.Operation.Call
 		);
 
 		// Build userop
 		UserOperation memory userOp = buildUserOp(
 			deployed4337AccountAddress,
 			new bytes(0),
-			payload,
-			alicePk
+			payload
 		);
 		UserOperation[] memory userOps = new UserOperation[](1);
 		userOps[0] = userOp;
@@ -207,18 +201,14 @@ contract Module4337Test is Helper4337 {
 			deployed4337AccountAddress,
 			0,
 			enableModulePayload,
-			Enum.Operation.Call,
-			address(0),
-			address(0),
-			0
+			Enum.Operation.Call
 		);
 
 		// Build userop
 		UserOperation memory userOp = buildUserOp(
 			deployed4337AccountAddress,
 			new bytes(0),
-			payload,
-			alicePk
+			payload
 		);
 		UserOperation[] memory userOps = new UserOperation[](1);
 		userOps[0] = userOp;

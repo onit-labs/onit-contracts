@@ -96,10 +96,7 @@ contract EIP4337Account is GnosisSafe, BaseAccount {
 		address to,
 		uint256 value,
 		bytes memory data,
-		Enum.Operation operation,
-		address paymaster,
-		address approveToken,
-		uint256 approveAmount
+		Enum.Operation operation
 	) external virtual {
 		_requireFromEntryPointOrOwner();
 
@@ -129,13 +126,13 @@ contract EIP4337Account is GnosisSafe, BaseAccount {
 	) internal virtual override returns (uint256 sigTimeRange) {
 		// ! create test function to create proper p256 sigs
 		// ! TESTING WITH SET MESSAGE BELOW IN VALIDATE SIGNATURE
-		bytes32 hash = keccak256(abi.encodePacked(userOpHash, DOMAIN_SEPARATOR()));
+		//bytes32 hash = keccak256(abi.encodePacked(userOpHash, DOMAIN_SEPARATOR()));
 
 		return
 			_ellipticCurveValidator.validateSignature(
 				0xf2424746de28d3e593fb6af9c8dff6d24de434350366e60312aacfe79dae94a8,
-				_owner,
-				abi.decode(userOp.signature, (uint[2]))
+				abi.decode(userOp.signature, (uint[2])),
+				_owner
 			)
 				? 0
 				: SIG_VALIDATION_FAILED;

@@ -131,8 +131,7 @@ contract Helper4337 is Test, SafeTestConfig, ForumModuleTestConfig {
 	function buildUserOp(
 		address sender,
 		bytes memory initCode,
-		bytes memory callData,
-		uint256 signerPk
+		bytes memory callData
 	) public view returns (UserOperation memory userOp) {
 		// Build on top of base op
 		userOp = userOpBase;
@@ -151,21 +150,15 @@ contract Helper4337 is Test, SafeTestConfig, ForumModuleTestConfig {
 		address to,
 		uint256 value,
 		bytes memory data,
-		Enum.Operation operation,
-		address paymaster,
-		address approveToken,
-		uint256 approveAmount
+		Enum.Operation operation
 	) internal pure returns (bytes memory) {
 		return
 			abi.encodeWithSignature(
-				'execute(address,uint256,bytes,uint8,address,address,uint256)',
+				'execute(address,uint256,bytes,uint8)',
 				to,
 				value,
 				data,
-				operation,
-				paymaster,
-				approveToken,
-				approveAmount
+				operation
 			);
 		// abi.encode(operationType, _accounts, _amounts, _payloads);
 	}
