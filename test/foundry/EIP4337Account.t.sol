@@ -18,6 +18,11 @@ contract Module4337Test is Helper4337 {
 	EIP4337Account private deployed4337Account;
 	address payable private deployed4337AccountAddress;
 
+	uint256 fork;
+
+	bytes32 internal salt1 = keccak256('0x1');
+	bytes32 internal salt2 = keccak256('0x2');
+
 	/// -----------------------------------------------------------------------
 	/// Setup
 	/// -----------------------------------------------------------------------
@@ -47,11 +52,13 @@ contract Module4337Test is Helper4337 {
 		// Should also check validator but that is not public in 4337Account
 
 		// Deploy an account to be used in tests later
-		deployed4337AccountAddress = eip4337AccountFactory.createAccount(1, testSig1.signer);
-		deployed4337Account = EIP4337Account(deployed4337AccountAddress);
+		//deployed4337AccountAddress = eip4337AccountFactory.createAccount(1, testSig1.signer);
+		//deployed4337Account = EIP4337Account(deployed4337AccountAddress);
 
 		// Deal funds to account
-		deal(deployed4337AccountAddress, 1 ether);
+		//deal(deployed4337AccountAddress, 1 ether);
+
+		fork = vm.createFork(vm.envString('MUMBAI_RPC_URL'));
 	}
 
 	/// -----------------------------------------------------------------------
@@ -59,13 +66,16 @@ contract Module4337Test is Helper4337 {
 	/// -----------------------------------------------------------------------
 
 	function testFactoryDeploy() public {
+		// Deploy an account to be used in tests later
+		deployed4337Account = EIP4337Account(deployed4337AccountAddress);
+
 		// Check that the account from setup is deployed and data is set on account, and safe
 		assertEq(deployed4337Account.owner()[0], testSig1.signer[0], 'owner not set');
 		assertEq(deployed4337Account.owner()[1], testSig1.signer[1], 'owner not set');
 		assertEq(deployed4337Account.getThreshold(), 1, 'threshold not set');
 		assertEq(
 			deployed4337Account.getOwners()[0],
-			address(uint160(testSig1.signer[0])),
+			calculateOwnerAddress(testSig1.signer),
 			'owner not set on safe'
 		);
 		assertEq(
@@ -75,25 +85,54 @@ contract Module4337Test is Helper4337 {
 		);
 	}
 
-	function testFactoryDeployFromEntryPoint() public {
-		// Create account for test, different to the above to ensure entry point deployments also work
-		uint[2] memory tmpSigner = [uint256(123), uint256(456)];
+	// function testFork() public {
+	// 	uint[2] memory tmpSigner = [uint256(123), uint256(456)];
 
+	// 	// Calculate address in advance to use as sender
+	// 	address preCalculatedAccountAddress = (eip4337AccountFactory2).getAddress2(
+	// 		keccak256('0x12'),
+	// 		tmpSigner
+	// 	);
+	// 	// Deal funds to account
+	// 	deal(preCalculatedAccountAddress, 1 ether);
+	// 	// Cast to EIP4337Account - used to make some test assertions easier
+	// 	EIP4337Account testNew4337Account = EIP4337Account(payable(preCalculatedAccountAddress));
+
+	// 	bytes memory createData = abi.encodePacked(
+	// 		// constructor
+	// 		bytes10(0x3d602d80600a3d3981f3),
+	// 		// proxy code
+	// 		bytes10(0x363d3d373d3d3d363d73),
+	// 		eip4337Singleton,
+	// 		bytes15(0x5af43d82803e903d91602b57fd5bf3)
+	// 	);
+
+	// 	(bool s, bytes memory r) = address(0x4e59b44847b379578588920cA78FbF26c0B4956C).call{
+	// 		value: 0
+	// 	}(abi.encodePacked(keccak256('0x12'), createData));
+
+	// 	console.logBytes(r);
+	// }
+
+	function testFactoryDeployFromEntryPoint2() public {
 		// Encode the calldata for the factory to create an account
 		bytes memory factoryCalldata = abi.encodeWithSignature(
-			'createAccount(uint256,uint256[2])',
-			1,
-			tmpSigner
+			'createAccount(bytes32,uint256[2])',
+			salt2,
+			testSig1.signer
 		);
 
 		// Prepend the address of the factory
 		bytes memory initCode = abi.encodePacked(eip4337AccountFactory, factoryCalldata);
 
 		// Calculate address in advance to use as sender
-		address preCalculatedAccountAddress = (eip4337AccountFactory).getAddress(1, tmpSigner);
+		address preCalculatedAccountAddress = (eip4337AccountFactory).getAddress(
+			salt2,
+			testSig1.signer
+		);
 		// Deal funds to account
 		deal(preCalculatedAccountAddress, 1 ether);
-		// Cast to EIP4337Account
+		// Cast to EIP4337Account - used to make some test assertions easier
 		EIP4337Account testNew4337Account = EIP4337Account(payable(preCalculatedAccountAddress));
 
 		// Build userop (no need for payload, use empty bytes)
@@ -104,17 +143,17 @@ contract Module4337Test is Helper4337 {
 		);
 		UserOperation[] memory userOps = new UserOperation[](1);
 		userOps[0] = userOp;
-
+		console.log('pre handle');
 		// Handle userOp
 		entryPoint.handleOps(userOps, payable(alice));
 
 		// Check that the account is deployed and data is set on account, and safe
-		assertEq(testNew4337Account.owner()[0], tmpSigner[0], 'owner not set');
-		assertEq(testNew4337Account.owner()[1], tmpSigner[1], 'owner not set');
+		assertEq(testNew4337Account.owner()[0], testSig1.signer[0], 'owner not set');
+		assertEq(testNew4337Account.owner()[1], testSig1.signer[1], 'owner not set');
 		assertEq(testNew4337Account.getThreshold(), 1, 'threshold not set');
 		assertEq(
 			testNew4337Account.getOwners()[0],
-			address(uint160(tmpSigner[0])),
+			calculateOwnerAddress(testSig1.signer),
 			'owner not set on safe'
 		);
 		assertEq(
@@ -233,5 +272,13 @@ contract Module4337Test is Helper4337 {
 
 	receive() external payable {
 		// Allows this contract to receive ether
+	}
+
+	/// -----------------------------------------------------------------------
+	/// Helper functions
+	/// -----------------------------------------------------------------------
+
+	function calculateOwnerAddress(uint[2] memory owner) internal pure returns (address) {
+		return address(bytes20(keccak256(abi.encodePacked(owner[0], owner[1])) << 96));
 	}
 }

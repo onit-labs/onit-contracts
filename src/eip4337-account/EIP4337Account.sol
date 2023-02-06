@@ -21,8 +21,6 @@ contract EIP4337Account is GnosisSafe, BaseAccount {
 	///							ACCOUNT STORAGE
 	/// ----------------------------------------------------------------------------------------
 
-	error Initialised();
-
 	error Unauthorized();
 
 	// Public key for secp256r1 signer
@@ -31,7 +29,7 @@ contract EIP4337Account is GnosisSafe, BaseAccount {
 	// Entry point allowed to call methods directly on this contract
 	IEntryPoint internal _entryPoint;
 
-	// Contract used to validate the signature was signed by the owner
+	// Contract used to validate the secp256r1 signature was signed by the owner
 	IEllipticCurveValidator internal immutable _ellipticCurveValidator;
 
 	/// ----------------------------------------------------------------------------------------
@@ -41,7 +39,6 @@ contract EIP4337Account is GnosisSafe, BaseAccount {
 	/**
 	 * @notice Constructor
 	 * @dev This contract should be deployed using a proxy, the constructor should not be called
-	 *		Pre set the entryPoint and ellipticCurveValidator to save gas on deployments
 	 */
 	constructor(IEllipticCurveValidator aValidator) GnosisSafe() {
 		_owner = [1, 1];
@@ -51,15 +48,32 @@ contract EIP4337Account is GnosisSafe, BaseAccount {
 
 	/**
 	 * @notice Initialize the account
-	 * @param anOwner Public key for secp256r1 signer
-	 * @dev This method should only be called
+	 * @param initData Encoded: EntryPoint, Public key for secp256r1 signer, and fallback handler
+	 * @dev This method should only be called once, and setup() will revert if needed
 	 */
-	function initialize(IEntryPoint anEntryPoint, uint[2] calldata anOwner) public virtual {
-		if (_owner[0] != 0 || _owner[1] != 0) revert Initialised();
+	function initialize(bytes calldata initData) public virtual {
+		(IEntryPoint anEntryPoint, uint[2] memory anOwner, address gnosisFallbackLibrary) = abi
+			.decode(initData, (IEntryPoint, uint[2], address));
 
 		_entryPoint = anEntryPoint;
 
 		_owner = anOwner;
+
+		// Owner must be passed to safe setup as an array of addresses
+		address[] memory arrayOwner = new address[](1);
+		// Take the last 20 bytes of the hashed public key as the address
+		arrayOwner[0] = address(bytes20(keccak256(abi.encodePacked(anOwner[0], anOwner[1])) << 96));
+
+		this.setup(
+			arrayOwner, // ! check if acceptable substitue for safe owner address
+			1,
+			address(0),
+			new bytes(0),
+			gnosisFallbackLibrary,
+			address(0),
+			0,
+			payable(address(0))
+		);
 	}
 
 	/// ----------------------------------------------------------------------------------------
@@ -84,14 +98,6 @@ contract EIP4337Account is GnosisSafe, BaseAccount {
 	///							ACCOUNT LOGIC
 	/// ----------------------------------------------------------------------------------------
 
-	function entryPoint() public view virtual override returns (IEntryPoint) {
-		return _entryPoint;
-	}
-
-	function owner() public view virtual returns (uint[2] memory) {
-		return _owner;
-	}
-
 	function execute(
 		address to,
 		uint256 value,
@@ -110,6 +116,14 @@ contract EIP4337Account is GnosisSafe, BaseAccount {
 		_entryPoint = anEntryPoint;
 	}
 
+	function entryPoint() public view virtual override returns (IEntryPoint) {
+		return _entryPoint;
+	}
+
+	function owner() public view virtual returns (uint[2] memory) {
+		return _owner;
+	}
+
 	/// ----------------------------------------------------------------------------------------
 	///							INTERNAL METHODS
 	/// ----------------------------------------------------------------------------------------
@@ -118,15 +132,16 @@ contract EIP4337Account is GnosisSafe, BaseAccount {
 		if (msg.sender != address(entryPoint())) revert Unauthorized();
 	}
 
-	// ! very minimal validation, not secure at all
 	function _validateSignature(
 		UserOperation calldata userOp,
-		bytes32 userOpHash,
+		bytes32, //userOpHash,
 		address
 	) internal virtual override returns (uint256 sigTimeRange) {
 		// ! create test function to create proper p256 sigs
 		// ! TESTING WITH SET MESSAGE BELOW IN VALIDATE SIGNATURE
 		//bytes32 hash = keccak256(abi.encodePacked(userOpHash, DOMAIN_SEPARATOR()));
+
+		// json serialise userOpHash, a constant (webauthn.get or similar), and app domain
 
 		return
 			_ellipticCurveValidator.validateSignature(
