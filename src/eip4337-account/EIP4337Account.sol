@@ -104,14 +104,14 @@ contract EIP4337Account is GnosisSafe, BaseAccount {
 		bytes memory data,
 		Enum.Operation operation
 	) external virtual {
-		_requireFromEntryPointOrOwner();
+		_requireFromEntryPoint();
 
 		// Execute transaction without further confirmations.
 		execute(to, value, data, operation, gasleft());
 	}
 
 	function setEntryPoint(IEntryPoint anEntryPoint) external virtual {
-		_requireFromEntryPointOrOwner();
+		_requireFromEntryPoint();
 
 		_entryPoint = anEntryPoint;
 	}
@@ -127,10 +127,6 @@ contract EIP4337Account is GnosisSafe, BaseAccount {
 	/// ----------------------------------------------------------------------------------------
 	///							INTERNAL METHODS
 	/// ----------------------------------------------------------------------------------------
-
-	function _requireFromEntryPointOrOwner() internal view {
-		if (msg.sender != address(entryPoint())) revert Unauthorized();
-	}
 
 	function _validateSignature(
 		UserOperation calldata userOp,

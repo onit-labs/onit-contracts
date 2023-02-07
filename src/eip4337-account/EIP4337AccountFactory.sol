@@ -16,15 +16,6 @@ contract EIP4337AccountFactory {
 	/// Errors and Events
 	/// ----------------------------------------------------------------------------------------
 
-	event ForumSafeDeployed(
-		EIP4337Account indexed forumGroup,
-		address indexed gnosisSafe,
-		string name,
-		string symbol,
-		address[] voters,
-		uint32[2] govSettings
-	);
-
 	error NullDeploy();
 
 	error AccountInitFailed();
@@ -84,26 +75,30 @@ contract EIP4337AccountFactory {
 	 * @param salt Salt for deterministic address generation
 	 * @param owner Public key for secp256r1 signer
 	 * @return account The deployed account
-	 * @dev This method returns an existing account address so that entryPoint.getSenderAddress() would work even after account creation
+	 * @dev Returns an existing account address so that entryPoint.getSenderAddress() works even after account creation
+	 * @dev Salt should be keccak256(abi.encode(otherSalt, owner)) where otherSalt is some uint
 	 */
 	function createAccount(
 		bytes32 salt,
 		uint[2] calldata owner
 	) external payable virtual returns (address payable account) {
-		address addr = getAddress(salt, owner);
+		address addr = getAddress(salt);
 		uint codeSize = addr.code.length;
 		if (codeSize > 0) {
 			return payable(addr);
 		}
 
+		// Deploy the account determinstically based on the salt (a combination of owner and otherSalt)
 		(bool successCreate, bytes memory responseCreate) = DETERMINISTIC_DEPLOYMENT_PROXY.call{
 			value: 0
 		}(abi.encodePacked(salt, createProxyData));
 
-		if (!successCreate) revert NullDeploy();
-
+		// If successful, convert response to address to be returned
 		account = payable(address(uint160(bytes20(responseCreate))));
 
+		if (!successCreate || account == address(0)) revert NullDeploy();
+
+		// Initialize the account and Safe
 		(bool successInit, ) = account.call(
 			abi.encodeCall(
 				eip4337AccountSingleton.initialize,
@@ -111,7 +106,7 @@ contract EIP4337AccountFactory {
 			)
 		);
 
-		if (!successInit || account == address(0)) revert AccountInitFailed();
+		if (!successInit) revert AccountInitFailed();
 	}
 
 	/// ----------------------------------------------------------------------------------------
@@ -119,10 +114,10 @@ contract EIP4337AccountFactory {
 	/// ----------------------------------------------------------------------------------------
 
 	/**
-	 * calculate the counterfactual address of this account as it would be returned by createAccount()
+	 * @notice Get the address of an account that would be returned by createAccount()
+	 * @dev Salt should be keccak256(abi.encode(otherSalt, owner)) where otherSalt is some uint
 	 */
-	// ! integrate owner here also
-	function getAddress(bytes32 salt, uint[2] calldata owner) public view returns (address clone) {
+	function getAddress(bytes32 salt) public view returns (address clone) {
 		return
 			address(
 				bytes20(

@@ -18,7 +18,8 @@ contract Module4337Test is Helper4337 {
 	EIP4337Account private deployed4337Account;
 	address payable private deployed4337AccountAddress;
 
-	uint256 fork;
+	uint256 internal mumbaiFork;
+	uint256 internal fujiFork;
 
 	bytes32 internal salt1 = keccak256('0x1');
 	bytes32 internal salt2 = keccak256('0x2');
@@ -58,7 +59,8 @@ contract Module4337Test is Helper4337 {
 		// Deal funds to account
 		//deal(deployed4337AccountAddress, 1 ether);
 
-		fork = vm.createFork(vm.envString('MUMBAI_RPC_URL'));
+		mumbaiFork = vm.createFork(vm.envString('MUMBAI_RPC_URL'));
+		fujiFork = vm.createFork(vm.envString('FUJI_RPC_URL'));
 	}
 
 	/// -----------------------------------------------------------------------
@@ -66,9 +68,6 @@ contract Module4337Test is Helper4337 {
 	/// -----------------------------------------------------------------------
 
 	function testFactoryDeploy() public {
-		// Deploy an account to be used in tests later
-		deployed4337Account = EIP4337Account(deployed4337AccountAddress);
-
 		// Check that the account from setup is deployed and data is set on account, and safe
 		assertEq(deployed4337Account.owner()[0], testSig1.signer[0], 'owner not set');
 		assertEq(deployed4337Account.owner()[1], testSig1.signer[1], 'owner not set');
@@ -85,36 +84,7 @@ contract Module4337Test is Helper4337 {
 		);
 	}
 
-	// function testFork() public {
-	// 	uint[2] memory tmpSigner = [uint256(123), uint256(456)];
-
-	// 	// Calculate address in advance to use as sender
-	// 	address preCalculatedAccountAddress = (eip4337AccountFactory2).getAddress2(
-	// 		keccak256('0x12'),
-	// 		tmpSigner
-	// 	);
-	// 	// Deal funds to account
-	// 	deal(preCalculatedAccountAddress, 1 ether);
-	// 	// Cast to EIP4337Account - used to make some test assertions easier
-	// 	EIP4337Account testNew4337Account = EIP4337Account(payable(preCalculatedAccountAddress));
-
-	// 	bytes memory createData = abi.encodePacked(
-	// 		// constructor
-	// 		bytes10(0x3d602d80600a3d3981f3),
-	// 		// proxy code
-	// 		bytes10(0x363d3d373d3d3d363d73),
-	// 		eip4337Singleton,
-	// 		bytes15(0x5af43d82803e903d91602b57fd5bf3)
-	// 	);
-
-	// 	(bool s, bytes memory r) = address(0x4e59b44847b379578588920cA78FbF26c0B4956C).call{
-	// 		value: 0
-	// 	}(abi.encodePacked(keccak256('0x12'), createData));
-
-	// 	console.logBytes(r);
-	// }
-
-	function testFactoryDeployFromEntryPoint2() public {
+	function testFactoryDeployFromEntryPoint() public {
 		// Encode the calldata for the factory to create an account
 		bytes memory factoryCalldata = abi.encodeWithSignature(
 			'createAccount(bytes32,uint256[2])',
@@ -127,8 +97,7 @@ contract Module4337Test is Helper4337 {
 
 		// Calculate address in advance to use as sender
 		address preCalculatedAccountAddress = (eip4337AccountFactory).getAddress(
-			salt2,
-			testSig1.signer
+			accountSalt(2, testSig1.signer)
 		);
 		// Deal funds to account
 		deal(preCalculatedAccountAddress, 1 ether);
@@ -161,6 +130,43 @@ contract Module4337Test is Helper4337 {
 			address(entryPoint),
 			'entry point not set'
 		);
+	}
+
+	function testCorrectAddressCrossChain() public {
+		address tmpMumbai;
+		address tmpFuji;
+
+		// Fork Mumbai and create an account from a fcatory
+		vm.selectFork(mumbaiFork);
+
+		eip4337AccountFactory = new EIP4337AccountFactory(
+			eip4337Singleton,
+			entryPoint,
+			address(handler)
+		);
+
+		// Deploy an account to be used in tests
+		tmpMumbai = eip4337AccountFactory.createAccount(
+			accountSalt(1, testSig1.signer),
+			testSig1.signer
+		);
+
+		// Fork Fuji and create an account from a fcatory
+		vm.selectFork(fujiFork);
+
+		eip4337AccountFactory = new EIP4337AccountFactory(
+			eip4337Singleton,
+			entryPoint,
+			address(handler)
+		);
+
+		// Deploy an account to be used in tests
+		tmpFuji = eip4337AccountFactory.createAccount(
+			accountSalt(1, testSig1.signer),
+			testSig1.signer
+		);
+
+		assertEq(tmpMumbai, tmpFuji, 'address not the same');
 	}
 
 	/// -----------------------------------------------------------------------
@@ -280,5 +286,9 @@ contract Module4337Test is Helper4337 {
 
 	function calculateOwnerAddress(uint[2] memory owner) internal pure returns (address) {
 		return address(bytes20(keccak256(abi.encodePacked(owner[0], owner[1])) << 96));
+	}
+
+	function accountSalt(uint salt, uint[2] memory owner) internal pure returns (bytes32) {
+		return keccak256(abi.encodePacked(salt, owner));
 	}
 }
