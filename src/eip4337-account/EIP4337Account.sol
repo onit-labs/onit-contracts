@@ -8,12 +8,24 @@ import {IEllipticCurveValidator} from '@interfaces/IEllipticCurveValidator.sol';
 // Modified BaseAccount with nonce removed
 import {BaseAccount, IEntryPoint, UserOperation} from '@interfaces/BaseAccount.sol';
 
+import {Base64} from '@libraries/Base64.sol';
+
 import 'forge-std/console.sol';
 
 /**
  * @notice EIP4337 Managed Gnosis Safe Account Implementation
  * @author Forum (https://forumdaos.com)
  * @dev Uses infinitism style base 4337 interface, with gnosis safe account
+ */
+
+/**
+ * TODO
+ * - Handle variable ClientDataJson
+ * - Consider security of added a generated address as owner on safe
+ * - Integrate domain seperator in validation of signatures
+ * - Use as a module until more finalised version is completed (for easier upgradability)
+ * - Consider a function to upgrade owner
+ * - Add restriction to check entryPoint is valid before setting
  */
 
 contract EIP4337Account is GnosisSafe, BaseAccount {
@@ -59,13 +71,19 @@ contract EIP4337Account is GnosisSafe, BaseAccount {
 
 		_owner = anOwner;
 
+		// ! tmp testing
+		// _owner = [
+		// 	0x7088c8f47cbe4745dc5e9e44302dcf1a528766b48470dea245076b8e91ebe2c5,
+		// 	0xe498cf1f4f1ed27c1db3e78d389673bb40f26fc7d2d9e3ae8ca247ff3ba6c570
+		// ];
+
 		// Owner must be passed to safe setup as an array of addresses
 		address[] memory arrayOwner = new address[](1);
 		// Take the last 20 bytes of the hashed public key as the address
 		arrayOwner[0] = address(bytes20(keccak256(abi.encodePacked(anOwner[0], anOwner[1])) << 96));
 
 		this.setup(
-			arrayOwner, // ! check if acceptable substitue for safe owner address
+			arrayOwner,
 			1,
 			address(0),
 			new bytes(0),
@@ -128,21 +146,45 @@ contract EIP4337Account is GnosisSafe, BaseAccount {
 	///							INTERNAL METHODS
 	/// ----------------------------------------------------------------------------------------
 
+	// ! testing only
 	function _validateSignature(
 		UserOperation calldata userOp,
-		bytes32, //userOpHash,
+		bytes32 userOpHash,
 		address
 	) internal virtual override returns (uint256 sigTimeRange) {
-		// ! create test function to create proper p256 sigs
-		// ! TESTING WITH SET MESSAGE BELOW IN VALIDATE SIGNATURE
-		//bytes32 hash = keccak256(abi.encodePacked(userOpHash, DOMAIN_SEPARATOR()));
+		// Extract the passkey generated signature and authentacator data
+		(uint256[2] memory s, bytes memory auth) = abi.decode(
+			userOp.signature,
+			(uint256[2], bytes)
+		);
 
-		// json serialise userOpHash, a constant (webauthn.get or similar), and app domain
+		console.log('-----------------');
+		console.logBytes(auth);
+
+		//bytes32(0x8381a509c43f9a7fe5a80145cace2799988f6e018fb24ffee62b87743fac38bb)
+		bytes32 hashedClientData = sha256(
+			abi.encodePacked(
+				'{"type":"webauthn.get","challenge":"',
+				Base64.encode(abi.encodePacked(userOpHash)),
+				'","origin":"https://development.forumdaos.com"}'
+			)
+		);
+
+		bytes32 message = sha256(
+			abi.encodePacked(
+				//userOp.signature[64:],
+				hex'1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000', //'1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000',
+				hashedClientData
+			)
+		);
+
+		console.logBytes32(message);
 
 		return
 			_ellipticCurveValidator.validateSignature(
-				0xf2424746de28d3e593fb6af9c8dff6d24de434350366e60312aacfe79dae94a8,
-				abi.decode(userOp.signature, (uint[2])),
+				//bytes32(0x331e04c82b160721ff30b8b6cd656a11331620b83e938ddca3eb29cf71bbc355),
+				message,
+				s,
 				_owner
 			)
 				? 0

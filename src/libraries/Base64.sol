@@ -5,9 +5,10 @@ pragma solidity ^0.8.13;
 /// @title Base64
 /// @notice Provides a function for encoding some bytes in base64
 /// @author Brecht Devos <brecht@loopring.org>
+/// @dev Modified to replace '/' with '_' and not pad with '='
 library Base64 {
 	bytes internal constant TABLE =
-		'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+		'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+_';
 
 	/// @notice Encodes some bytes to the base64 representation
 	function encode(bytes memory data) internal pure returns (string memory) {
@@ -48,13 +49,13 @@ library Base64 {
 				resultPtr := add(resultPtr, 4)
 			}
 
-			switch mod(len, 3)
-			case 1 {
-				mstore(sub(resultPtr, 2), shl(240, 0x3d3d))
-			}
-			case 2 {
-				mstore(sub(resultPtr, 1), shl(248, 0x3d))
-			}
+			// switch mod(len, 3)
+			// case 1 {
+			// 	mstore(sub(resultPtr, 2), shl(240, 0x3d3d))
+			// }
+			// case 2 {
+			// 	mstore(sub(resultPtr, 1), shl(248, 0x3d))
+			// }
 
 			mstore(result, encodedLen)
 		}
