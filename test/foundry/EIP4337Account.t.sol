@@ -24,6 +24,8 @@ contract Module4337Test is Helper4337 {
 	bytes32 internal salt1 = keccak256('0x1');
 	bytes32 internal salt2 = keccak256('0x2');
 
+	bytes internal basicTransferPayload;
+
 	/// -----------------------------------------------------------------------
 	/// Setup
 	/// -----------------------------------------------------------------------
@@ -50,14 +52,23 @@ contract Module4337Test is Helper4337 {
 		// Check 4337 entryPoint is set in the singleton
 		//assertEq(address(eip4337Singleton.entryPoint()), address(entryPoint), 'entryPoint not set');
 
-		// Should also check validator but that is not public in 4337Account
-
 		// Deploy an account to be used in tests later
-		//deployed4337AccountAddress = eip4337AccountFactory.createAccount(1, testSig1.signer);
-		//deployed4337Account = EIP4337Account(deployed4337AccountAddress);
+		deployed4337AccountAddress = eip4337AccountFactory.createAccount(
+			accountSalt(1, testSig1.signer),
+			testSig1.signer
+		);
+		deployed4337Account = EIP4337Account(deployed4337AccountAddress);
 
 		// Deal funds to account
-		//deal(deployed4337AccountAddress, 1 ether);
+		deal(deployed4337AccountAddress, 1 ether);
+
+		// Payload used in some tests
+		basicTransferPayload = buildExecutionPayload(
+			alice,
+			0.5 ether,
+			new bytes(0),
+			Enum.Operation.Call
+		);
 
 		mumbaiFork = vm.createFork(vm.envString('MUMBAI_RPC_URL'));
 		fujiFork = vm.createFork(vm.envString('FUJI_RPC_URL'));
@@ -106,7 +117,9 @@ contract Module4337Test is Helper4337 {
 
 		// Build userop (no need for payload, use empty bytes)
 		UserOperation memory userOp = buildUserOp(
+			1, // use test account 1
 			preCalculatedAccountAddress,
+			0,
 			initCode,
 			new bytes(0)
 		);
@@ -184,7 +197,9 @@ contract Module4337Test is Helper4337 {
 
 		// Build userop to set entrypoint to this contract as a test
 		UserOperation memory userOp = buildUserOp(
+			1, // use test account 1
 			deployed4337AccountAddress,
+			deployed4337Account.nonce(),
 			new bytes(0),
 			abi.encodeWithSignature('setEntryPoint(address)', address(this))
 		);
@@ -203,18 +218,13 @@ contract Module4337Test is Helper4337 {
 	}
 
 	function test4337AccountTransfer() public {
-		bytes memory payload = buildExecutionPayload(
-			alice,
-			0.5 ether,
-			new bytes(0),
-			Enum.Operation.Call
-		);
-
 		// Build userop
 		UserOperation memory userOp = buildUserOp(
+			2, // use test account 2
 			deployed4337AccountAddress,
+			deployed4337Account.nonce(),
 			new bytes(0),
-			payload
+			basicTransferPayload
 		);
 		UserOperation[] memory userOps = new UserOperation[](1);
 		userOps[0] = userOp;
@@ -251,7 +261,9 @@ contract Module4337Test is Helper4337 {
 
 		// Build userop
 		UserOperation memory userOp = buildUserOp(
+			1, // use test account 1
 			deployed4337AccountAddress,
+			deployed4337Account.nonce(),
 			new bytes(0),
 			payload
 		);
@@ -268,12 +280,49 @@ contract Module4337Test is Helper4337 {
 
 		// Check updated balances
 		assertEq(deployed4337AccountAddress.balance, 1 ether - gas, 'balance not updated');
-
 		// Check account nonce
 		assertEq(deployed4337Account.nonce(), 1, 'nonce not updated');
-
 		// Check module is enabled
 		assertTrue(deployed4337Account.isModuleEnabled(address(this)), 'module not enabled');
+	}
+
+	// ! Double check with new validation including the domain seperator
+	function testCannotReplaySig() public {
+		// Build first userop
+		UserOperation memory userOp = buildUserOp(
+			1, // use test account 1
+			deployed4337AccountAddress,
+			deployed4337Account.nonce(),
+			new bytes(0),
+			basicTransferPayload
+		);
+		UserOperation[] memory userOps = new UserOperation[](1);
+		userOps[0] = userOp;
+
+		// Check nonce before tx
+		assertEq(deployed4337Account.nonce(), 0, 'nonce not correct');
+
+		// Handle first userOp
+		entryPoint.handleOps(userOps, payable(address(this)));
+		assertEq(deployed4337Account.nonce(), 1, 'nonce not correct');
+
+		// Build second userop, reusing signature
+		userOps[0] = UserOperation({
+			sender: deployed4337AccountAddress,
+			nonce: deployed4337Account.nonce(),
+			initCode: new bytes(0),
+			callData: basicTransferPayload,
+			callGasLimit: 100000,
+			verificationGasLimit: 10000000,
+			preVerificationGas: 21000000,
+			maxFeePerGas: 2,
+			maxPriorityFeePerGas: 1e9,
+			paymasterAndData: new bytes(0),
+			signature: abi.encodePacked(testSig1.sig[0], testSig1.sig[1])
+		});
+
+		vm.expectRevert();
+		entryPoint.handleOps(userOps, payable(address(this)));
 	}
 
 	receive() external payable {

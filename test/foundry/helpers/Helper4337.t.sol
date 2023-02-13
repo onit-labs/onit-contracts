@@ -120,6 +120,36 @@ contract Helper4337 is Test, SafeTestConfig, ForumModuleTestConfig {
 			message: 0xf2424746de28d3e593fb6af9c8dff6d24de434350366e60312aacfe79dae94a8
 		});
 
+	TestSig internal testSig2 =
+		TestSig({
+			sig: [
+				0x0fb0aa68dce6f1517cfb4cad4659a3ea403edc9f31994dd6bd2e1945df0f11bb,
+				0x83479be56839e8c3e089613a02dd09f1a035751db0cb4fcf728bf94a231e0285
+			],
+			signer: [
+				0x7088c8f47cbe4745dc5e9e44302dcf1a528766b48470dea245076b8e91ebe2c5,
+				0xe498cf1f4f1ed27c1db3e78d389673bb40f26fc7d2d9e3ae8ca247ff3ba6c570
+			],
+			message: 0x75f6954424c5ac191d504086214ca53c4d0d199fcfd47da90364eab2aa98a31d
+		});
+
+	// account 0x3092CE9e547BadF2173327c2FB1dC1094B11934c, 0.4 eth transfer to alice, nonce 0
+	TestSig internal testSig3 =
+		TestSig({
+			sig: [
+				0x0fb0aa68dce6f1517cfb4cad4659a3ea403edc9f31994dd6bd2e1945df0f11bb,
+				0x83479be56839e8c3e089613a02dd09f1a035751db0cb4fcf728bf94a231e0285
+			],
+			signer: [
+				0x7088c8f47cbe4745dc5e9e44302dcf1a528766b48470dea245076b8e91ebe2c5,
+				0xe498cf1f4f1ed27c1db3e78d389673bb40f26fc7d2d9e3ae8ca247ff3ba6c570
+			],
+			message: ''
+		});
+
+	bytes authenticatorDataBufferHex =
+		bytes('0x1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000');
+
 	// -----------------------------------------------------------------------
 	// 4337 Helper Functions
 	// -----------------------------------------------------------------------
@@ -129,7 +159,9 @@ contract Helper4337 is Test, SafeTestConfig, ForumModuleTestConfig {
 	}
 
 	function buildUserOp(
+		uint8 testSignatureData,
 		address sender,
+		uint256 nonce,
 		bytes memory initCode,
 		bytes memory callData
 	) public view returns (UserOperation memory userOp) {
@@ -138,11 +170,16 @@ contract Helper4337 is Test, SafeTestConfig, ForumModuleTestConfig {
 
 		// Add sender and calldata to op
 		userOp.sender = sender;
+		userOp.nonce = nonce;
 		userOp.initCode = initCode;
 		userOp.callData = callData;
-		userOp.signature = abi.encodePacked(testSig1.sig[0], testSig1.sig[1]);
 
-		// ! get new sig type
+		// Improve this now we have multiple
+		TestSig memory testSig = testSignatureData == 1 ? testSig1 : testSignatureData == 2
+			? testSig2
+			: testSig3;
+
+		userOp.signature = abi.encode([testSig.sig[0], testSig.sig[1]], authenticatorDataBufferHex);
 	}
 
 	// Build payload which the entryPoint will call on the sender 4337 account
