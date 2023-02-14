@@ -18,12 +18,6 @@ contract Module4337Test is Helper4337 {
 	EIP4337Account private deployed4337Account;
 	address payable private deployed4337AccountAddress;
 
-	uint256 internal mumbaiFork;
-	uint256 internal fujiFork;
-
-	bytes32 internal salt1 = keccak256('0x1');
-	bytes32 internal salt2 = keccak256('0x2');
-
 	bytes internal basicTransferPayload;
 
 	/// -----------------------------------------------------------------------
@@ -49,8 +43,6 @@ contract Module4337Test is Helper4337 {
 			address(handler),
 			'handler not set'
 		);
-		// Check 4337 entryPoint is set in the singleton
-		//assertEq(address(eip4337Singleton.entryPoint()), address(entryPoint), 'entryPoint not set');
 
 		// Deploy an account to be used in tests later
 		deployed4337AccountAddress = eip4337AccountFactory.createAccount(
@@ -69,9 +61,6 @@ contract Module4337Test is Helper4337 {
 			new bytes(0),
 			Enum.Operation.Call
 		);
-
-		mumbaiFork = vm.createFork(vm.envString('MUMBAI_RPC_URL'));
-		fujiFork = vm.createFork(vm.envString('FUJI_RPC_URL'));
 	}
 
 	/// -----------------------------------------------------------------------
@@ -99,7 +88,7 @@ contract Module4337Test is Helper4337 {
 		// Encode the calldata for the factory to create an account
 		bytes memory factoryCalldata = abi.encodeWithSignature(
 			'createAccount(bytes32,uint256[2])',
-			salt2,
+			accountSalt(2, testSig1.signer),
 			testSig1.signer
 		);
 
@@ -125,7 +114,7 @@ contract Module4337Test is Helper4337 {
 		);
 		UserOperation[] memory userOps = new UserOperation[](1);
 		userOps[0] = userOp;
-		console.log('pre handle');
+
 		// Handle userOp
 		entryPoint.handleOps(userOps, payable(alice));
 
@@ -150,7 +139,7 @@ contract Module4337Test is Helper4337 {
 		address tmpFuji;
 
 		// Fork Mumbai and create an account from a fcatory
-		vm.selectFork(mumbaiFork);
+		vm.createSelectFork(vm.envString('MUMBAI_RPC_URL'));
 
 		eip4337AccountFactory = new EIP4337AccountFactory(
 			eip4337Singleton,
@@ -165,7 +154,7 @@ contract Module4337Test is Helper4337 {
 		);
 
 		// Fork Fuji and create an account from a fcatory
-		vm.selectFork(fujiFork);
+		vm.createSelectFork(vm.envString('FUJI_RPC_URL'));
 
 		eip4337AccountFactory = new EIP4337AccountFactory(
 			eip4337Singleton,
@@ -218,6 +207,12 @@ contract Module4337Test is Helper4337 {
 	}
 
 	function test4337AccountTransfer() public {
+		// ! tmp deploying account 3 since we have a comple signature for that accont
+		// deployed4337AccountAddress = eip4337AccountFactory.createAccount(
+		// 	accountSalt(1, testSig2.signer),
+		// 	testSig2.signer
+		// );
+
 		// Build userop
 		UserOperation memory userOp = buildUserOp(
 			2, // use test account 2
