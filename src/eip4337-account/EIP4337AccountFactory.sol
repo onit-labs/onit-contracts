@@ -7,8 +7,6 @@ import {GnosisSafe, Enum} from '@gnosis/GnosisSafe.sol';
 
 import {EIP4337Account, IEntryPoint} from './EIP4337Account.sol';
 
-import 'forge-std/console.sol';
-
 /// @notice Factory to deploy an ERC4337 Account
 /// @author ForumDAOs (https://forumdaos.com)
 contract EIP4337AccountFactory {
