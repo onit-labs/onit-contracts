@@ -4,21 +4,23 @@ require('dotenv').config({ path: '.env' })
 
 // Run autotask code locally using the Relayer API key and secret
 if (require.main === module) {
-	const { AVAX_OPENSEA_RELAY_API: apiKey, AVAX_OPENSEA_RELAY_SECRET: apiSecret } = process.env
+	const { MUMBAI_USER_OP_RELAY_API: apiKey, MUMBAI_USER_OP_RELAY_SECRET: apiSecret } = process.env
 
-	const payload = require('fs').readFileSync('../../testing/relay-opensea-request.json')
+	const payload = require('fs').readFileSync(
+		'services/oz-defender/autotasks/test/relay-user-op-request.json'
+	)
 
-	// 0 = mint pass
-	// 1 = toggle WL
-	// 2 = build shield for owner
-	// 3 = batch and drop item
 	const body = JSON.parse(payload.toString())
-	console.log(body)
 
+	// Hardcode entryPoint addresses for testing
 	handler({
 		apiKey,
 		apiSecret,
-		request: { body: body }
+		request: { body: body },
+		secrets: {
+			mumbai_entry_point_address: '0x119df1582e0dd7334595b8280180f336c959f3bb',
+			polygon_entry_point_address: '0x119df1582e0dd7334595b8280180f336c959f3bb'
+		}
 	})
 		.then(() => process.exit(0))
 		.catch((error) => {
