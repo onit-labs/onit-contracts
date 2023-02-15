@@ -10,8 +10,6 @@ import {BaseAccount, IEntryPoint, UserOperation} from '@interfaces/BaseAccount.s
 
 import {Base64} from '@libraries/Base64.sol';
 
-import 'forge-std/console.sol';
-
 /**
  * @notice EIP4337 Managed Gnosis Safe Account Implementation
  * @author Forum (https://forumdaos.com)
@@ -70,12 +68,6 @@ contract EIP4337Account is GnosisSafe, BaseAccount {
 		_entryPoint = anEntryPoint;
 
 		_owner = anOwner;
-
-		// ! tmp testing
-		// _owner = [
-		// 	0x7088c8f47cbe4745dc5e9e44302dcf1a528766b48470dea245076b8e91ebe2c5,
-		// 	0xe498cf1f4f1ed27c1db3e78d389673bb40f26fc7d2d9e3ae8ca247ff3ba6c570
-		// ];
 
 		// Owner must be passed to safe setup as an array of addresses
 		address[] memory arrayOwner = new address[](1);
@@ -146,51 +138,6 @@ contract EIP4337Account is GnosisSafe, BaseAccount {
 	///							INTERNAL METHODS
 	/// ----------------------------------------------------------------------------------------
 
-	// ! testing only
-	function _validateSignature(
-		UserOperation calldata userOp,
-		bytes32 userOpHash,
-		address
-	) internal virtual override returns (uint256 sigTimeRange) {
-		// Extract the passkey generated signature and authentacator data
-		(uint256[2] memory s, bytes memory auth) = abi.decode(
-			userOp.signature,
-			(uint256[2], bytes)
-		);
-
-		console.log('-----------------');
-		console.logBytes(auth);
-
-		//bytes32(0x8381a509c43f9a7fe5a80145cace2799988f6e018fb24ffee62b87743fac38bb)
-		bytes32 hashedClientData = sha256(
-			abi.encodePacked(
-				'{"type":"webauthn.get","challenge":"',
-				Base64.encode(abi.encodePacked(userOpHash)),
-				'","origin":"https://development.forumdaos.com"}'
-			)
-		);
-
-		bytes32 message = sha256(
-			abi.encodePacked(
-				//userOp.signature[64:],
-				hex'1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000', //'1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000',
-				hashedClientData
-			)
-		);
-
-		console.logBytes32(message);
-
-		return
-			_ellipticCurveValidator.validateSignature(
-				//bytes32(0x331e04c82b160721ff30b8b6cd656a11331620b83e938ddca3eb29cf71bbc355),
-				message,
-				s,
-				_owner
-			)
-				? 0
-				: SIG_VALIDATION_FAILED;
-	}
-
 	/**
 	 * validate the current nonce matches the UserOperation nonce.
 	 * then it should update the account's state to prevent replay of this UserOperation.
@@ -199,5 +146,71 @@ contract EIP4337Account is GnosisSafe, BaseAccount {
 	 */
 	function _validateAndUpdateNonce(UserOperation calldata userOp) internal override {
 		require(GnosisSafe.nonce++ == userOp.nonce, 'account: invalid nonce');
+	}
+
+	/**
+	 * @notice Validate the signature of the user operation
+	 * @param userOp The user operation to validate
+	 * @param userOpHash The hash of the user operation
+	 * @return sigTimeRange The time range the signature is valid for
+	 * @dev This is a first take at getting the signature validation working using passkeys
+	 * - A more general client data json should be used
+	 * - The signature may be validated using the domain seperator
+	 * - More efficient validation of the hashing and conversion of authData is needed
+	 * - In general more efficient validation of the signature is needed (zk proof in research)
+	 */
+	function _validateSignature(
+		UserOperation calldata userOp,
+		bytes32 userOpHash,
+		address
+	) internal virtual override returns (uint256 sigTimeRange) {
+		// Extract the passkey generated signature and authentacator data
+		(uint256[2] memory sig, string memory authData) = abi.decode(
+			userOp.signature,
+			(uint256[2], string)
+		);
+
+		// Hash the client data to produce the challenge signed by the passkey offchain
+		bytes32 hashedClientData = sha256(
+			abi.encodePacked(
+				'{"type":"webauthn.get","challenge":"',
+				Base64.encode(abi.encodePacked(userOpHash)),
+				'","origin":"https://development.forumdaos.com"}'
+			)
+		);
+
+		return
+			_ellipticCurveValidator.validateSignature(
+				sha256(abi.encodePacked(fromHex(authData), hashedClientData)),
+				sig,
+				_owner
+			)
+				? 0
+				: SIG_VALIDATION_FAILED;
+	}
+
+	// Convert an hexadecimal string to raw bytes
+	function fromHex(string memory s) internal pure returns (bytes memory) {
+		bytes memory ss = bytes(s);
+		require(ss.length % 2 == 0); // length must be even
+		bytes memory r = new bytes(ss.length / 2);
+		for (uint i = 0; i < ss.length / 2; ++i) {
+			r[i] = bytes1(fromHexChar(uint8(ss[2 * i])) * 16 + fromHexChar(uint8(ss[2 * i + 1])));
+		}
+		return r;
+	}
+
+	// Convert an hexadecimal character to their value
+	function fromHexChar(uint8 c) internal pure returns (uint8) {
+		if (bytes1(c) >= bytes1('0') && bytes1(c) <= bytes1('9')) {
+			return c - uint8(bytes1('0'));
+		}
+		if (bytes1(c) >= bytes1('a') && bytes1(c) <= bytes1('f')) {
+			return 10 + c - uint8(bytes1('a'));
+		}
+		if (bytes1(c) >= bytes1('A') && bytes1(c) <= bytes1('F')) {
+			return 10 + c - uint8(bytes1('A'));
+		}
+		revert('fail');
 	}
 }

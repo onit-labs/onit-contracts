@@ -13,6 +13,9 @@ import {CompatibilityFallbackHandler} from '@gnosis/handler/CompatibilityFallbac
 
 import './helpers/Helper4337.t.sol';
 
+// ! need a way to generate test passkey sigs that match owner addresses
+// ! until then some manual effor it required to run each test
+
 contract Module4337Test is Helper4337 {
 	// Variable used for test eip4337 account
 	EIP4337Account private deployed4337Account;
@@ -207,12 +210,6 @@ contract Module4337Test is Helper4337 {
 	}
 
 	function test4337AccountTransfer() public {
-		// ! tmp deploying account 3 since we have a comple signature for that accont
-		// deployed4337AccountAddress = eip4337AccountFactory.createAccount(
-		// 	accountSalt(1, testSig2.signer),
-		// 	testSig2.signer
-		// );
-
 		// Build userop
 		UserOperation memory userOp = buildUserOp(
 			2, // use test account 2

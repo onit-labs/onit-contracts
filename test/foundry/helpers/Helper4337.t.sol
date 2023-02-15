@@ -104,8 +104,28 @@ contract Helper4337 is Test, SafeTestConfig, ForumModuleTestConfig {
 		});
 
 	// -----------------------------------------------------------------------
-	// Signature Templates
+	// Signer and Signature Templates
 	// -----------------------------------------------------------------------
+
+	/**
+	 * @dev 	The below are sets of signers and signatures for testing
+	 *		They are used to create a valid signature for a given message
+	 */
+
+	uint[2] public signerA = [
+		0xd3c6949ab309ff80296ffb17cd2a5298ec23ad7f1fda03ca70f12353987303de,
+		0x42c164839f37f10fb2e6e5649c046a473a8d4db61d0602433fe32484d1c2d8d3
+	];
+
+	uint[2] public signerB = [
+		0x7088c8f47cbe4745dc5e9e44302dcf1a528766b48470dea245076b8e91ebe2c5,
+		0xe498cf1f4f1ed27c1db3e78d389673bb40f26fc7d2d9e3ae8ca247ff3ba6c570
+	];
+
+	uint[2] public signerC = [
+		0x7088c8f47cbe4745dc5e9e44302dcf1a528766b48470dea245076b8e91ebe2c5,
+		0xe498cf1f4f1ed27c1db3e78d389673bb40f26fc7d2d9e3ae8ca247ff3ba6c570
+	];
 
 	TestSig internal testSig1 =
 		TestSig({
@@ -148,7 +168,7 @@ contract Helper4337 is Test, SafeTestConfig, ForumModuleTestConfig {
 		});
 
 	bytes authenticatorDataBufferHex =
-		bytes('0x1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000');
+		'1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000';
 
 	// -----------------------------------------------------------------------
 	// 4337 Helper Functions
@@ -197,7 +217,6 @@ contract Helper4337 is Test, SafeTestConfig, ForumModuleTestConfig {
 				data,
 				operation
 			);
-		// abi.encode(operationType, _accounts, _amounts, _payloads);
 	}
 
 	// Calculate gas used by sender of userOp

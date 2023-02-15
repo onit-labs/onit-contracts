@@ -5,18 +5,15 @@ pragma solidity ^0.8.13;
 /// @title Base64
 /// @notice Provides a function for encoding some bytes in base64
 /// @author Brecht Devos <brecht@loopring.org>
-/// @dev Modified to replace '/' with '_' and not pad with '='
+/// @dev Modified to replace '/' with '_' and not pad with '=', with fixed length 43
 library Base64 {
 	bytes internal constant TABLE =
 		'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+_';
 
 	/// @notice Encodes some bytes to the base64 representation
 	function encode(bytes memory data) internal pure returns (string memory) {
-		uint256 len = data.length;
-		if (len == 0) return '';
-
-		// multiply by 4/3 rounded up
-		uint256 encodedLen = 4 * ((len + 2) / 3);
+		// Set length to format 32 byte hash without padding
+		uint256 encodedLen = 43;
 
 		// Add some extra buffer at the end
 		bytes memory result = new bytes(encodedLen + 32);
@@ -24,40 +21,39 @@ library Base64 {
 		bytes memory table = TABLE;
 
 		assembly {
+			// set the actual output length
+			mstore(result, encodedLen)
+
+			// prepare the lookup table
 			let tablePtr := add(table, 1)
+
+			// input ptr
+			let dataPtr := data
+			let endPtr := add(dataPtr, mload(data))
+
+			// result ptr, jump over length
 			let resultPtr := add(result, 32)
 
+			// run over the input, 3 bytes at a time
 			for {
-				let i := 0
-			} lt(i, len) {
+
+			} lt(dataPtr, endPtr) {
 
 			} {
-				i := add(i, 3)
-				let input := and(mload(add(data, i)), 0xffffff)
+				// read 3 bytes
+				dataPtr := add(dataPtr, 3)
+				let input := mload(dataPtr)
 
-				let out := mload(add(tablePtr, and(shr(18, input), 0x3F)))
-				out := shl(8, out)
-				out := add(out, and(mload(add(tablePtr, and(shr(12, input), 0x3F))), 0xFF))
-				out := shl(8, out)
-				out := add(out, and(mload(add(tablePtr, and(shr(6, input), 0x3F))), 0xFF))
-				out := shl(8, out)
-				out := add(out, and(mload(add(tablePtr, and(input, 0x3F))), 0xFF))
-				out := shl(224, out)
-
-				mstore(resultPtr, out)
-
-				resultPtr := add(resultPtr, 4)
+				// write 4 characters
+				mstore8(resultPtr, mload(add(tablePtr, and(shr(18, input), 0x3F))))
+				resultPtr := add(resultPtr, 1)
+				mstore8(resultPtr, mload(add(tablePtr, and(shr(12, input), 0x3F))))
+				resultPtr := add(resultPtr, 1)
+				mstore8(resultPtr, mload(add(tablePtr, and(shr(6, input), 0x3F))))
+				resultPtr := add(resultPtr, 1)
+				mstore8(resultPtr, mload(add(tablePtr, and(input, 0x3F))))
+				resultPtr := add(resultPtr, 1)
 			}
-
-			// switch mod(len, 3)
-			// case 1 {
-			// 	mstore(sub(resultPtr, 2), shl(240, 0x3d3d))
-			// }
-			// case 2 {
-			// 	mstore(sub(resultPtr, 1), shl(248, 0x3d))
-			// }
-
-			mstore(result, encodedLen)
 		}
 
 		return string(result);
