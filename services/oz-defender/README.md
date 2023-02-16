@@ -24,9 +24,9 @@ yarn relay
 
 Used to push updates from the autotasks folder to defender.
 
-To build the code which will be updloaded to Defender run the following from package root:
+To build the code which will be updloaded to Defender run the following from project root:
 
 ```
 yarn webpack --env=TASK_NAME=relay-user-op
-yarn scripts/updates/update-relay-user-op.ts
+yarn ts-node services/oz-defender/autotasks/scripts/updates/update-relay-user-op.ts
 ```

@@ -17,4 +17,7 @@ forge-cache
 deployments/
 broadcast/
 
+#oz-defender files
+dist/
+
 
