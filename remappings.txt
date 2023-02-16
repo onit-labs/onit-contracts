@@ -1,6 +1,6 @@
 ds-test/=lib/forge-std/lib/ds-test/src/
 forge-std/=lib/forge-std/src/
-@solbase=lib/solbase/
+@solbase=lib/solbase/src/
 @eip4337=lib/account-abstraction/
 
 eth-gas-reporter/=node_modules/eth-gas-reporter/

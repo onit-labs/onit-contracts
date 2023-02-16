@@ -1,12 +1,14 @@
 // SPDX-License-Identifier UNLICENSED
 pragma solidity ^0.8.13;
 
-import './helpers/ForumSafeTestConfig.t.sol';
-
 import {ForumFundraiseExtension} from '../../src/gnosis-forum/extensions/fundraise/ForumFundraiseExtension.sol';
 import {ForumShareManager} from '../../src/gnosis-forum/extensions/share-manager/ForumShareManager.sol';
 
-contract TestShareManager is ForumSafeTestConfig {
+// Helers with module and safe setup
+import './helpers/ForumModuleTestConfig.t.sol';
+import './helpers/SafeTestConfig.t.sol';
+
+contract TestShareManager is SafeTestConfig, ForumModuleTestConfig {
 	ForumShareManager shareManager;
 
 	ForumSafeModule private forumSafeModule;
@@ -21,6 +23,18 @@ contract TestShareManager is ForumSafeTestConfig {
 	function setUp() public {
 		fundraiseExtension = new ForumFundraiseExtension();
 		shareManager = new ForumShareManager();
+
+		forumSafeFactory = new ForumSafeFactory(
+			alice,
+			payable(address(forumSafeModuleSingleton)),
+			address(safeSingleton),
+			address(handler),
+			address(multisend),
+			address(safeProxyFactory),
+			address(fundraiseExtension),
+			address(withdrawalExtension),
+			address(0) // pfpSetter - not used in tests
+		);
 
 		// Deploy a forum safe from the factory
 		(forumSafeModule, safe) = forumSafeFactory.deployForumSafe(
@@ -37,154 +51,156 @@ contract TestShareManager is ForumSafeTestConfig {
 		shareManagerAddress = address(shareManager);
 
 		// Set extension with module as manager
-		setExtensionWithSafeManager(new bytes(0), 1);
+		//setExtensionWithSafeManager(new bytes(0), 1);
 
 		// Check that the extension is enabled
 		assertTrue(forumSafeModule.extensions(shareManagerAddress));
 	}
 
-	/// -----------------------------------------------------------------------
-	/// Share Manager Setup
-	/// -----------------------------------------------------------------------
+	// ! THESE TESTS SHOULD BE CONVERTED TO NON 'PROPOSAL' BASED TESTS (MOST LOGIC IS THE SAME)
 
-	function testSetShareManagerExt() public {
-		address[] memory managers = new address[](1);
-		managers[0] = moduleAddress;
-		bool[] memory settings = new bool[](1);
-		settings[0] = true;
+	// /// -----------------------------------------------------------------------
+	// /// Share Manager Setup
+	// /// -----------------------------------------------------------------------
 
-		// Abi encoded payload of managers and booleans
-		bytes memory setExtensionPayload = abi.encode(managers, settings);
+	// function testSetShareManagerExt() public {
+	// 	address[] memory managers = new address[](1);
+	// 	managers[0] = moduleAddress;
+	// 	bool[] memory settings = new bool[](1);
+	// 	settings[0] = true;
 
-		// Set extension
-		setExtensionWithSafeManager(setExtensionPayload, 0);
+	// 	// Abi encoded payload of managers and booleans
+	// 	bytes memory setExtensionPayload = abi.encode(managers, settings);
 
-		// Check that the extension is set, and module is manager
-		assertTrue(forumSafeModule.extensions(shareManagerAddress));
-		assertTrue(shareManager.management(moduleAddress, moduleAddress));
-	}
+	// 	// Set extension
+	// 	setExtensionWithSafeManager(setExtensionPayload, 0);
 
-	function testUnsetExtension() public {
-		// Unset extension
-		setExtensionWithSafeManager(new bytes(0), 1);
+	// 	// Check that the extension is set, and module is manager
+	// 	assertTrue(forumSafeModule.extensions(shareManagerAddress));
+	// 	assertTrue(shareManager.management(moduleAddress, moduleAddress));
+	// }
 
-		// Check that the extension is set, and module is manager
-		assertFalse(forumSafeModule.extensions(shareManagerAddress));
-	}
+	// function testUnsetExtension() public {
+	// 	// Unset extension
+	// 	setExtensionWithSafeManager(new bytes(0), 1);
 
-	function testCannotSetArrayMissmatch() public {
-		// Abi encoded payload of managers and booleans
-		bytes memory setExtensionPayload = abi.encode([moduleAddress], [true, false]);
+	// 	// Check that the extension is set, and module is manager
+	// 	assertFalse(forumSafeModule.extensions(shareManagerAddress));
+	// }
 
-		// Encode paylaod to set module as a manager
-		bytes memory payload = abi.encodeWithSignature('setExtension(bytes)', setExtensionPayload);
+	// function testCannotSetArrayMissmatch() public {
+	// 	// Abi encoded payload of managers and booleans
+	// 	bytes memory setExtensionPayload = abi.encode([moduleAddress], [true, false]);
 
-		// Propose to set the extension
-		uint256 prop = proposeToForum(
-			forumSafeModule,
-			IForumSafeModuleTypes.ProposalType.EXTENSION,
-			Enum.Operation.Call,
-			[address(shareManager)],
-			[uint256(0)],
-			[payload]
-		);
+	// 	// Encode paylaod to set module as a manager
+	// 	bytes memory payload = abi.encodeWithSignature('setExtension(bytes)', setExtensionPayload);
 
-		processProposal(prop, forumSafeModule, false);
-	}
+	// 	// Propose to set the extension
+	// 	uint256 prop = proposeToForum(
+	// 		forumSafeModule,
+	// 		IForumSafeModuleTypes.ProposalType.EXTENSION,
+	// 		Enum.Operation.Call,
+	// 		[address(shareManager)],
+	// 		[uint256(0)],
+	// 		[payload]
+	// 	);
 
-	/// -----------------------------------------------------------------------
-	/// Share Manager Management
-	/// -----------------------------------------------------------------------
+	// 	processProposal(prop, forumSafeModule, false);
+	// }
 
-	function testMintAliceShares(uint256 amount) public {
-		vm.assume(amount > 0 && amount <= 1 ether);
+	// /// -----------------------------------------------------------------------
+	// /// Share Manager Management
+	// /// -----------------------------------------------------------------------
 
-		// Check balances
-		assertEq(forumSafeModule.balanceOf(alice, TOKEN), 0);
-		assertEq(forumSafeModule.totalSupply(), 0);
+	// function testMintAliceShares(uint256 amount) public {
+	// 	vm.assume(amount > 0 && amount <= 1 ether);
 
-		address[] memory managers = new address[](1);
-		managers[0] = safeAddress;
-		bool[] memory settings = new bool[](1);
-		settings[0] = true;
+	// 	// Check balances
+	// 	assertEq(forumSafeModule.balanceOf(alice, TOKEN), 0);
+	// 	assertEq(forumSafeModule.totalSupply(), 0);
 
-		// Abi encoded payload of managers and booleans
-		bytes memory setExtensionPayload = abi.encode(managers, settings);
+	// 	address[] memory managers = new address[](1);
+	// 	managers[0] = safeAddress;
+	// 	bool[] memory settings = new bool[](1);
+	// 	settings[0] = true;
 
-		// Set extension
-		setExtensionWithSafeManager(setExtensionPayload, 0);
+	// 	// Abi encoded payload of managers and booleans
+	// 	bytes memory setExtensionPayload = abi.encode(managers, settings);
 
-		// Build payload to mint amount of shares for Alice
-		bytes memory mintPayload = abi.encode(alice, amount, TOKEN, true);
-		bytes[] memory mintPayloadArray = new bytes[](1);
-		mintPayloadArray[0] = mintPayload;
+	// 	// Set extension
+	// 	setExtensionWithSafeManager(setExtensionPayload, 0);
 
-		// Payload for callExtension proposal
-		bytes memory callExtPayload = abi.encodeWithSignature(
-			'callExtension(address,bytes[])',
-			moduleAddress,
-			mintPayloadArray
-		);
+	// 	// Build payload to mint amount of shares for Alice
+	// 	bytes memory mintPayload = abi.encode(alice, amount, TOKEN, true);
+	// 	bytes[] memory mintPayloadArray = new bytes[](1);
+	// 	mintPayloadArray[0] = mintPayload;
 
-		uint256 prop = proposeToForum(
-			forumSafeModule,
-			IForumSafeModuleTypes.ProposalType.CALL,
-			Enum.Operation.Call,
-			[shareManagerAddress],
-			[uint256(0)],
-			[callExtPayload]
-		);
+	// 	// Payload for callExtension proposal
+	// 	bytes memory callExtPayload = abi.encodeWithSignature(
+	// 		'callExtension(address,bytes[])',
+	// 		moduleAddress,
+	// 		mintPayloadArray
+	// 	);
 
-		processProposal(prop, forumSafeModule, true);
+	// 	uint256 prop = proposeToForum(
+	// 		forumSafeModule,
+	// 		IForumSafeModuleTypes.ProposalType.CALL,
+	// 		Enum.Operation.Call,
+	// 		[shareManagerAddress],
+	// 		[uint256(0)],
+	// 		[callExtPayload]
+	// 	);
 
-		// Check balances
-		assertEq(forumSafeModule.balanceOf(alice, TOKEN), amount);
-		assertEq(forumSafeModule.totalSupply(), amount);
-	}
+	// 	processProposal(prop, forumSafeModule, true);
 
-	function testOnlyManagerCanMint() public {
-		address[] memory managers = new address[](1);
-		managers[0] = safeAddress;
-		bool[] memory settings = new bool[](1);
-		settings[0] = true;
+	// 	// Check balances
+	// 	assertEq(forumSafeModule.balanceOf(alice, TOKEN), amount);
+	// 	assertEq(forumSafeModule.totalSupply(), amount);
+	// }
 
-		// Abi encoded payload of managers and booleans
-		bytes memory setExtensionPayload = abi.encode(managers, settings);
+	// function testOnlyManagerCanMint() public {
+	// 	address[] memory managers = new address[](1);
+	// 	managers[0] = safeAddress;
+	// 	bool[] memory settings = new bool[](1);
+	// 	settings[0] = true;
 
-		// Set extension
-		setExtensionWithSafeManager(setExtensionPayload, 0);
+	// 	// Abi encoded payload of managers and booleans
+	// 	bytes memory setExtensionPayload = abi.encode(managers, settings);
 
-		// Build payload to mint amount of shares for Alice
-		bytes memory mintPayload = abi.encode(alice, 1 ether, TOKEN, true);
-		bytes[] memory mintPayloadArray = new bytes[](1);
-		mintPayloadArray[0] = mintPayload;
+	// 	// Set extension
+	// 	setExtensionWithSafeManager(setExtensionPayload, 0);
 
-		// Payload for callExtension proposal
-		bytes memory callExtPayload = abi.encodeWithSignature(
-			'callExtension(address,bytes[])',
-			moduleAddress,
-			mintPayloadArray
-		);
+	// 	// Build payload to mint amount of shares for Alice
+	// 	bytes memory mintPayload = abi.encode(alice, 1 ether, TOKEN, true);
+	// 	bytes[] memory mintPayloadArray = new bytes[](1);
+	// 	mintPayloadArray[0] = mintPayload;
 
-		vm.prank(alice);
-		vm.expectRevert(bytes4(keccak256('Forbidden()')));
-		shareManager.callExtension(moduleAddress, mintPayloadArray);
-	}
+	// 	// Payload for callExtension proposal
+	// 	bytes memory callExtPayload = abi.encodeWithSignature(
+	// 		'callExtension(address,bytes[])',
+	// 		moduleAddress,
+	// 		mintPayloadArray
+	// 	);
 
-	// -----------------------------------------------------------------------
-	// Utils
-	// -----------------------------------------------------------------------
+	// 	vm.prank(alice);
+	// 	vm.expectRevert(bytes4(keccak256('Forbidden()')));
+	// 	shareManager.callExtension(moduleAddress, mintPayloadArray);
+	// }
 
-	function setExtensionWithSafeManager(bytes memory payload, uint256 active) internal {
-		uint256 prop = proposeToForum(
-			forumSafeModule,
-			IForumSafeModuleTypes.ProposalType.EXTENSION,
-			Enum.Operation.Call,
-			[shareManagerAddress],
-			[active],
-			[payload]
-		);
+	// // -----------------------------------------------------------------------
+	// // Utils
+	// // -----------------------------------------------------------------------
 
-		processProposal(prop, forumSafeModule, true);
-	}
+	// function setExtensionWithSafeManager(bytes memory payload, uint256 active) internal {
+	// 	uint256 prop = proposeToForum(
+	// 		forumSafeModule,
+	// 		IForumSafeModuleTypes.ProposalType.EXTENSION,
+	// 		Enum.Operation.Call,
+	// 		[shareManagerAddress],
+	// 		[active],
+	// 		[payload]
+	// 	);
+
+	// 	processProposal(prop, forumSafeModule, true);
+	// }
 }

@@ -9,7 +9,7 @@ import {BaseAccount, IEntryPoint, IAccount, UserOperation} from '@eip4337/contra
  * @dev A first pass at integrating 4337 with ForumSafeModule
  */
 
-contract EIP4337Account is BaseAccount {
+contract EIP4337GroupAccount is BaseAccount {
 	/// ----------------------------------------------------------------------------------------
 	///							ACCOUNT STORAGE
 	/// ----------------------------------------------------------------------------------------

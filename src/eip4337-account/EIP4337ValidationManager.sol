@@ -43,7 +43,7 @@ contract EIP4337ValidationManager is ForumSafe4337Module {
 	 */
 	function validateUserOp(
 		UserOperation calldata userOp,
-		bytes32 userOpHash,
+		bytes32 /* userOpHash */,
 		address /*aggregator*/,
 		uint256 missingAccountFunds
 	) external override returns (uint256 sigTimeRange) {

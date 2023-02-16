@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {MockERC20} from '@solbase/test/utils/mocks/MockERC20.sol';
-import {MockERC721} from '@solbase/test/utils/mocks/MockERC721.sol';
-import {MockERC1155} from '@solbase/test/utils/mocks/MockERC1155.sol';
+import {MockERC20} from '../../../lib/solbase/test/utils/mocks/MockERC20.sol';
+import {MockERC721} from '../../../lib/solbase/test/utils/mocks/MockERC721.sol';
+import {MockERC1155} from '../../../lib/solbase/test/utils/mocks/MockERC1155.sol';
 
 import 'forge-std/Test.sol';
 import 'forge-std/StdCheats.sol';
@@ -21,6 +21,9 @@ abstract contract BasicTestConfig is Test {
 	uint256 internal bobPk;
 	address internal carl;
 	uint256 internal carlPk;
+
+	address internal zeroAddress = address(0);
+	address internal oneAddress = address(1);
 
 	/// -----------------------------------------------------------------------
 	/// Setup

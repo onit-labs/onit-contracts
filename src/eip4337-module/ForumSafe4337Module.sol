@@ -3,7 +3,7 @@
 pragma solidity ^0.8.15;
 
 import {ForumGovernance, EnumerableSet, Enum} from './ForumSafe4337Governance.sol';
-import {EIP4337Account, IEntryPoint, IAccount} from './EIP4337Account.sol';
+import {EIP4337GroupAccount, IEntryPoint, IAccount} from './EIP4337GroupAccount.sol';
 
 import {NFTreceiver} from '@utils/NFTreceiver.sol';
 import {ReentrancyGuard} from '@utils/ReentrancyGuard.sol';
@@ -20,7 +20,7 @@ import 'forge-std/console.sol';
  */
 contract ForumSafe4337Module is
 	IForumSafeModuleTypes,
-	EIP4337Account,
+	EIP4337GroupAccount,
 	ForumGovernance,
 	ReentrancyGuard,
 	NFTreceiver
@@ -164,6 +164,8 @@ contract ForumSafe4337Module is
 			if (amounts[0] > 13 || amounts[1] > 2 || amounts.length != 2) revert TypeBounds();
 
 		unchecked {
+			// Add / remove members + update gnosis threshold
+
 			if (proposalType == ProposalType.MEMBER_THRESHOLD)
 				memberVoteThreshold = uint32(amounts[0]);
 
