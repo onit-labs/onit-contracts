@@ -2,8 +2,8 @@
 pragma solidity ^0.8.15;
 
 // Forum 4337 contracts
-import {EIP4337Account} from '../../src/eip4337-account/EIP4337Account.sol';
-import {EIP4337AccountFactory} from '../../src/eip4337-account/EIP4337AccountFactory.sol';
+import {EIP4337Account} from '../src/eip4337-account/EIP4337Account.sol';
+import {EIP4337AccountFactory} from '../src/eip4337-account/EIP4337AccountFactory.sol';
 
 // Infinitism 4337 contracts
 import {EntryPoint} from '@eip4337/contracts/core/EntryPoint.sol';
@@ -11,12 +11,12 @@ import {EntryPoint} from '@eip4337/contracts/core/EntryPoint.sol';
 // Gnosis Safe contracts
 import {CompatibilityFallbackHandler} from '@gnosis/handler/CompatibilityFallbackHandler.sol';
 
-import './helpers/Helper4337.t.sol';
+import './config/EIP4337TestConfig.t.sol';
 
 // ! need a way to generate test passkey sigs that match owner addresses
 // ! until then some manual effor it required to run each test
 
-contract Module4337Test is Helper4337 {
+contract Module4337Test is EIP4337TestConfig {
 	// Variable used for test eip4337 account
 	EIP4337Account private deployed4337Account;
 	address payable private deployed4337AccountAddress;

@@ -2,10 +2,10 @@
 pragma solidity ^0.8.13;
 
 // Helers with module and safe setup
-import './helpers/ForumModuleTestConfig.t.sol';
-import './helpers/SafeTestConfig.t.sol';
+import './config/ForumModuleTestConfig.t.sol';
+import './config/SafeTestConfig.t.sol';
 
-import {ForumFundraiseExtension} from '../../src/gnosis-forum/extensions/fundraise/ForumFundraiseExtension.sol';
+import {ForumFundraiseExtension} from '../src/gnosis-forum/extensions/fundraise/ForumFundraiseExtension.sol';
 
 contract FundraiseExtensionTest is ForumModuleTestConfig, SafeTestConfig {
 	// ForumFundraiseExtension fundraiseExtension;

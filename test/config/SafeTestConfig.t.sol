@@ -11,10 +11,10 @@ import {GnosisSafeProxyFactory} from '@gnosis/proxies/GnosisSafeProxyFactory.sol
 import {SignMessageLib} from '@gnosis/examples/libraries/SignMessage.sol';
 
 // Forum 4337 contracts
-import {ForumSafeModule} from '../../../src/gnosis-forum/ForumSafeModule.sol';
+import {ForumSafeModule} from '../../src/gnosis-forum/ForumSafeModule.sol';
 
 // Forum interfaces
-import {IForumSafeModuleTypes} from '../../../src/interfaces/IForumSafeModuleTypes.sol';
+import {IForumSafeModuleTypes} from '../../src/interfaces/IForumSafeModuleTypes.sol';
 
 // Config for the Safe which the Forum Module will attach to
 abstract contract SafeTestConfig {

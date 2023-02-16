@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {PfpSetter} from '../../src/gnosis-forum/extensions/pfp-setter/PfpSetter.sol';
+import {PfpSetter} from '../src/gnosis-forum/extensions/pfp-setter/PfpSetter.sol';
 
-import {ERC721Test} from '../../src/test-contracts/ERC721Test.sol';
-import {ERC1155Test} from '../../src/test-contracts/ERC1155Test.sol';
+import {ERC721Test} from '../src/test-contracts/ERC721Test.sol';
+import {ERC1155Test} from '../src/test-contracts/ERC1155Test.sol';
 
 import 'forge-std/Test.sol';
 import 'forge-std/StdCheats.sol';

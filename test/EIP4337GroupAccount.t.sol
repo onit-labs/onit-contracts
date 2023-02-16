@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.15;
 
-// import './helpers/ForumSafeTestConfig.t.sol';
-import './helpers/Helper4337.t.sol';
+// import './config/ForumSafeTestConfig.t.sol';
+import './config/EIP4337TestConfig.t.sol';
 
-contract Module4337Test is Helper4337 {
+contract Module4337Test is EIP4337TestConfig {
 	EIP4337GroupAccount private forumSafeModule;
 	GnosisSafe private safe;
 

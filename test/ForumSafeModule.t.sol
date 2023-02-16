@@ -3,7 +3,7 @@
 
 // import {IERC1271Upgradeable} from '@openzeppelin/contracts-upgradeable/interfaces/IERC1271Upgradeable.sol';
 
-// import './helpers/ForumSafeTestConfig.t.sol';
+// import './config/ForumSafeTestConfig.t.sol';
 
 // import 'forge-std/console.sol';
 

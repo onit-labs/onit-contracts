@@ -1,7 +1,7 @@
 import { DeployFunction } from 'hardhat-deploy/types'
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { ZERO_ADDRESS } from '../../config'
-import { GnosisContracts } from '../helpers'
+import { GnosisContracts } from '../config'
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 	const { deployer } = await hre.getNamedAccounts()

@@ -4,15 +4,15 @@ pragma solidity ^0.8.13;
 import {Module, Enum} from '@gnosis.pm/zodiac/contracts/core/Module.sol';
 
 // Forum imports
-import {ForumSafeFactory} from '../../../src/gnosis-forum/ForumSafeFactory.sol';
-import {ForumSafeModule} from '../../../src/gnosis-forum/ForumSafeModule.sol';
+import {ForumSafeFactory} from '../../src/gnosis-forum/ForumSafeFactory.sol';
+import {ForumSafeModule} from '../../src/gnosis-forum/ForumSafeModule.sol';
 
 // Forum extension imports
-import {ForumFundraiseExtension} from '../../../src/gnosis-forum/extensions/fundraise/ForumFundraiseExtension.sol';
-import {ForumWithdrawalExtension} from '../../../src/gnosis-forum/extensions/withdrawal/ForumWithdrawalExtension.sol';
+import {ForumFundraiseExtension} from '../../src/gnosis-forum/extensions/fundraise/ForumFundraiseExtension.sol';
+import {ForumWithdrawalExtension} from '../../src/gnosis-forum/extensions/withdrawal/ForumWithdrawalExtension.sol';
 
 // Forum interfaces
-import {IForumSafeModuleTypes} from '../../../src/interfaces/IForumSafeModuleTypes.sol';
+import {IForumSafeModuleTypes} from '../../src/interfaces/IForumSafeModuleTypes.sol';
 
 import './BasicTestConfig.t.sol';
 

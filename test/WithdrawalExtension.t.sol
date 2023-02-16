@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {TestShareManager} from '../../src/test-contracts/TestShareManager.sol';
-import {ForumWithdrawalExtension} from '../../src/gnosis-forum/extensions/withdrawal/ForumWithdrawalExtension.sol';
-import {WithdrawalTransferManagerV2} from '../../src/gnosis-forum/extensions/withdrawal/WithdrawalTransferManagerV2.sol';
+import {TestShareManager} from '../src/test-contracts/TestShareManager.sol';
+import {ForumWithdrawalExtension} from '../src/gnosis-forum/extensions/withdrawal/ForumWithdrawalExtension.sol';
+import {WithdrawalTransferManagerV2} from '../src/gnosis-forum/extensions/withdrawal/WithdrawalTransferManagerV2.sol';
 
-import {IForumSafeModule} from '../../src/interfaces/IForumSafeModule.sol';
+import {IForumSafeModule} from '../src/interfaces/IForumSafeModule.sol';
 
 // Helers with module and safe setup
-import './helpers/ForumModuleTestConfig.t.sol';
-import './helpers/SafeTestConfig.t.sol';
+import './config/ForumModuleTestConfig.t.sol';
+import './config/SafeTestConfig.t.sol';
 
 contract WithdrawalTest is ForumModuleTestConfig, SafeTestConfig {
 	ForumSafeModule internal forumModule;

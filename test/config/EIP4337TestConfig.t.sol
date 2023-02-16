@@ -6,11 +6,11 @@ import {EntryPoint} from '@eip4337/contracts/core/EntryPoint.sol';
 import {BaseAccount, UserOperation} from '@eip4337/contracts/core/BaseAccount.sol';
 
 // 4337 contracts
-import {EIP4337Account} from '../../../src/eip4337-account/EIP4337Account.sol';
-import {EIP4337AccountFactory} from '../../../src/eip4337-account/EIP4337AccountFactory.sol';
-import {EIP4337ValidationManager} from '../../../src/eip4337-account/EIP4337ValidationManager.sol';
-import {EIP4337GroupAccount} from '../../../src/eip4337-module/EIP4337GroupAccount.sol';
-import {ForumSafe4337Factory} from '../../../src/eip4337-module/ForumSafe4337Factory.sol';
+import {EIP4337Account} from '../../src/eip4337-account/EIP4337Account.sol';
+import {EIP4337AccountFactory} from '../../src/eip4337-account/EIP4337AccountFactory.sol';
+import {EIP4337ValidationManager} from '../../src/eip4337-account/EIP4337ValidationManager.sol';
+import {EIP4337GroupAccount} from '../../src/eip4337-module/EIP4337GroupAccount.sol';
+import {ForumSafe4337Factory} from '../../src/eip4337-module/ForumSafe4337Factory.sol';
 
 // EllipticCurve validator used for p256 curves - compiled with v0.5.0
 /// @dev To save changes to folder structure, this is built elsewhere and added to the ./out folder
@@ -20,7 +20,7 @@ import {IEllipticCurveValidator} from '@interfaces/IEllipticCurveValidator.sol';
 import './SafeTestConfig.t.sol';
 import './ForumModuleTestConfig.t.sol';
 
-contract Helper4337 is Test, SafeTestConfig, ForumModuleTestConfig {
+contract EIP4337TestConfig is Test, SafeTestConfig, ForumModuleTestConfig {
 	// 4337 Account Types
 	// Entry point
 	EntryPoint public entryPoint;

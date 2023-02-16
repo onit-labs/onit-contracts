@@ -1,12 +1,12 @@
 // SPDX-License-Identifier UNLICENSED
 pragma solidity ^0.8.13;
 
-import {ForumFundraiseExtension} from '../../src/gnosis-forum/extensions/fundraise/ForumFundraiseExtension.sol';
-import {ForumShareManager} from '../../src/gnosis-forum/extensions/share-manager/ForumShareManager.sol';
+import {ForumFundraiseExtension} from '../src/gnosis-forum/extensions/fundraise/ForumFundraiseExtension.sol';
+import {ForumShareManager} from '../src/gnosis-forum/extensions/share-manager/ForumShareManager.sol';
 
 // Helers with module and safe setup
-import './helpers/ForumModuleTestConfig.t.sol';
-import './helpers/SafeTestConfig.t.sol';
+import './config/ForumModuleTestConfig.t.sol';
+import './config/SafeTestConfig.t.sol';
 
 contract TestShareManager is SafeTestConfig, ForumModuleTestConfig {
 	ForumShareManager shareManager;

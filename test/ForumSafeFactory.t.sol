@@ -2,8 +2,8 @@
 pragma solidity ^0.8.13;
 
 // Helers with module and safe setup
-import './helpers/ForumModuleTestConfig.t.sol';
-import './helpers/SafeTestConfig.t.sol';
+import './config/ForumModuleTestConfig.t.sol';
+import './config/SafeTestConfig.t.sol';
 
 contract ForumSafeFactoryTest is ForumModuleTestConfig, SafeTestConfig {
 	/// -----------------------------------------------------------------------
