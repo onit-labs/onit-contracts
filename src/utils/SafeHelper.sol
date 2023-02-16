@@ -5,8 +5,12 @@ import {Module, Enum} from '@zodiac/core/Module.sol';
 
 abstract contract SafeHelper is Module {
 	/// ----------------------------------------------------------------------------------------
-	///							GNOSIS SAFE STORAGE
+	///							SAFE HELPER STORAGE
 	/// ----------------------------------------------------------------------------------------
+
+	error AvatarOnly();
+
+	error ExecuteAsModuleError();
 
 	// Gnosis multisendLibrary library contract
 	address public multisendLibrary;
@@ -54,5 +58,30 @@ abstract contract SafeHelper is Module {
 		(, bytes memory _owners) = target.staticcall(GET_OWNERS);
 
 		return abi.decode(_owners, (address[]));
+	}
+
+	/// ----------------------------------------------------------------------------------------
+	///							MODULE LOGIC
+	/// ----------------------------------------------------------------------------------------
+
+	modifier avatarOnly() {
+		if (msg.sender != avatar) revert AvatarOnly();
+		_;
+	}
+
+	/**
+	 * @notice Execute a transaction as a module
+	 * @dev Can be used to execute arbitrary code if needed, only when called by safe
+	 * @param _to address to send transaction to
+	 * @param _value value to send with transaction
+	 * @param _data data to send with transaction
+	 */
+	function executeAsModule(
+		address _to,
+		uint256 _value,
+		bytes calldata _data
+	) external avatarOnly {
+		(bool success, ) = _to.call{value: _value}(_data);
+		if (!success) revert ExecuteAsModuleError();
 	}
 }

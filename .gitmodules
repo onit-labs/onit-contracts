@@ -7,3 +7,6 @@
 [submodule "lib/zodiac"]
 	path = lib/zodiac
 	url = https://github.com/gnosis/zodiac
+[submodule "lib/account-abstraction"]
+	path = lib/account-abstraction
+	url = https://github.com/eth-infinitism/account-abstraction
