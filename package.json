@@ -53,7 +53,7 @@
 		"web3-utils": "^1.7.1"
 	},
 	"scripts": {
-		"test": "forge test -vvvv --match ",
+		"test": "forge test FOUNDRY_PROFILE=test -vvvv  ",
 		"gas": "yarn test --gas-report  ",
 		"relay": "yarn ts-node services/oz-defender/autotasks/scripts/calls/relay-user-op.ts"
 	}
