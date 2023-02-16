@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import {EIP4337Account} from '../../src/eip4337-account/EIP4337Account.sol';
 import {IEllipticCurveValidator} from '@interfaces/IEllipticCurveValidator.sol';
-import {Deployer} from './Deployer.sol';
+import {Deployer} from '../../lib/foundry-deployment-manager/src/Deployer.sol';
 
 // TODO add check to avoid deploying if no change to bytecode
 // TODO implement create2 proxy deployment
