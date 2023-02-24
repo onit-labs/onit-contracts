@@ -13,3 +13,7 @@
 [submodule "lib/foundry-deployment-manager"]
 	path = lib/foundry-deployment-manager
 	url = https://github.com/jamesmccomish/foundry-deployment-manager
+[submodule "lib/safe-contracts"]
+	path = lib/safe-contracts
+	url = https://github.com/safe-global/safe-contracts
+	branch = v1.3.0
