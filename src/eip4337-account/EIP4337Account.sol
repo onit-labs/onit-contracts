@@ -19,11 +19,12 @@ import {Base64} from '@libraries/Base64.sol';
 /**
  * TODO
  * - Handle variable ClientDataJson
- * - Consider security of added a generated address as owner on safe
+ * - Consider security of adding a generated address as owner on safe
  * - Integrate domain seperator in validation of signatures
  * - Use as a module until more finalised version is completed (for easier upgradability)
  * - Consider a function to upgrade owner
  * - Add restriction to check entryPoint is valid before setting
+ * - Add guardians and account recovery
  */
 
 contract EIP4337Account is GnosisSafe, BaseAccount {
@@ -113,7 +114,7 @@ contract EIP4337Account is GnosisSafe, BaseAccount {
 		uint256 value,
 		bytes memory data,
 		Enum.Operation operation
-	) external virtual {
+	) external payable virtual {
 		_requireFromEntryPoint();
 
 		// Execute transaction without further confirmations.
@@ -161,8 +162,7 @@ contract EIP4337Account is GnosisSafe, BaseAccount {
 	 */
 	function _validateSignature(
 		UserOperation calldata userOp,
-		bytes32 userOpHash,
-		address
+		bytes32 userOpHash
 	) internal virtual override returns (uint256 sigTimeRange) {
 		// Extract the passkey generated signature and authentacator data
 		(uint256[2] memory sig, string memory authData) = abi.decode(

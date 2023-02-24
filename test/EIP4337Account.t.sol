@@ -12,14 +12,19 @@ import {EntryPoint} from '@eip4337/contracts/core/EntryPoint.sol';
 import {CompatibilityFallbackHandler} from '@gnosis/handler/CompatibilityFallbackHandler.sol';
 
 import './config/EIP4337TestConfig.t.sol';
+import {ERC4337SignatureStore} from './config/ERC4337SignatureStore.t.sol';
 
 // ! need a way to generate test passkey sigs that match owner addresses
 // ! until then some manual effor it required to run each test
 
-contract Module4337Test is EIP4337TestConfig {
+contract Module4337Test is EIP4337TestConfig, ERC4337SignatureStore {
 	// Variable used for test eip4337 account
 	EIP4337Account private deployed4337Account;
 	address payable private deployed4337AccountAddress;
+
+	// Some salts
+	bytes32 private constant SALT_1 = keccak256('salt1');
+	bytes32 private constant SALT_2 = keccak256('salt2');
 
 	bytes internal basicTransferPayload;
 
@@ -49,8 +54,8 @@ contract Module4337Test is EIP4337TestConfig {
 
 		// Deploy an account to be used in tests later
 		deployed4337AccountAddress = eip4337AccountFactory.createAccount(
-			accountSalt(1, testSig1.signer),
-			testSig1.signer
+			accountSalt(SALT_1, signers[TestSigner.SignerB]),
+			signers[TestSigner.SignerB]
 		);
 		deployed4337Account = EIP4337Account(deployed4337AccountAddress);
 
@@ -72,12 +77,12 @@ contract Module4337Test is EIP4337TestConfig {
 
 	function testFactoryDeploy() public {
 		// Check that the account from setup is deployed and data is set on account, and safe
-		assertEq(deployed4337Account.owner()[0], testSig1.signer[0], 'owner not set');
-		assertEq(deployed4337Account.owner()[1], testSig1.signer[1], 'owner not set');
+		assertEq(deployed4337Account.owner()[0], signers[TestSigner.SignerA][0], 'owner not set');
+		assertEq(deployed4337Account.owner()[1], signers[TestSigner.SignerA][1], 'owner not set');
 		assertEq(deployed4337Account.getThreshold(), 1, 'threshold not set');
 		assertEq(
 			deployed4337Account.getOwners()[0],
-			calculateOwnerAddress(testSig1.signer),
+			calculateOwnerAddress(signers[TestSigner.SignerA]),
 			'owner not set on safe'
 		);
 		assertEq(
@@ -89,45 +94,38 @@ contract Module4337Test is EIP4337TestConfig {
 
 	function testFactoryDeployFromEntryPoint() public {
 		// Encode the calldata for the factory to create an account
-		bytes memory factoryCalldata = abi.encodeWithSignature(
-			'createAccount(bytes32,uint256[2])',
-			accountSalt(2, testSig1.signer),
-			testSig1.signer
-		);
+		// bytes memory factoryCalldata = abi.encodeWithSignature(
+		// 	'createAccount(bytes32,uint256[2])',
+		// 	SALT_2,
+		// 	signers[TestSigner.SignerB]
+		// );
 
 		// Prepend the address of the factory
-		bytes memory initCode = abi.encodePacked(eip4337AccountFactory, factoryCalldata);
+		// bytes memory initCode = abi.encodePacked(eip4337AccountFactory, factoryCalldata);
 
 		// Calculate address in advance to use as sender
 		address preCalculatedAccountAddress = (eip4337AccountFactory).getAddress(
-			accountSalt(2, testSig1.signer)
+			accountSalt(SALT_2, signers[TestSigner.SignerB])
 		);
 		// Deal funds to account
 		deal(preCalculatedAccountAddress, 1 ether);
 		// Cast to EIP4337Account - used to make some test assertions easier
 		EIP4337Account testNew4337Account = EIP4337Account(payable(preCalculatedAccountAddress));
 
-		// Build userop (no need for payload, use empty bytes)
-		UserOperation memory userOp = buildUserOp(
-			1, // use test account 1
-			preCalculatedAccountAddress,
-			0,
-			initCode,
-			new bytes(0)
-		);
+		// Retrieve the userOp from signature store (in future generate this and sign it here)
 		UserOperation[] memory userOps = new UserOperation[](1);
-		userOps[0] = userOp;
+		userOps[0] = signerBUserOpsWithSigs[1];
 
 		// Handle userOp
 		entryPoint.handleOps(userOps, payable(alice));
 
 		// Check that the account is deployed and data is set on account, and safe
-		assertEq(testNew4337Account.owner()[0], testSig1.signer[0], 'owner not set');
-		assertEq(testNew4337Account.owner()[1], testSig1.signer[1], 'owner not set');
+		assertEq(testNew4337Account.owner()[0], signers[TestSigner.SignerB][0], 'owner not set');
+		assertEq(testNew4337Account.owner()[1], signers[TestSigner.SignerB][1], 'owner not set');
 		assertEq(testNew4337Account.getThreshold(), 1, 'threshold not set');
 		assertEq(
 			testNew4337Account.getOwners()[0],
-			calculateOwnerAddress(testSig1.signer),
+			calculateOwnerAddress(signers[TestSigner.SignerB]),
 			'owner not set on safe'
 		);
 		assertEq(
@@ -152,8 +150,8 @@ contract Module4337Test is EIP4337TestConfig {
 
 		// Deploy an account to be used in tests
 		tmpMumbai = eip4337AccountFactory.createAccount(
-			accountSalt(1, testSig1.signer),
-			testSig1.signer
+			accountSalt(SALT_1, signers[TestSigner.SignerB]),
+			signers[TestSigner.SignerB]
 		);
 
 		// Fork Fuji and create an account from a fcatory
@@ -167,8 +165,8 @@ contract Module4337Test is EIP4337TestConfig {
 
 		// Deploy an account to be used in tests
 		tmpFuji = eip4337AccountFactory.createAccount(
-			accountSalt(1, testSig1.signer),
-			testSig1.signer
+			accountSalt(SALT_1, signers[TestSigner.SignerB]),
+			signers[TestSigner.SignerB]
 		);
 
 		assertEq(tmpMumbai, tmpFuji, 'address not the same');
@@ -188,13 +186,13 @@ contract Module4337Test is EIP4337TestConfig {
 		);
 
 		// Build userop to set entrypoint to this contract as a test
-		UserOperation memory userOp = buildUserOp(
-			1, // use test account 1
-			deployed4337AccountAddress,
-			deployed4337Account.nonce(),
-			new bytes(0),
-			abi.encodeWithSignature('setEntryPoint(address)', address(this))
-		);
+		// UserOperation memory userOp = buildUserOp(
+		// 	1, // use test account 1
+		// 	deployed4337AccountAddress,
+		// 	deployed4337Account.nonce(),
+		// 	new bytes(0),
+		// 	abi.encodeWithSignature('setEntryPoint(address)', address(this))
+		// );
 		UserOperation[] memory userOps = new UserOperation[](1);
 		userOps[0] = userOp;
 
@@ -211,15 +209,15 @@ contract Module4337Test is EIP4337TestConfig {
 
 	function test4337AccountTransfer() public {
 		// Build userop
-		UserOperation memory userOp = buildUserOp(
-			2, // use test account 2
-			deployed4337AccountAddress,
-			deployed4337Account.nonce(),
-			new bytes(0),
-			basicTransferPayload
-		);
+		// UserOperation memory userOp = buildUserOp(
+		// 	2, // use test account 2
+		// 	deployed4337AccountAddress,
+		// 	deployed4337Account.nonce(),
+		// 	new bytes(0),
+		// 	basicTransferPayload
+		// );
 		UserOperation[] memory userOps = new UserOperation[](1);
-		userOps[0] = userOp;
+		userOps[0] = signerBUserOpsWithSigs[0];
 
 		// Check nonce before tx
 		assertEq(deployed4337Account.nonce(), 0, 'nonce not correct');
@@ -227,7 +225,7 @@ contract Module4337Test is EIP4337TestConfig {
 		// Handle userOp
 		entryPoint.handleOps(userOps, payable(address(this)));
 
-		uint256 gas = calculateGas(userOp);
+		uint256 gas = calculateGas(signerBUserOpsWithSigs[0]);
 
 		// Check updated balances
 		assertEq(deployed4337AccountAddress.balance, 0.5 ether - gas, 'balance not updated');
@@ -252,13 +250,13 @@ contract Module4337Test is EIP4337TestConfig {
 		);
 
 		// Build userop
-		UserOperation memory userOp = buildUserOp(
-			1, // use test account 1
-			deployed4337AccountAddress,
-			deployed4337Account.nonce(),
-			new bytes(0),
-			payload
-		);
+		// UserOperation memory userOp = buildUserOp(
+		// 	1, // use test account 1
+		// 	deployed4337AccountAddress,
+		// 	deployed4337Account.nonce(),
+		// 	new bytes(0),
+		// 	payload
+		// );
 		UserOperation[] memory userOps = new UserOperation[](1);
 		userOps[0] = userOp;
 
@@ -281,13 +279,13 @@ contract Module4337Test is EIP4337TestConfig {
 	// ! Double check with new validation including the domain seperator
 	function testCannotReplaySig() public {
 		// Build first userop
-		UserOperation memory userOp = buildUserOp(
-			1, // use test account 1
-			deployed4337AccountAddress,
-			deployed4337Account.nonce(),
-			new bytes(0),
-			basicTransferPayload
-		);
+		// UserOperation memory userOp = buildUserOp(
+		// 	1, // use test account 1
+		// 	deployed4337AccountAddress,
+		// 	deployed4337Account.nonce(),
+		// 	new bytes(0),
+		// 	basicTransferPayload
+		// );
 		UserOperation[] memory userOps = new UserOperation[](1);
 		userOps[0] = userOp;
 
@@ -310,7 +308,10 @@ contract Module4337Test is EIP4337TestConfig {
 			maxFeePerGas: 2,
 			maxPriorityFeePerGas: 1e9,
 			paymasterAndData: new bytes(0),
-			signature: abi.encodePacked(testSig1.sig[0], testSig1.sig[1])
+			signature: abi.encodePacked(
+				signers[TestSigner.SignerB][0],
+				signers[TestSigner.SignerB][1]
+			)
 		});
 
 		vm.expectRevert();
@@ -329,7 +330,7 @@ contract Module4337Test is EIP4337TestConfig {
 		return address(bytes20(keccak256(abi.encodePacked(owner[0], owner[1])) << 96));
 	}
 
-	function accountSalt(uint salt, uint[2] memory owner) internal pure returns (bytes32) {
-		return keccak256(abi.encodePacked(salt, owner));
+	function accountSalt(bytes32 salt, uint[2] memory owner) internal pure returns (bytes32) {
+		return keccak256(abi.encode(salt, owner));
 	}
 }

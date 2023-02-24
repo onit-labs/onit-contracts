@@ -8,7 +8,7 @@ pragma solidity ^0.8.13;
 /// @dev Modified to replace '/' with '_' and not pad with '=', with fixed length 43
 library Base64 {
 	bytes internal constant TABLE =
-		'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+_';
+		'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 
 	/// @notice Encodes some bytes to the base64 representation
 	function encode(bytes memory data) internal pure returns (string memory) {
