@@ -16,6 +16,7 @@ forge-cache
 #Deployment folder
 deployments/
 broadcast/
+local.json
 
 #oz-defender files
 dist/
