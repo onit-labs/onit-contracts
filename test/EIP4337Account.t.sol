@@ -114,7 +114,7 @@ contract Module4337Test is EIP4337TestConfig, ERC4337SignatureStore {
 
 		// Retrieve the userOp from signature store (in future generate this and sign it here)
 		UserOperation[] memory userOps = new UserOperation[](1);
-		userOps[0] = signerBUserOpsWithSigs[1];
+		userOps[0] = userOpDeployFactoryFromEntryPoint;
 
 		// Handle userOp
 		entryPoint.handleOps(userOps, payable(alice));
@@ -194,7 +194,7 @@ contract Module4337Test is EIP4337TestConfig, ERC4337SignatureStore {
 		// 	abi.encodeWithSignature('setEntryPoint(address)', address(this))
 		// );
 		UserOperation[] memory userOps = new UserOperation[](1);
-		userOps[0] = userOp;
+		userOps[0] = userOpUpdateEntryPoint;
 
 		// Handle userOp
 		entryPoint.handleOps(userOps, payable(this));
@@ -217,7 +217,7 @@ contract Module4337Test is EIP4337TestConfig, ERC4337SignatureStore {
 		// 	basicTransferPayload
 		// );
 		UserOperation[] memory userOps = new UserOperation[](1);
-		userOps[0] = signerBUserOpsWithSigs[0];
+		userOps[0] = userOpTransfer;
 
 		// Check nonce before tx
 		assertEq(deployed4337Account.nonce(), 0, 'nonce not correct');
@@ -225,7 +225,7 @@ contract Module4337Test is EIP4337TestConfig, ERC4337SignatureStore {
 		// Handle userOp
 		entryPoint.handleOps(userOps, payable(address(this)));
 
-		uint256 gas = calculateGas(signerBUserOpsWithSigs[0]);
+		uint256 gas = calculateGas(userOpTransfer);
 
 		// Check updated balances
 		assertEq(deployed4337AccountAddress.balance, 0.5 ether - gas, 'balance not updated');
@@ -258,7 +258,7 @@ contract Module4337Test is EIP4337TestConfig, ERC4337SignatureStore {
 		// 	payload
 		// );
 		UserOperation[] memory userOps = new UserOperation[](1);
-		userOps[0] = userOp;
+		userOps[0] = userOpAddModuleToSafe;
 
 		// Check nonce before tx
 		assertEq(deployed4337Account.nonce(), 0, 'nonce not correct');
@@ -266,7 +266,7 @@ contract Module4337Test is EIP4337TestConfig, ERC4337SignatureStore {
 		// Handle userOp
 		entryPoint.handleOps(userOps, payable(address(this)));
 
-		uint256 gas = calculateGas(userOp);
+		uint256 gas = calculateGas(userOpAddModuleToSafe);
 
 		// Check updated balances
 		assertEq(deployed4337AccountAddress.balance, 1 ether - gas, 'balance not updated');
@@ -286,6 +286,21 @@ contract Module4337Test is EIP4337TestConfig, ERC4337SignatureStore {
 		// 	new bytes(0),
 		// 	basicTransferPayload
 		// );
+		UserOperation memory userOp = UserOperation({
+			sender: deployed4337AccountAddress,
+			nonce: 1,
+			initCode: new bytes(0),
+			callData: basicTransferPayload,
+			callGasLimit: 100000,
+			verificationGasLimit: 10000000,
+			preVerificationGas: 21000000,
+			maxFeePerGas: 2,
+			maxPriorityFeePerGas: 1e9,
+			paymasterAndData: new bytes(0),
+			signature: new bytes(0)
+		});
+		console.logBytes32(entryPoint.getUserOpHash(userOp));
+
 		UserOperation[] memory userOps = new UserOperation[](1);
 		userOps[0] = userOp;
 

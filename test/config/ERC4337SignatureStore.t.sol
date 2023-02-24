@@ -19,10 +19,7 @@ contract ERC4337SignatureStore {
 			signers[TestSigner(i)] = _signers[i];
 		}
 
-		signerBUserOpsWithSigs.push(signerBTransaction1);
-		signerBUserOpsWithSigs.push(signerBTransaction2);
-
-		console.logBytes(signerCTransaction3.callData);
+		// console.logBytes(signerCTransaction3.callData);
 	}
 
 	// -----------------------------------------------------------------------
@@ -62,20 +59,6 @@ contract ERC4337SignatureStore {
 	/**
 	 * @dev Signatures that can be used with SignerB account
 	 */
-	UserOperation[] internal signerBUserOpsWithSigs;
-
-	/**
-	 * @dev Enum to index the signerBUserOpsWithSigs array
-	 */
-	enum TransactionNumber {
-		Transaction1,
-		Transaction2,
-		Transaction3
-	}
-
-	/**
-	 * @dev Signatures that can be used with SignerB account
-	 */
 	UserOperation internal signerBTransaction1 =
 		UserOperation({
 			sender: 0x9A13710ca108D389627b4Fc7dC0e3e699Bbc780C,
@@ -97,8 +80,7 @@ contract ERC4337SignatureStore {
 			)
 		});
 
-	// testFactoryDeployFromEntryPoint
-	UserOperation internal signerBTransaction2 =
+	UserOperation internal userOpDeployFactoryFromEntryPoint =
 		UserOperation({
 			sender: 0x84C25C1252CA1f70C69109311739Ffcf786a6429,
 			nonce: 0,
@@ -119,33 +101,12 @@ contract ERC4337SignatureStore {
 			)
 		});
 
-	// /**
-	//  * @dev Signatures that can be used with SignerC account
-	//  */
-
-	//  // testUpdateEntryPoint
-	// UserOperation internal signerCTransaction2 =
-	// 	UserOperation({
-	// 		sender: ,
-	// 		nonce: 0,
-	// 		initCode: ,
-	// 		callData: new bytes(0),
-	// 		callGasLimit: 100000,
-	// 		verificationGasLimit: 10000000,
-	// 		preVerificationGas: 21000000,
-	// 		maxFeePerGas: 2,
-	// 		maxPriorityFeePerGas: 1e9,
-	// 		paymasterAndData: new bytes(0),
-	// 		signature: new bytes(0)
-	// 	});
-
-	// safe admin
-	UserOperation internal signerCTransaction3 =
+	UserOperation internal userOpUpdateEntryPoint =
 		UserOperation({
-			sender: 0xda36B27320691CEd1da4b3B7E0A4401e82148B7D,
+			sender: 0xD6BbDE9174b1CdAa358d2Cf4D57D1a9F7178FBfF,
 			nonce: 0,
 			initCode: new bytes(0),
-			callData: hex'51945447000000000000000000000000da36b27320691ced1da4b3b7e0a4401e82148b7d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000024610b59250000000000000000000000007fa9385be102ac3eac297483dd6233d62b3e149600000000000000000000000000000000000000000000000000000000',
+			callData: new bytes(0),
 			callGasLimit: 100000,
 			verificationGasLimit: 10000000,
 			preVerificationGas: 21000000,
@@ -155,21 +116,37 @@ contract ERC4337SignatureStore {
 			signature: new bytes(0)
 		});
 
-	//  // test4337AccountTransfer
-	// UserOperation internal signerCTransaction3 =
-	// 	UserOperation({
-	// 		sender: ,
-	// 		nonce: 0,
-	// 		initCode: ,
-	// 		callData: new bytes(0),
-	// 		callGasLimit: 100000,
-	// 		verificationGasLimit: 10000000,
-	// 		preVerificationGas: 21000000,
-	// 		maxFeePerGas: 2,
-	// 		maxPriorityFeePerGas: 1e9,
-	// 		paymasterAndData: new bytes(0),
-	// 		signature: new bytes(0)
-	// 	});
+	// Confirms admin operations work
+	UserOperation internal userOpAddModuleToSafe =
+		UserOperation({
+			sender: 0xbF2f97c5315e14522e3F894f22474FFA0870A089,
+			nonce: 0,
+			initCode: new bytes(0),
+			callData: hex'51945447000000000000000000000000bf2f97c5315e14522e3f894f22474ffa0870a0890000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000024610b59250000000000000000000000007fa9385be102ac3eac297483dd6233d62b3e149600000000000000000000000000000000000000000000000000000000',
+			callGasLimit: 100000,
+			verificationGasLimit: 10000000,
+			preVerificationGas: 21000000,
+			maxFeePerGas: 2,
+			maxPriorityFeePerGas: 1e9,
+			paymasterAndData: new bytes(0),
+			signature: new bytes(0)
+		});
+
+	// test4337AccountTransfer
+	UserOperation internal userOpTransfer =
+		UserOperation({
+			sender: 0xbF2f97c5315e14522e3F894f22474FFA0870A089,
+			nonce: 0,
+			initCode: new bytes(0),
+			callData: hex'51945447000000000000000000000000328809bc894f92807417d2dad6b7c998c1afdac600000000000000000000000000000000000000000000000006f05b59d3b20000000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000',
+			callGasLimit: 100000,
+			verificationGasLimit: 10000000,
+			preVerificationGas: 21000000,
+			maxFeePerGas: 2,
+			maxPriorityFeePerGas: 1e9,
+			paymasterAndData: new bytes(0),
+			signature: new bytes(0)
+		});
 
 	string internal authenticatorDataBufferHex =
 		'1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000';
