@@ -2,12 +2,6 @@ node_modules
 .env
 coverage
 coverage.json
-typechain/factories
-
-#Hardhat files
-cache
-artifacts
-typechain/
 
 #Foundry files
 out
@@ -16,6 +10,7 @@ forge-cache
 #Deployment folder
 deployments/
 broadcast/
+local.json
 
 #oz-defender files
 dist/

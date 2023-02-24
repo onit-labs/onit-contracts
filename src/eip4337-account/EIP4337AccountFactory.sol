@@ -80,7 +80,9 @@ contract EIP4337AccountFactory {
 		bytes32 salt,
 		uint[2] calldata owner
 	) external payable virtual returns (address payable account) {
-		address addr = getAddress(salt);
+		bytes32 accountSalt = keccak256(abi.encode(salt, owner));
+
+		address addr = getAddress(accountSalt);
 		uint codeSize = addr.code.length;
 		if (codeSize > 0) {
 			return payable(addr);
@@ -89,7 +91,7 @@ contract EIP4337AccountFactory {
 		// Deploy the account determinstically based on the salt (a combination of owner and otherSalt)
 		(bool successCreate, bytes memory responseCreate) = DETERMINISTIC_DEPLOYMENT_PROXY.call{
 			value: 0
-		}(abi.encodePacked(salt, createProxyData));
+		}(abi.encodePacked(accountSalt, createProxyData));
 
 		// If successful, convert response to address to be returned
 		account = payable(address(uint160(bytes20(responseCreate))));
@@ -113,7 +115,7 @@ contract EIP4337AccountFactory {
 
 	/**
 	 * @notice Get the address of an account that would be returned by createAccount()
-	 * @dev Salt should be keccak256(abi.encode(otherSalt, owner)) where otherSalt is some uint
+	 * @dev Salt should be keccak256(abi.encode(otherSalt, owner)) where otherSalt is some bytes32
 	 */
 	function getAddress(bytes32 salt) public view returns (address clone) {
 		return
