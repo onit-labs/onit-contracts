@@ -3,8 +3,6 @@ pragma solidity ^0.8.13;
 
 import '../utils/tokens/erc1155/ERC1155.sol';
 
-import 'hardhat/console.sol';
-
 /// @dev THIS IS A TEST FILE ONLY
 contract ERC1155Test is ERC1155 {
 	string public name;
@@ -20,11 +18,7 @@ contract ERC1155Test is ERC1155 {
 		symbol = symbol_;
 	}
 
-	function mint(
-		address to,
-		uint256 id,
-		uint256 amount
-	) public {
+	function mint(address to, uint256 id, uint256 amount) public {
 		_mint(to, id, amount, '');
 	}
 

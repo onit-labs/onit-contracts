@@ -5,8 +5,6 @@ forge-std/=lib/forge-std/src/
 @safe=lib/safe-contracts/contracts/
 
 eth-gas-reporter/=node_modules/eth-gas-reporter/
-hardhat-deploy/=node_modules/hardhat-deploy/
-hardhat/=node_modules/hardhat/
 @gnosis/=node_modules/@gnosis.pm/safe-contracts/contracts/
 @zodiac/=node_modules/@gnosis.pm/zodiac/contracts/
 

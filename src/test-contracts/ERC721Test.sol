@@ -3,8 +3,6 @@ pragma solidity ^0.8.13;
 
 import '../utils/tokens/erc721/ERC721.sol';
 
-import 'hardhat/console.sol';
-
 /// @dev THIS IS A TEST FILE ONLY
 contract ERC721Test is ERC721 {
 	/*///////////////////////////////////////////////////////////////
