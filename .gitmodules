@@ -11,6 +11,7 @@
 [submodule "lib/account-abstraction"]
 	path = lib/account-abstraction
 	url = https://github.com/eth-infinitism/account-abstraction
+	branch = 1b78ed2
 [submodule "lib/foundry-deployment-manager"]
 	path = lib/foundry-deployment-manager
 	url = https://github.com/jamesmccomish/foundry-deployment-manager
