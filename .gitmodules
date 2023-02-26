@@ -4,7 +4,7 @@
 	branch = v1.4.0
 [submodule "lib/solbase"]
 	path = lib/solbase
-	url = https://github.com/sol-dao/solbase
+	url = https://github.com/Sol-DAO/solbase
 [submodule "lib/zodiac"]
 	path = lib/zodiac
 	url = https://github.com/gnosis/zodiac
