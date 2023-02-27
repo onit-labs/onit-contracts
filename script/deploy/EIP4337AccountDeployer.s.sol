@@ -13,7 +13,7 @@ import {DeploymentSelector} from '../../lib/foundry-deployment-manager/src/Deplo
 contract EIP4337AccountDeployer is DeploymentSelector {
 	EIP4337Account internal account;
 
-	address internal validator = 0x30f67C247d0339d6b7C9763a1815E6ba1de82F44;
+	address internal validator = 0xBa81560Ae6Bd24D34BB24084993AfdaFad3cfeff;
 
 	function run() public {
 		innerRun();
