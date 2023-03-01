@@ -2,8 +2,8 @@
 pragma solidity ^0.8.15;
 
 // 4337 imports
-import {EntryPoint} from '@eip4337/contracts/core/EntryPoint.sol';
-import {BaseAccount, UserOperation} from '@eip4337/contracts/core/BaseAccount.sol';
+import {EntryPoint} from '@eip4337/core/EntryPoint.sol';
+import {BaseAccount, UserOperation} from '@eip4337/core/BaseAccount.sol';
 
 // 4337 contracts
 import {EIP4337Account} from '../../src/eip4337-account/EIP4337Account.sol';

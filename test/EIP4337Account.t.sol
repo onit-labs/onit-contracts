@@ -6,7 +6,7 @@ import {EIP4337Account} from '../src/eip4337-account/EIP4337Account.sol';
 import {EIP4337AccountFactory} from '../src/eip4337-account/EIP4337AccountFactory.sol';
 
 // Infinitism 4337 contracts
-import {EntryPoint} from '@eip4337/contracts/core/EntryPoint.sol';
+import {EntryPoint} from '@eip4337/core/EntryPoint.sol';
 
 // Gnosis Safe contracts
 import {CompatibilityFallbackHandler} from '@gnosis/handler/CompatibilityFallbackHandler.sol';

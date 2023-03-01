@@ -5,10 +5,10 @@ pragma solidity ^0.8.12;
 /* solhint-disable no-inline-assembly */
 /* solhint-disable reason-string */
 
-import '@eip4337/contracts/core/Helpers.sol';
+import '@eip4337/core/Helpers.sol';
 
-import '@eip4337/contracts/interfaces/IAccount.sol';
-import '@eip4337/contracts/interfaces/IEntryPoint.sol';
+import '@eip4337/interfaces/IAccount.sol';
+import '@eip4337/interfaces/IEntryPoint.sol';
 
 /**
  * @author modified from infinitism
