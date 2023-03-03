@@ -9,8 +9,8 @@ import {BaseAccount, UserOperation} from '@eip4337/core/BaseAccount.sol';
 import {EIP4337Account} from '../../src/eip4337-account/EIP4337Account.sol';
 import {EIP4337AccountFactory} from '../../src/eip4337-account/EIP4337AccountFactory.sol';
 //import {EIP4337ValidationManager} from '../../src/eip4337-account/EIP4337ValidationManager.sol';
-//import {EIP4337GroupAccount} from '../../src/eip4337-module/EIP4337GroupAccount.sol';
-//import {ForumSafe4337Factory} from '../../src/eip4337-module/ForumSafe4337Factory.sol';
+import {ForumGroupModule} from '../../src/eip4337-module/ForumGroupModule.sol';
+import {ForumGroupFactory} from '../../src/eip4337-module/ForumGroupFactory.sol';
 
 // EllipticCurve validator used for p256 curves - compiled with v0.5.0
 /// @dev To save changes to folder structure, this is built elsewhere and added to the ./out folder
@@ -22,18 +22,26 @@ import './ForumModuleTestConfig.t.sol';
 
 contract EIP4337TestConfig is Test, SafeTestConfig, ForumModuleTestConfig {
 	// 4337 Account Types
+
 	// Entry point
 	EntryPoint public entryPoint;
+
 	// Singleton for Forum 4337 account implementation
 	EIP4337Account public eip4337Singleton;
+
 	// Singleton for Forum 4337 group account implementation
-	//EIP4337GroupAccount public eip4337GroupSingleton;
+	ForumGroupModule public eip4337GroupSingleton;
+
 	// Validation manager used to check signatures for a 4337 group
 	//EIP4337ValidationManager public eip4337ValidationManager;
+	address internal eip4337ValidationManager = 0xBa81560Ae6Bd24D34BB24084993AfdaFad3cfeff; //on mumbai
+
 	// Factory for individual 4337 accounts
 	EIP4337AccountFactory public eip4337AccountFactory;
+
 	// Factory for 4337 group accounts
-	//ForumSafe4337Factory public forumSafe4337Factory;
+	ForumGroupFactory public forumGroupFactory;
+
 	// Elliptic curve validator
 	IEllipticCurveValidator public ellipticCurveValidator;
 
@@ -61,25 +69,26 @@ contract EIP4337TestConfig is Test, SafeTestConfig, ForumModuleTestConfig {
 		);
 
 		eip4337Singleton = new EIP4337Account(ellipticCurveValidator);
-		//eip4337GroupSingleton = new EIP4337GroupAccount();
+		eip4337GroupSingleton = new ForumGroupModule();
 
 		eip4337AccountFactory = new EIP4337AccountFactory(
 			eip4337Singleton,
 			entryPoint,
 			address(handler)
 		);
-		// forumSafe4337Factory = new ForumSafe4337Factory(
-		// 	payable(address(eip4337GroupSingleton)),
-		// 	address(safeSingleton),
-		// 	address(handler),
-		// 	address(multisend),
-		// 	address(safeProxyFactory),
-		// 	address(entryPoint),
-		// 	eip4337ValidationManagerAddress,
-		// 	address(fundraiseExtension),
-		// 	address(withdrawalExtension),
-		// 	address(0)
-		// );
+
+		forumGroupFactory = new ForumGroupFactory(
+			payable(address(eip4337GroupSingleton)),
+			address(safeSingleton),
+			address(handler),
+			address(multisend),
+			address(safeProxyFactory),
+			address(entryPoint),
+			eip4337ValidationManager,
+			address(fundraiseExtension),
+			address(withdrawalExtension),
+			address(0)
+		);
 	}
 
 	// -----------------------------------------------------------------------
