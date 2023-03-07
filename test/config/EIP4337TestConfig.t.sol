@@ -69,7 +69,7 @@ contract EIP4337TestConfig is Test, SafeTestConfig, ForumModuleTestConfig {
 		);
 
 		eip4337Singleton = new EIP4337Account(ellipticCurveValidator);
-		eip4337GroupSingleton = new ForumGroupModule();
+		eip4337GroupSingleton = new ForumGroupModule(entryPointAddress);
 
 		eip4337AccountFactory = new EIP4337AccountFactory(
 			eip4337Singleton,

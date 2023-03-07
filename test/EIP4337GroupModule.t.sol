@@ -4,7 +4,9 @@ pragma solidity ^0.8.15;
 // import './helpers/ForumSafeTestConfig.t.sol';
 import './config/EIP4337TestConfig.t.sol';
 
-contract Module4337Test is EIP4337TestConfig {
+import {SignatureHelper} from './config/SignatureHelper.t.sol';
+
+contract Module4337Test is EIP4337TestConfig, SignatureHelper {
 	ForumGroupModule private forumSafeModule;
 	GnosisSafe private safe;
 
@@ -35,6 +37,35 @@ contract Module4337Test is EIP4337TestConfig {
 	/// -----------------------------------------------------------------------
 	/// Tests
 	/// -----------------------------------------------------------------------
+
+	function testSetupGroup() public {
+		uint256[2] memory publicKey = createPublicKey();
+		uint256[2] memory publicKey2 = createPublicKey();
+
+		address account1 = eip4337AccountFactory.createAccount(keccak256(abi.encode(1)), publicKey);
+		address account2 = eip4337AccountFactory.createAccount(
+			keccak256(abi.encode(2)),
+			publicKey2
+		);
+
+		console.log('account1: %s', account1);
+		console.log('account2: %s', account2);
+
+		address[] memory accounts = new address[](2);
+		accounts[0] = account1;
+		accounts[1] = account2;
+		(
+			// Deploy a forum safe from the factory
+			forumSafeModule,
+			safe
+		) = forumGroupFactory.deployForumSafe(
+			'test',
+			'T',
+			[uint32(50), uint32(80)],
+			accounts,
+			initialExtensions
+		);
+	}
 
 	// function testExecutionViaEntryPoint() public {
 	// 	// check balance before
