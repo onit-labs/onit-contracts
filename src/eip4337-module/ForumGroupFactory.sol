@@ -16,18 +16,7 @@ contract ForumGroupFactory {
 	event ForumSafeDeployed(
 		ForumGroupModule indexed forumGroup,
 		address indexed gnosisSafe,
-		string name,
-		string symbol,
-		//address[] voters,
-		uint32[2] govSettings
-	);
-
-	event ForumSafeEnabled(
-		ForumGroupModule indexed forumGroup,
-		address indexed gnosisSafe,
-		string name,
-		string symbol,
-		uint32[2] govSettings
+		string name
 	);
 
 	error NullDeploy();
@@ -44,22 +33,21 @@ contract ForumGroupFactory {
 
 	// This address - stored for delegate call checks
 	address public immutable forumGroupFactory;
+
 	// Template contract to use for new Gnosis safe proxies
 	address public immutable gnosisSingleton;
+
 	// Library to use for EIP1271 compatability
 	address public immutable gnosisFallbackLibrary;
+
 	// Library to use for all safe transaction executions
 	address public immutable gnosisMultisendLibrary;
+
 	// Template contract to use for new forum groups
 	address public immutable forumGroupSingleton;
+
 	// Forum initial extensions
 	address public immutable entryPoint;
-	address public immutable validaitonLogic;
-	address public immutable fundraiseExtension;
-	address public immutable withdrawalExtension;
-	address public immutable pfpStaker;
-
-	uint256 internal immutable BASIC_EXTENSION_COUNT = 5;
 
 	/// ----------------------------------------------------------------------------------------
 	/// Constructor
@@ -71,11 +59,7 @@ contract ForumGroupFactory {
 		address _gnosisFallbackLibrary,
 		address _gnosisMultisendLibrary,
 		address _gnosisSafeProxyFactory,
-		address _entryPoint,
-		address _validaitonLogic,
-		address _fundraiseExtension,
-		address _withdrawalExtension,
-		address _pfpStaker
+		address _entryPoint
 	) {
 		forumGroupFactory = address(this);
 		forumGroupSingleton = _forumGroupSingleton;
@@ -84,10 +68,6 @@ contract ForumGroupFactory {
 		gnosisMultisendLibrary = _gnosisMultisendLibrary;
 		gnosisSafeProxyFactory = GnosisSafeProxyFactory(_gnosisSafeProxyFactory);
 		entryPoint = _entryPoint;
-		validaitonLogic = _validaitonLogic;
-		fundraiseExtension = _fundraiseExtension;
-		withdrawalExtension = _withdrawalExtension;
-		pfpStaker = _pfpStaker;
 	}
 
 	/// ----------------------------------------------------------------------------------------
@@ -95,23 +75,17 @@ contract ForumGroupFactory {
 	/// ----------------------------------------------------------------------------------------
 
 	/**
-	 * @notice Deploys a new forum group and a new Gnosis safe
+	 * @notice Deploys a new Forum group which manages a safe account
 	 * @param _name Name of the forum group
-	 * @param _symbol Symbol of the forum group
-	 * @param _govSettings Array of governance settings
 	 * @param _ownersX Array of initial owners on safe
 	 * @param _ownersY Array of initial owners on safe
-	 * @param _customExtensions Array of custom extensions to add to the forum group
 	 * @return forumModule The deployed forum group
 	 * @return _safe The deployed Gnosis safe
 	 */
-	function deployForumSafe(
+	function deployForumGroup(
 		string calldata _name,
-		string calldata _symbol,
-		uint32[2] calldata _govSettings,
 		uint256[] calldata _ownersX,
-		uint256[] calldata _ownersY,
-		address[] calldata _customExtensions
+		uint256[] calldata _ownersY
 	) external payable virtual returns (ForumGroupModule forumModule, GnosisSafe _safe) {
 		// Deploy new safe but do not set it up yet
 		_safe = GnosisSafe(
@@ -158,58 +132,11 @@ contract ForumGroupFactory {
 			);
 		}
 
-		{
-			// Create initialExtensions array
-			address[] memory initialExtensions = _createInitialExtensions(_customExtensions);
+		// Set up the module
+		forumModule.setUp(address(_safe), _ownersX, _ownersY);
 
-			// Encode the init params, and set up the module
-			forumModule.setUp(
-				address(_safe),
-				abi.encode('test', _symbol, initialExtensions, _govSettings),
-				_ownersX,
-				_ownersY
-			);
-		}
-
-		emit ForumSafeDeployed(forumModule, address(_safe), _name, _symbol, _govSettings);
+		emit ForumSafeDeployed(forumModule, address(_safe), _name);
 	}
-
-	// /**
-	//  * @dev Deploys a new Forum Safe Module and enables it on the calling safe
-	//  * @param _name Name of the new Forum Safe Module
-	//  * @param _symbol Symbol of the new Forum Safe Module
-	//  * @param _govSettings Array of governance settings for the new Forum Safe Module
-	//  * @return forumGroup The new Forum Safe Module
-	//  */
-	// function extendSafeWithForumModule(
-	// 	string calldata _name,
-	// 	string calldata _symbol,
-	// 	uint32[2] calldata _govSettings
-	// ) external returns (ForumGroupModule forumGroup) {
-	// 	if (address(this) == forumGroupFactory) revert DelegateCallOnly();
-
-	// 	// Deploy new Forum group
-	// 	forumGroup = ForumGroupModule(_cloneAsMinimalProxy(forumGroupSingleton, _name));
-
-	// 	// Create initialExtensions array - no custom extensions, therefore empty array
-	// 	address[] memory _initialExtensions = _createInitialExtensions(new address[](0));
-
-	// 	// Encode the init params, and set up the module
-	// 	forumGroup.setUp(
-	// 		address(this),
-	// 		abi.encode(_name, _symbol, address(this), _initialExtensions, _govSettings)
-	// 	);
-
-	// 	// Finally enable the module on the safe
-	// 	// The extendSafeWithForumModule() method is delegate called from the safe,
-	// 	// therefore the enableModule function called below updates the storage location of the safe
-	// 	(bool success, ) = (address(this)).call(
-	// 		abi.encodeWithSignature('enableModule(address)', address(forumGroup))
-	// 	);
-	// 	if (!success) revert EnableModuleFailed();
-
-	// 	emit ForumSafeEnabled(forumGroup, msg.sender, _name, _symbol, _govSettings);
-	// }
 
 	/// ----------------------------------------------------------------------------------------
 	/// Factory Internal
@@ -241,38 +168,5 @@ contract ForumGroupFactory {
 		}
 		// if CREATE2 fails for some reason, address(0) is returned
 		if (clone == address(0)) revert NullDeploy();
-	}
-
-	/**
-	 * @notice Creates the initial extensions array
-	 * @param _customExtensions The initial extensions to add to the Forum
-	 */
-	function _createInitialExtensions(
-		address[] memory _customExtensions
-	) internal view returns (address[] memory initialExtensions) {
-		// Create initialExtensions array of correct length. Basic Forum extensions + customExtensions
-		initialExtensions = new address[](BASIC_EXTENSION_COUNT + _customExtensions.length);
-
-		// Set the base Forum extensions
-		(
-			initialExtensions[0],
-			initialExtensions[1],
-			initialExtensions[2],
-			initialExtensions[3],
-			initialExtensions[4]
-		) = (entryPoint, validaitonLogic, pfpStaker, fundraiseExtension, withdrawalExtension);
-
-		// Set the custom extensions
-		if (_customExtensions.length != 0) {
-			// Cannot realistically overflow on human timescales
-			unchecked {
-				for (uint256 i; i < _customExtensions.length; ) {
-					// +BASIC_EXTENSION_COUNT offsets the base Forum extensions
-					initialExtensions[i + BASIC_EXTENSION_COUNT] = _customExtensions[i];
-
-					++i;
-				}
-			}
-		}
 	}
 }

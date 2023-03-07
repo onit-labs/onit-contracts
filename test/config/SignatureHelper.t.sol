@@ -31,6 +31,7 @@ contract SignatureHelper is BasicTestConfig {
 	}
 
 	function signMessageForPublicKey(
+		bytes32 message,
 		uint256[2] memory publicKey
 	) public returns (uint256[2] memory) {
 		string[] memory cmd = new string[](7);
@@ -39,7 +40,7 @@ contract SignatureHelper is BasicTestConfig {
 		cmd[1] = 'ts-node';
 		cmd[2] = 'script/signatureHelper.ts';
 		cmd[3] = '2';
-		cmd[4] = 'test';
+		cmd[4] = bytes32ToString(message);
 		cmd[5] = Strings.toString(publicKey[0]);
 		cmd[6] = Strings.toString(publicKey[1]);
 
@@ -52,7 +53,15 @@ contract SignatureHelper is BasicTestConfig {
 		return sig;
 	}
 
-	function testFailing() public {
-		//require(false, 'testFailing');
+	function bytes32ToString(bytes32 _bytes32) public pure returns (string memory) {
+		uint8 i = 0;
+		while (i < 32 && _bytes32[i] != 0) {
+			i++;
+		}
+		bytes memory bytesArray = new bytes(i);
+		for (i = 0; i < 32 && _bytes32[i] != 0; i++) {
+			bytesArray[i] = _bytes32[i];
+		}
+		return string(bytesArray);
 	}
 }

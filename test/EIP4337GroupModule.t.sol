@@ -10,26 +10,34 @@ contract Module4337Test is EIP4337TestConfig, SignatureHelper {
 	ForumGroupModule private forumSafeModule;
 	GnosisSafe private safe;
 
+	// Some public keys used as signers in tests
+	uint256[2] internal publicKey;
+	uint256[2] internal publicKey2;
+
 	/// -----------------------------------------------------------------------
 	/// Setup
 	/// -----------------------------------------------------------------------
 
 	function setUp() public {
-		// (
-		// 	// Deploy a forum safe from the factory
-		// 	forumSafeModule,
-		// 	safe
-		// ) = forumGroupFactory.deployForumSafe(
-		// 	'test',
-		// 	'T',
-		// 	[uint32(50), uint32(80)],
-		// 	voters,
-		// 	initialExtensions
-		// );
-		// // Set addresses for easier use in tests
-		// moduleAddress = address(forumSafeModule);
-		// safeAddress = address(safe);
-		// vm.deal(safeAddress, 1 ether);
+		publicKey = createPublicKey();
+		publicKey2 = createPublicKey();
+
+		uint256[] memory membersX = new uint256[](2);
+		membersX[0] = publicKey[0];
+		membersX[1] = publicKey2[0];
+
+		uint256[] memory membersY = new uint256[](2);
+		membersY[0] = publicKey[1];
+		membersY[1] = publicKey2[1];
+
+		(
+			// Deploy a forum safe from the factory
+			forumSafeModule,
+			safe
+		) = forumGroupFactory.deployForumGroup('test', membersX, membersY);
+
+		// Deal the account some funds
+		vm.deal(address(safe), 1 ether);
 	}
 
 	/// -----------------------------------------------------------------------
@@ -37,64 +45,61 @@ contract Module4337Test is EIP4337TestConfig, SignatureHelper {
 	/// -----------------------------------------------------------------------
 
 	function testSetupGroup() public {
-		uint256[2] memory publicKey = createPublicKey();
-		uint256[2] memory publicKey2 = createPublicKey();
+		// check the members are set
+		uint256[2][] memory members = forumSafeModule.getMembers();
 
-		uint256[] memory membersX = new uint256[](2);
-		membersX[0] = publicKey[0];
-		membersX[1] = publicKey2[1];
-
-		uint256[] memory membersY = new uint256[](2);
-		membersY[0] = publicKey[0];
-		membersY[1] = publicKey2[1];
-
-		(
-			// Deploy a forum safe from the factory
-			forumSafeModule,
-			safe
-		) = forumGroupFactory.deployForumSafe(
-			'test',
-			'T',
-			[uint32(50), uint32(80)],
-			membersX,
-			membersY,
-			initialExtensions
-		);
+		assertTrue(members[0][0] == publicKey[0]);
+		assertTrue(members[0][1] == publicKey[1]);
+		assertTrue(members[1][0] == publicKey2[0]);
+		assertTrue(members[1][1] == publicKey2[1]);
 	}
 
-	// function testExecutionViaEntryPoint() public {
-	// 	// check balance before
-	// 	assertTrue(address(alice).balance == 1 ether);
-	// 	assertTrue(address(safe).balance == 1 ether);
-	// 	assertTrue(forumSafeModule.nonce() == 0);
+	function testExecutionViaEntryPoint() public {
+		// check balance before
+		assertTrue(address(alice).balance == 1 ether);
+		assertTrue(address(safe).balance == 1 ether);
+		assertTrue(forumSafeModule.nonce() == 0);
 
-	// 	// build a proposal
-	// 	bytes memory executeCalldata = buildExecutionPayload(
-	// 		Enum.Operation.Call,
-	// 		[alice],
-	// 		[uint256(0.5 ether)],
-	// 		[new bytes(0)]
-	// 	);
+		// Build a transaction to execute
+		bytes memory executeCalldata = buildExecutionPayload(
+			alice,
+			uint256(0.5 ether),
+			new bytes(0),
+			Enum.Operation.Call
+		);
 
-	// 	// build user operation
-	// 	UserOperation memory tmp = buildUserOp(
-	// 		address(forumSafeModule),
-	// 		new bytes(0),
-	// 		executeCalldata,
-	// 		alicePk
-	// 	);
+		// Build user operation
+		UserOperation memory tmp = buildUserOp(
+			address(forumSafeModule),
+			forumSafeModule.nonce(),
+			new bytes(0),
+			executeCalldata
+		);
 
-	// 	UserOperation[] memory tmp1 = new UserOperation[](1);
-	// 	tmp1[0] = tmp;
+		// Get signatures for the user operation
+		uint256[2] memory s1 = signMessageForPublicKey(entryPoint.getUserOpHash(tmp), publicKey);
+		//uint256[2] memory s2 = signMessageForPublicKey(entryPoint.getUserOpHash(tmp), publicKey2);
 
-	// 	entryPoint.handleOps(tmp1, payable(alice));
+		uint256[2][] memory sigs = new uint256[2][](2);
+		sigs[0] = s1;
+		//sigs[1] = s2;
 
-	// 	// Transfer has been made, nonce incremented, used nonce set
-	// 	assertTrue(address(alice).balance == 1.5 ether);
-	// 	assertTrue(address(safe).balance == 0.5 ether);
-	// 	assertTrue(forumSafeModule.nonce() == 1);
-	// 	assertTrue(forumSafeModule.usedNonces(entryPoint.getUserOpHash(tmp)) == 1);
-	// }
+		tmp.signature = abi.encode(
+			sigs,
+			'1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000'
+		);
+
+		UserOperation[] memory tmp1 = new UserOperation[](1);
+		tmp1[0] = tmp;
+
+		entryPoint.handleOps(tmp1, payable(alice));
+
+		// Transfer has been made, nonce incremented, used nonce set
+		assertTrue(address(alice).balance == 1.5 ether);
+		assertTrue(address(safe).balance == 0.5 ether);
+		assertTrue(forumSafeModule.nonce() == 1);
+		//assertTrue(forumSafeModule.usedNonces(entryPoint.getUserOpHash(tmp)) == 1);
+	}
 
 	// function testManageAdminViaEntryPoint() public {
 	// 	// check balance before

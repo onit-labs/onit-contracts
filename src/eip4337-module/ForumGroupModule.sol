@@ -4,23 +4,22 @@ pragma solidity ^0.8.7;
 /* solhint-disable avoid-low-level-calls */
 /* solhint-disable no-inline-assembly */
 /* solhint-disable reason-string */
+/* solhint-disable no-console */
 
 import {Base64} from '@libraries/Base64.sol';
-
-import {Forum4337Group} from './Forum4337Group.sol';
 
 // Interface of the elliptic curve validator contract
 import {IEllipticCurveValidator} from '@interfaces/IEllipticCurveValidator.sol';
 
-import '@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
+import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+
 import '@gnosis.pm/safe-contracts/contracts/GnosisSafe.sol';
 import '@gnosis.pm/safe-contracts/contracts/base/Executor.sol';
 import '@gnosis.pm/safe-contracts/contracts/GnosisSafe.sol';
+
 import '@eip4337/interfaces/IAccount.sol';
 import '@eip4337/interfaces/IEntryPoint.sol';
 import '@utils/Exec.sol';
-
-using ECDSA for bytes32;
 
 // !!!
 // - Consider domain / chain info to be included in signatures
@@ -35,7 +34,7 @@ using ECDSA for bytes32;
  * 		- Is enabled as a module on a Gnosis Safe
  * @author modified from infinitism https://github.com/eth-infinitism/account-abstraction/contracts/samples/gnosis/EIP4337Module.sol
  */
-contract ForumGroupModule is Forum4337Group, IAccount, Executor {
+contract ForumGroupModule is IAccount, Executor, Initializable {
 	// Immutable reference to latest entrypoint
 	address public immutable entryPoint;
 
@@ -75,15 +74,12 @@ contract ForumGroupModule is Forum4337Group, IAccount, Executor {
 
 	function setUp(
 		address _safe,
-		bytes memory _initializationParams,
 		uint256[] memory _membersX,
 		uint256[] memory _membersY
 	) external initializer {
 		this4337Module = address(this);
 
 		safe = GnosisSafe(payable(_safe));
-
-		setUpGroup(_initializationParams);
 
 		membersX = _membersX;
 		membersY = _membersY;
@@ -117,7 +113,8 @@ contract ForumGroupModule is Forum4337Group, IAccount, Executor {
 
 		bytes32 fullMessage = sha256(abi.encodePacked(fromHex(authData), hashedClientData));
 
-		for (uint i; i < membersX.length; i++) {
+		// ! A basic version where all members must vote
+		for (uint i; i < membersX.length; ) {
 			// Check if the signature is valid
 			if (
 				!_ellipticCurveValidator.validateSignature(
@@ -129,6 +126,7 @@ contract ForumGroupModule is Forum4337Group, IAccount, Executor {
 				// If the signature is valid, we return the offset of the member
 				validationData = SIG_VALIDATION_FAILED;
 			}
+			++i;
 		}
 
 		if (userOp.initCode.length == 0) {
@@ -151,7 +149,7 @@ contract ForumGroupModule is Forum4337Group, IAccount, Executor {
 	 * EntryPoint wouldn't know to emit the UserOperationRevertReason event,
 	 * which the frontend/client uses to capture the reason for the failure.
 	 */
-	function executeAndRevert(
+	function execute(
 		address to,
 		uint256 value,
 		bytes memory data,
@@ -293,6 +291,7 @@ contract ForumGroupModule is Forum4337Group, IAccount, Executor {
 	}
 
 	function getMembers() public view returns (uint256[2][] memory members) {
+		members = new uint256[2][](membersX.length);
 		for (uint i; i < membersX.length; ) {
 			members[i] = [membersX[i], membersY[i]];
 			++i;

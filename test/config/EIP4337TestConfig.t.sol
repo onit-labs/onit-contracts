@@ -47,14 +47,8 @@ contract EIP4337TestConfig is Test, SafeTestConfig, ForumModuleTestConfig {
 
 	// Addresses for easy use in tests
 	address internal entryPointAddress;
-	//address internal eip4337ValidationManagerAddress;
 
-	// Stuct for sigs to be decoded by p256 solidity library
-	struct TestSig {
-		uint[2] sig;
-		uint[2] signer;
-		bytes32 message;
-	}
+	//address internal eip4337ValidationManagerAddress;
 
 	constructor() {
 		entryPoint = new EntryPoint();
@@ -83,11 +77,7 @@ contract EIP4337TestConfig is Test, SafeTestConfig, ForumModuleTestConfig {
 			address(handler),
 			address(multisend),
 			address(safeProxyFactory),
-			address(entryPoint),
-			eip4337ValidationManager,
-			address(fundraiseExtension),
-			address(withdrawalExtension),
-			address(0)
+			address(entryPoint)
 		);
 	}
 
@@ -95,37 +85,41 @@ contract EIP4337TestConfig is Test, SafeTestConfig, ForumModuleTestConfig {
 	// 4337 Helper Functions
 	// -----------------------------------------------------------------------
 
+	UserOperation public userOpBase =
+		UserOperation({
+			sender: address(0),
+			nonce: 0,
+			initCode: new bytes(0),
+			callData: new bytes(0),
+			callGasLimit: 10000000,
+			verificationGasLimit: 20000000,
+			preVerificationGas: 20000000,
+			maxFeePerGas: 2,
+			maxPriorityFeePerGas: 1,
+			paymasterAndData: new bytes(0),
+			signature: new bytes(0)
+		});
+
 	function getNonce(BaseAccount account) internal view returns (uint256) {
 		return account.nonce();
 	}
 
 	// ! This should be replaced when generation of signatures is done programatically
-	// function buildUserOp(
-	// 	uint8 testSignatureData,
-	// 	address sender,
-	// 	uint256 nonce,
-	// 	bytes memory initCode,
-	// 	bytes memory callData
-	// ) public view returns (UserOperation memory userOp) {
-	// 	// Build on top of base op
-	// 	userOp = userOpBase;
+	function buildUserOp(
+		address sender,
+		uint256 nonce,
+		bytes memory initCode,
+		bytes memory callData
+	) public view returns (UserOperation memory userOp) {
+		// Build on top of base op
+		userOp = userOpBase;
 
-	// 	// Add sender and calldata to op
-	// 	userOp.sender = sender;
-	// 	userOp.nonce = nonce;
-	// 	userOp.initCode = initCode;
-	// 	userOp.callData = callData;
-
-	// 	// Improve this now we have multiple
-	// 	TestSig memory testSig = testSignatureData == 1 ? testSig1 : testSignatureData == 2
-	// 		? testSig2
-	// 		: testSig3;
-
-	// 	userOp.signature = abi.encode(
-	// 		[testSig.sig[0], testSig.sig[1]],
-	// 		authenticatorDataBufferHex2
-	// 	);
-	// }
+		// Add sender and calldata to op
+		userOp.sender = sender;
+		userOp.nonce = nonce;
+		userOp.initCode = initCode;
+		userOp.callData = callData;
+	}
 
 	// Build payload which the entryPoint will call on the sender 4337 account
 	function buildExecutionPayload(
