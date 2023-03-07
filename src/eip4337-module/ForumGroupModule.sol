@@ -5,7 +5,12 @@ pragma solidity ^0.8.7;
 /* solhint-disable no-inline-assembly */
 /* solhint-disable reason-string */
 
+import {Base64} from '@libraries/Base64.sol';
+
 import {Forum4337Group} from './Forum4337Group.sol';
+
+// Interface of the elliptic curve validator contract
+import {IEllipticCurveValidator} from '@interfaces/IEllipticCurveValidator.sol';
 
 import '@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
 import '@gnosis.pm/safe-contracts/contracts/GnosisSafe.sol';
@@ -31,63 +36,109 @@ using ECDSA for bytes32;
  * @author modified from infinitism https://github.com/eth-infinitism/account-abstraction/contracts/samples/gnosis/EIP4337Module.sol
  */
 contract ForumGroupModule is Forum4337Group, IAccount, Executor {
+	// Immutable reference to latest entrypoint
+	address public immutable entryPoint;
+
+	// Immutable reference to validator of the secp256r1 signatures
+	IEllipticCurveValidator internal immutable _ellipticCurveValidator;
+
 	// The safe controlled by this module
 	GnosisSafe public safe;
 
-	address public immutable entryPoint;
-
-	// Set to address(this) we can know the current 4337 module enabled on a safe
+	// Set to address(this) so we can know the current 4337 module enabled on a safe
 	address public this4337Module;
 
 	address internal constant SENTINEL_MODULES = address(0x1);
+
+	// The nonce of the account
+	uint256 public nonce;
 
 	// return value in case of signature failure, with no time-range.
 	// equivalent to _packValidationData(true,0,0);
 	uint256 internal constant SIG_VALIDATION_FAILED = 1;
 
+	// TODO convert below x and y mappings to linked list
+
+	// The public keys of the signing members of the group
+	uint256[] internal membersX;
+	uint256[] internal membersY;
+
 	/// -----------------------------------------------------------------------
 	/// 						CONSTRUCTOR
 	/// -----------------------------------------------------------------------
 
-	constructor(address anEntryPoint) {
+	constructor(address anEntryPoint, IEllipticCurveValidator ellipticCurveValidator) {
 		entryPoint = anEntryPoint;
+
+		_ellipticCurveValidator = ellipticCurveValidator;
 	}
 
-	function setUp(address _safe, bytes memory _initializationParams) external initializer {
+	function setUp(
+		address _safe,
+		bytes memory _initializationParams,
+		uint256[] memory _membersX,
+		uint256[] memory _membersY
+	) external initializer {
 		this4337Module = address(this);
 
 		safe = GnosisSafe(payable(_safe));
 
 		setUpGroup(_initializationParams);
+
+		membersX = _membersX;
+		membersY = _membersY;
 	}
 
-	/**
-	 * delegate-called (using execFromModule) through the fallback, so "real" msg.sender is attached as last 20 bytes
-	 */
+	/// -----------------------------------------------------------------------
+	/// 						EXECUTION
+	/// -----------------------------------------------------------------------
+
 	function validateUserOp(
 		UserOperation calldata userOp,
 		bytes32 userOpHash,
 		uint256 missingAccountFunds
 	) external override returns (uint256 validationData) {
-		address msgSender = address(bytes20(msg.data[msg.data.length - 20:]));
-		require(msgSender == entryPoint, 'account: not from entrypoint');
+		require(msg.sender == entryPoint, 'account: not from entrypoint');
 
-		// GnosisSafe pThis = GnosisSafe(payable(address(this)));
-		// bytes32 hash = userOpHash.toEthSignedMessageHash();
-		// address recovered = hash.recover(userOp.signature);
-		// require(threshold == 1, 'account: only threshold 1');
-		// if (!pThis.isOwner(recovered)) {
-		// 	validationData = SIG_VALIDATION_FAILED;
-		// }
+		// Extract the passkey generated signature and authentacator data
+		(uint256[2][] memory sig, string memory authData) = abi.decode(
+			userOp.signature,
+			(uint256[2][], string)
+		);
 
-		// if (userOp.initCode.length == 0) {
-		// 	require(uint256(nonce) == userOp.nonce, 'account: invalid nonce');
-		// 	nonce = bytes32(uint256(nonce) + 1);
-		// }
+		// Hash the client data to produce the challenge signed by the passkey offchain
+		bytes32 hashedClientData = sha256(
+			abi.encodePacked(
+				'{"type":"webauthn.get","challenge":"',
+				Base64.encode(abi.encodePacked(userOpHash)),
+				'","origin":"https://development.forumdaos.com"}'
+			)
+		);
+
+		bytes32 fullMessage = sha256(abi.encodePacked(fromHex(authData), hashedClientData));
+
+		for (uint i; i < membersX.length; i++) {
+			// Check if the signature is valid
+			if (
+				!_ellipticCurveValidator.validateSignature(
+					fullMessage,
+					[sig[i][0], sig[i][1]],
+					[membersX[i], membersY[i]]
+				)
+			) {
+				// If the signature is valid, we return the offset of the member
+				validationData = SIG_VALIDATION_FAILED;
+			}
+		}
+
+		if (userOp.initCode.length == 0) {
+			require(nonce == userOp.nonce, 'account: invalid nonce');
+			++nonce;
+		}
 
 		if (missingAccountFunds > 0) {
 			//Note: MAY pay more than the minimum, to deposit for future transactions
-			(bool success, ) = payable(msgSender).call{value: missingAccountFunds}('');
+			(bool success, ) = payable(msg.sender).call{value: missingAccountFunds}('');
 			(success);
 			//ignore failure (its EntryPoint's job to verify, not account.)
 		}
@@ -124,6 +175,10 @@ contract ForumGroupModule is Forum4337Group, IAccount, Executor {
 			revert(abi.decode(returnData, (string)));
 		}
 	}
+
+	/// -----------------------------------------------------------------------
+	/// 						MODULE MANAGEMENT
+	/// -----------------------------------------------------------------------
 
 	/**
 	 * set up a safe as EIP-4337 enabled.
@@ -210,6 +265,10 @@ contract ForumGroupModule is Forum4337Group, IAccount, Executor {
 		}
 	}
 
+	/// -----------------------------------------------------------------------
+	/// 						VIEW FUNCTIONS
+	/// -----------------------------------------------------------------------
+
 	/**
 	 * enumerate modules, and find the currently active EIP4337 manager (and previous module)
 	 * @return prev prev module, needed by replaceEIP4337Manager
@@ -231,5 +290,41 @@ contract ForumGroupModule is Forum4337Group, IAccount, Executor {
 			prev = module;
 		}
 		return (address(0), address(0));
+	}
+
+	function getMembers() public view returns (uint256[2][] memory members) {
+		for (uint i; i < membersX.length; ) {
+			members[i] = [membersX[i], membersY[i]];
+			++i;
+		}
+	}
+
+	/// -----------------------------------------------------------------------
+	/// 						INTERNAL FUNCTIONS
+	/// -----------------------------------------------------------------------
+
+	// Convert an hexadecimal string to raw bytes
+	function fromHex(string memory s) internal pure returns (bytes memory) {
+		bytes memory ss = bytes(s);
+		require(ss.length % 2 == 0, 'hex length not even');
+		bytes memory r = new bytes(ss.length / 2);
+		for (uint i = 0; i < ss.length / 2; ++i) {
+			r[i] = bytes1(fromHexChar(uint8(ss[2 * i])) * 16 + fromHexChar(uint8(ss[2 * i + 1])));
+		}
+		return r;
+	}
+
+	// Convert an hexadecimal character to their value
+	function fromHexChar(uint8 c) internal pure returns (uint8) {
+		if (bytes1(c) >= bytes1('0') && bytes1(c) <= bytes1('9')) {
+			return c - uint8(bytes1('0'));
+		}
+		if (bytes1(c) >= bytes1('a') && bytes1(c) <= bytes1('f')) {
+			return 10 + c - uint8(bytes1('a'));
+		}
+		if (bytes1(c) >= bytes1('A') && bytes1(c) <= bytes1('F')) {
+			return 10 + c - uint8(bytes1('A'));
+		}
+		revert('failed hex conversion');
 	}
 }

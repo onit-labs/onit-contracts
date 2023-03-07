@@ -18,7 +18,7 @@ contract ForumGroupFactory {
 		address indexed gnosisSafe,
 		string name,
 		string symbol,
-		address[] voters,
+		//address[] voters,
 		uint32[2] govSettings
 	);
 
@@ -99,7 +99,8 @@ contract ForumGroupFactory {
 	 * @param _name Name of the forum group
 	 * @param _symbol Symbol of the forum group
 	 * @param _govSettings Array of governance settings
-	 * @param _owners Array of initial owners on safe
+	 * @param _ownersX Array of initial owners on safe
+	 * @param _ownersY Array of initial owners on safe
 	 * @param _customExtensions Array of custom extensions to add to the forum group
 	 * @return forumModule The deployed forum group
 	 * @return _safe The deployed Gnosis safe
@@ -108,7 +109,8 @@ contract ForumGroupFactory {
 		string calldata _name,
 		string calldata _symbol,
 		uint32[2] calldata _govSettings,
-		address[] calldata _owners,
+		uint256[] calldata _ownersX,
+		uint256[] calldata _ownersY,
 		address[] calldata _customExtensions
 	) external payable virtual returns (ForumGroupModule forumModule, GnosisSafe _safe) {
 		// Deploy new safe but do not set it up yet
@@ -139,10 +141,14 @@ contract ForumGroupFactory {
 				_enableForumGroupMultisend
 			);
 
+			// Create array of owners
+			address[] memory ownerPlaceholder = new address[](1);
+			ownerPlaceholder[0] = address(0xdead);
+
 			// Call setup on safe adding owners and enabling module
 			_safe.setup(
-				_owners,
-				_owners.length,
+				ownerPlaceholder,
+				1,
 				gnosisMultisendLibrary,
 				_multisendAction,
 				gnosisFallbackLibrary,
@@ -159,49 +165,51 @@ contract ForumGroupFactory {
 			// Encode the init params, and set up the module
 			forumModule.setUp(
 				address(_safe),
-				abi.encode(_name, _symbol, initialExtensions, _govSettings)
+				abi.encode('test', _symbol, initialExtensions, _govSettings),
+				_ownersX,
+				_ownersY
 			);
 		}
 
-		emit ForumSafeDeployed(forumModule, address(_safe), _name, _symbol, _owners, _govSettings);
+		emit ForumSafeDeployed(forumModule, address(_safe), _name, _symbol, _govSettings);
 	}
 
-	/**
-	 * @dev Deploys a new Forum Safe Module and enables it on the calling safe
-	 * @param _name Name of the new Forum Safe Module
-	 * @param _symbol Symbol of the new Forum Safe Module
-	 * @param _govSettings Array of governance settings for the new Forum Safe Module
-	 * @return forumGroup The new Forum Safe Module
-	 */
-	function extendSafeWithForumModule(
-		string calldata _name,
-		string calldata _symbol,
-		uint32[2] calldata _govSettings
-	) external returns (ForumGroupModule forumGroup) {
-		if (address(this) == forumGroupFactory) revert DelegateCallOnly();
+	// /**
+	//  * @dev Deploys a new Forum Safe Module and enables it on the calling safe
+	//  * @param _name Name of the new Forum Safe Module
+	//  * @param _symbol Symbol of the new Forum Safe Module
+	//  * @param _govSettings Array of governance settings for the new Forum Safe Module
+	//  * @return forumGroup The new Forum Safe Module
+	//  */
+	// function extendSafeWithForumModule(
+	// 	string calldata _name,
+	// 	string calldata _symbol,
+	// 	uint32[2] calldata _govSettings
+	// ) external returns (ForumGroupModule forumGroup) {
+	// 	if (address(this) == forumGroupFactory) revert DelegateCallOnly();
 
-		// Deploy new Forum group
-		forumGroup = ForumGroupModule(_cloneAsMinimalProxy(forumGroupSingleton, _name));
+	// 	// Deploy new Forum group
+	// 	forumGroup = ForumGroupModule(_cloneAsMinimalProxy(forumGroupSingleton, _name));
 
-		// Create initialExtensions array - no custom extensions, therefore empty array
-		address[] memory _initialExtensions = _createInitialExtensions(new address[](0));
+	// 	// Create initialExtensions array - no custom extensions, therefore empty array
+	// 	address[] memory _initialExtensions = _createInitialExtensions(new address[](0));
 
-		// Encode the init params, and set up the module
-		forumGroup.setUp(
-			address(this),
-			abi.encode(_name, _symbol, address(this), _initialExtensions, _govSettings)
-		);
+	// 	// Encode the init params, and set up the module
+	// 	forumGroup.setUp(
+	// 		address(this),
+	// 		abi.encode(_name, _symbol, address(this), _initialExtensions, _govSettings)
+	// 	);
 
-		// Finally enable the module on the safe
-		// The extendSafeWithForumModule() method is delegate called from the safe,
-		// therefore the enableModule function called below updates the storage location of the safe
-		(bool success, ) = (address(this)).call(
-			abi.encodeWithSignature('enableModule(address)', address(forumGroup))
-		);
-		if (!success) revert EnableModuleFailed();
+	// 	// Finally enable the module on the safe
+	// 	// The extendSafeWithForumModule() method is delegate called from the safe,
+	// 	// therefore the enableModule function called below updates the storage location of the safe
+	// 	(bool success, ) = (address(this)).call(
+	// 		abi.encodeWithSignature('enableModule(address)', address(forumGroup))
+	// 	);
+	// 	if (!success) revert EnableModuleFailed();
 
-		emit ForumSafeEnabled(forumGroup, msg.sender, _name, _symbol, _govSettings);
-	}
+	// 	emit ForumSafeEnabled(forumGroup, msg.sender, _name, _symbol, _govSettings);
+	// }
 
 	/// ----------------------------------------------------------------------------------------
 	/// Factory Internal

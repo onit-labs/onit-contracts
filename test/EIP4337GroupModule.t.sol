@@ -15,23 +15,21 @@ contract Module4337Test is EIP4337TestConfig, SignatureHelper {
 	/// -----------------------------------------------------------------------
 
 	function setUp() public {
-		(
-			// Deploy a forum safe from the factory
-			forumSafeModule,
-			safe
-		) = forumGroupFactory.deployForumSafe(
-			'test',
-			'T',
-			[uint32(50), uint32(80)],
-			voters,
-			initialExtensions
-		);
-
-		// Set addresses for easier use in tests
-		moduleAddress = address(forumSafeModule);
-		safeAddress = address(safe);
-
-		vm.deal(safeAddress, 1 ether);
+		// (
+		// 	// Deploy a forum safe from the factory
+		// 	forumSafeModule,
+		// 	safe
+		// ) = forumGroupFactory.deployForumSafe(
+		// 	'test',
+		// 	'T',
+		// 	[uint32(50), uint32(80)],
+		// 	voters,
+		// 	initialExtensions
+		// );
+		// // Set addresses for easier use in tests
+		// moduleAddress = address(forumSafeModule);
+		// safeAddress = address(safe);
+		// vm.deal(safeAddress, 1 ether);
 	}
 
 	/// -----------------------------------------------------------------------
@@ -42,18 +40,14 @@ contract Module4337Test is EIP4337TestConfig, SignatureHelper {
 		uint256[2] memory publicKey = createPublicKey();
 		uint256[2] memory publicKey2 = createPublicKey();
 
-		address account1 = eip4337AccountFactory.createAccount(keccak256(abi.encode(1)), publicKey);
-		address account2 = eip4337AccountFactory.createAccount(
-			keccak256(abi.encode(2)),
-			publicKey2
-		);
+		uint256[] memory membersX = new uint256[](2);
+		membersX[0] = publicKey[0];
+		membersX[1] = publicKey2[1];
 
-		console.log('account1: %s', account1);
-		console.log('account2: %s', account2);
+		uint256[] memory membersY = new uint256[](2);
+		membersY[0] = publicKey[0];
+		membersY[1] = publicKey2[1];
 
-		address[] memory accounts = new address[](2);
-		accounts[0] = account1;
-		accounts[1] = account2;
 		(
 			// Deploy a forum safe from the factory
 			forumSafeModule,
@@ -62,7 +56,8 @@ contract Module4337Test is EIP4337TestConfig, SignatureHelper {
 			'test',
 			'T',
 			[uint32(50), uint32(80)],
-			accounts,
+			membersX,
+			membersY,
 			initialExtensions
 		);
 	}
