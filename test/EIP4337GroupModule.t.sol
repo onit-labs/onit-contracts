@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.15;
 
+/* solhint-disable no-console */
+
 // import './helpers/ForumSafeTestConfig.t.sol';
 import './config/EIP4337TestConfig.t.sol';
 
 import {SignatureHelper} from './config/SignatureHelper.t.sol';
+
+import {Base64} from '@libraries/Base64.sol';
 
 contract Module4337Test is EIP4337TestConfig, SignatureHelper {
 	ForumGroupModule private forumSafeModule;
@@ -19,16 +23,16 @@ contract Module4337Test is EIP4337TestConfig, SignatureHelper {
 	/// -----------------------------------------------------------------------
 
 	function setUp() public {
-		publicKey = createPublicKey();
-		publicKey2 = createPublicKey();
+		publicKey = createPublicKey('1');
+		publicKey2 = createPublicKey('2');
 
-		uint256[] memory membersX = new uint256[](2);
+		uint256[] memory membersX = new uint256[](1);
 		membersX[0] = publicKey[0];
-		membersX[1] = publicKey2[0];
+		//membersX[1] = publicKey2[0];
 
-		uint256[] memory membersY = new uint256[](2);
+		uint256[] memory membersY = new uint256[](1);
 		membersY[0] = publicKey[1];
-		membersY[1] = publicKey2[1];
+		//membersY[1] = publicKey2[1];
 
 		(
 			// Deploy a forum safe from the factory
@@ -76,11 +80,21 @@ contract Module4337Test is EIP4337TestConfig, SignatureHelper {
 			executeCalldata
 		);
 
+		string memory base64Hash = Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(tmp)));
+
+		console.log(base64Hash);
+		console.log('pub', publicKey[0], publicKey[1]);
+
 		// Get signatures for the user operation
 		uint256[2] memory s1 = signMessageForPublicKey(entryPoint.getUserOpHash(tmp), publicKey);
+
+		console.log(s1[0], s1[1]);
+
 		//uint256[2] memory s2 = signMessageForPublicKey(entryPoint.getUserOpHash(tmp), publicKey2);
 
-		uint256[2][] memory sigs = new uint256[2][](2);
+		//console.logBytes32(tmp);
+
+		uint256[2][] memory sigs = new uint256[2][](1);
 		sigs[0] = s1;
 		//sigs[1] = s2;
 

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier UNLICENSED
 pragma solidity ^0.8.13;
 
+/* solhint-disable no-console */
+
 import './BasicTestConfig.t.sol';
 import '@openzeppelin/contracts/utils/Strings.sol';
 
@@ -9,18 +11,17 @@ import '@openzeppelin/contracts/utils/Strings.sol';
  * 			 It is used to create and sign messages, similar to how the passkey would, for testing
  */
 contract SignatureHelper is BasicTestConfig {
-	function createPublicKey() public returns (uint256[2] memory) {
-		string[] memory cmd = new string[](4);
+	function createPublicKey(string memory salt) public returns (uint256[2] memory) {
+		string[] memory cmd = new string[](6);
 
 		cmd[0] = 'yarn';
-		cmd[1] = 'ts-node';
-		cmd[2] = 'script/signatureHelper.ts';
-		cmd[3] = '1';
+		cmd[1] = '--silent';
+		cmd[2] = 'ts-node';
+		cmd[3] = 'script/signatureHelper.ts';
+		cmd[4] = 'gen';
+		cmd[5] = salt;
 
 		bytes memory res = vm.ffi(cmd);
-
-		console.logBytes(res);
-		console.log(string(res));
 
 		uint256[2] memory s = abi.decode(res, (uint256[2]));
 
@@ -34,18 +35,21 @@ contract SignatureHelper is BasicTestConfig {
 		bytes32 message,
 		uint256[2] memory publicKey
 	) public returns (uint256[2] memory) {
-		string[] memory cmd = new string[](7);
+		string[] memory cmd = new string[](8);
 
 		cmd[0] = 'yarn';
-		cmd[1] = 'ts-node';
-		cmd[2] = 'script/signatureHelper.ts';
-		cmd[3] = '2';
-		cmd[4] = bytes32ToString(message);
-		cmd[5] = Strings.toString(publicKey[0]);
-		cmd[6] = Strings.toString(publicKey[1]);
+		cmd[1] = '--silent';
+		cmd[2] = 'ts-node';
+		cmd[3] = 'script/signatureHelper.ts';
+		cmd[4] = 'sign';
+		cmd[5] = bytes32ToString(message);
+		cmd[6] = Strings.toString(publicKey[0]);
+		cmd[7] = Strings.toString(publicKey[1]);
+
+		bytes memory res = vm.ffi(cmd);
 
 		//bytes memory sig = vm.ffi(cmd);
-		uint256[2] memory sig = abi.decode(vm.ffi(cmd), (uint256[2]));
+		uint256[2] memory sig = abi.decode(res, (uint256[2]));
 
 		console.log(sig[0]);
 		console.log(sig[1]);

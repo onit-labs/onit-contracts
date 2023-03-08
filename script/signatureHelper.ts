@@ -1,4 +1,5 @@
 const { createHash } = require('crypto')
+import { AbiCoder } from '@ethersproject/abi'
 import * as elliptic from 'elliptic'
 
 const EC = elliptic.ec
@@ -7,7 +8,7 @@ const ec = new EC('p256')
 // Setup test data based off last userOp
 const rawAuthenticatorData = 'FYRIL996TQt+udRc+DUojLWeVbgkn/81bjO+iOzFRtEdAAAAAA=='
 
-export async function formatMessageFromAuthDataAndClientJson(userOpHash) {
+async function formatMessageFromAuthDataAndClientJson(userOpHash) {
 	// Get authentaicator and client json data into buffer form
 	const authenticatorDataBuffer = Buffer.from(rawAuthenticatorData, 'base64')
 
@@ -30,15 +31,24 @@ export async function formatMessageFromAuthDataAndClientJson(userOpHash) {
 	return messageData
 }
 
-function generateKeyPair() {
-	const key = ec.genKeyPair()
+// Ffi expects encoded outputs
+function encodeOutput(types: string[], values: any[]) {
+	const encoder = new AbiCoder()
+	return encoder.encode(types, values)
+}
+
+function generateKeyPair(inputs: string[]) {
+	const [salt] = inputs
+
+	const key = ec.genKeyPair({ nonce: salt })
 
 	const publicKey = key.getPublic()
 
 	const x = publicKey.getX()
 	const y = publicKey.getY()
 
-	return [x.toString(), y.toString()]
+	const encoder = new AbiCoder()
+	console.log(encoder.encode(['uint256[2]'], [[x.toString(), y.toString()]]))
 }
 
 /**
@@ -52,20 +62,18 @@ function signMessage(inputs: string[]) {
 	const key = ec.keyFromPrivate([x, y])
 	const signature = key.sign(formatMessageFromAuthDataAndClientJson(message))
 
-	return [signature.r.toString(), signature.s.toString()]
+	console.log(encodeOutput(['uint256[2]'], [[signature.r.toString(), signature.s.toString()]]))
 }
 
-function run(test, inputs) {
-	console.log('test', test[0])
-
-	switch (test[0]) {
-		case '1':
-			generateKeyPair()
+function run(inputs) {
+	switch (inputs[0]) {
+		case 'gen':
+			return generateKeyPair(inputs)
 			break
-		case '2':
+		case 'sign':
 			signMessage(inputs)
 			break
 	}
 }
 
-run(process.argv.slice(2), process.argv)
+run(process.argv.slice(2))
