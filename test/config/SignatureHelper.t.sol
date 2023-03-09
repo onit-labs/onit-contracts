@@ -5,6 +5,7 @@ pragma solidity ^0.8.13;
 
 import {BasicTestConfig} from './BasicTestConfig.t.sol';
 import {Strings} from '@openzeppelin/contracts/utils/Strings.sol';
+import 'forge-std/console.sol';
 
 /**
  * @notice - This contract runs the signatureHelper.ts script
@@ -18,7 +19,7 @@ contract SignatureHelper is BasicTestConfig {
 		cmd[1] = '--silent';
 		cmd[2] = 'ts-node';
 		cmd[3] = 'script/signatureHelper.ts';
-		cmd[4] = 'gen';
+		cmd[4] = 'generate';
 		cmd[5] = salt;
 
 		bytes memory res = vm.ffi(cmd);
@@ -27,7 +28,7 @@ contract SignatureHelper is BasicTestConfig {
 
 		// console.log('keys');
 		// console.log(publicKey[0]);
-		// console.log(s[1]);
+		// console.log(publicKey[1]);
 
 		return publicKey;
 	}

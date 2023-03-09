@@ -21,8 +21,7 @@ export function formatMessageFromAuthDataAndClientJson(userOpHash) {
 	const authenticatorDataBuffer = Buffer.from(rawAuthenticatorData, 'base64')
 
 	const clientDataJsonBytes = Buffer.from(
-		`{"type":"webauthn.get","challenge":"${userOpHash}","origin":"https://development.forumdaos.com"}',
-		'utf8`
+		`{"type":"webauthn.get","challenge":"${userOpHash}","origin":"https://development.forumdaos.com"}`
 	)
 
 	// Hash client data
@@ -85,7 +84,7 @@ function signMessage(inputs: string[]) {
 
 function run(inputs) {
 	switch (inputs[0]) {
-		case 'gen':
+		case 'generate':
 			generateKeyPair(inputs)
 			break
 		case 'sign':

@@ -132,19 +132,28 @@ contract ForumGroupModule is IAccount, Executor, Initializable {
 
 		bytes32 fullMessage = sha256(abi.encodePacked(fromHex(authData), hashedClientData));
 
-		for (uint i; i < membersX.length; ) {
-			// Check if the signature is valid
+		uint256 len = membersX.length;
+
+		uint256 count;
+
+		// ! Update this to avoid needing to pass empty sigs
+		for (uint i; i < len; ) {
+			// Check if the signature is not empty, check if it's valid
 			if (
-				!_ellipticCurveValidator.validateSignature(
+				sig[i][0] != 0 &&
+				_ellipticCurveValidator.validateSignature(
 					fullMessage,
 					[sig[i][0], sig[i][1]],
 					[membersX[i], membersY[i]]
 				)
 			) {
-				// If the signature is valid, we return the offset of the member
-				validationData = SIG_VALIDATION_FAILED;
+				++count;
 			}
 			++i;
+		}
+
+		if (count < (len * voteThreshold) / 10000) {
+			validationData = SIG_VALIDATION_FAILED;
 		}
 
 		if (userOp.initCode.length == 0) {
