@@ -21,10 +21,13 @@ import '@eip4337/interfaces/IAccount.sol';
 import '@eip4337/interfaces/IEntryPoint.sol';
 import '@utils/Exec.sol';
 
+import 'forge-std/console.sol';
+
 // !!!
 // - Consider domain / chain info to be included in signatures
 // - Integrate validation of sigs on elliptic contract
 // - Make more addresses immutable to save gas
+// - Convert to custom errors
 // !!!
 
 /**
@@ -52,6 +55,9 @@ contract ForumGroupModule is IAccount, Executor, Initializable {
 	// The nonce of the account
 	uint256 public nonce;
 
+	// Vote threshold to pass (basis points of 10,000 ie. 6,000 = 60%)
+	uint256 public voteThreshold;
+
 	// return value in case of signature failure, with no time-range.
 	// equivalent to _packValidationData(true,0,0);
 	uint256 internal constant SIG_VALIDATION_FAILED = 1;
@@ -74,12 +80,25 @@ contract ForumGroupModule is IAccount, Executor, Initializable {
 
 	function setUp(
 		address _safe,
+		uint256 _voteThreshold,
 		uint256[] memory _membersX,
 		uint256[] memory _membersY
 	) external initializer {
 		this4337Module = address(this);
 
+		require(
+			_safe != address(0) &&
+				_voteThreshold > 0 &&
+				_voteThreshold <= 10000 &&
+				_membersX.length > 0 &&
+				_membersY.length > 0 &&
+				_membersX.length == _membersY.length,
+			'account: invalid setup params'
+		);
+
 		safe = GnosisSafe(payable(_safe));
+
+		voteThreshold = _voteThreshold;
 
 		membersX = _membersX;
 		membersY = _membersY;
@@ -113,7 +132,6 @@ contract ForumGroupModule is IAccount, Executor, Initializable {
 
 		bytes32 fullMessage = sha256(abi.encodePacked(fromHex(authData), hashedClientData));
 
-		// ! A basic version where all members must vote
 		for (uint i; i < membersX.length; ) {
 			// Check if the signature is valid
 			if (
@@ -177,6 +195,14 @@ contract ForumGroupModule is IAccount, Executor, Initializable {
 	/// -----------------------------------------------------------------------
 	/// 						MODULE MANAGEMENT
 	/// -----------------------------------------------------------------------
+
+	function setThreshold(uint256 threshold) external {
+		require(msg.sender == entryPoint, 'account: not from entrypoint');
+
+		require(threshold > 0 && threshold <= 10000, 'account: invalid threshold');
+
+		voteThreshold = threshold;
+	}
 
 	/**
 	 * set up a safe as EIP-4337 enabled.

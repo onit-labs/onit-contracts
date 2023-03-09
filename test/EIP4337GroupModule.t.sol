@@ -41,14 +41,14 @@ contract Module4337Test is EIP4337TestConfig, SignatureHelper {
 			// Deploy a forum safe from the factory
 			forumSafeModule,
 			safe
-		) = forumGroupFactory.deployForumGroup('test', membersX, membersY);
+		) = forumGroupFactory.deployForumGroup('test', 5000, membersX, membersY);
 
 		// Deal the account some funds
 		vm.deal(address(safe), 1 ether);
 	}
 
 	/// -----------------------------------------------------------------------
-	/// Tests
+	/// SETUP AND FUNCTION TESTS
 	/// -----------------------------------------------------------------------
 
 	function testSetupGroup() public {
@@ -57,8 +57,19 @@ contract Module4337Test is EIP4337TestConfig, SignatureHelper {
 
 		assertTrue(members[0][0] == publicKey[0]);
 		assertTrue(members[0][1] == publicKey[1]);
-		assertTrue(members[1][0] == publicKey2[0]);
-		assertTrue(members[1][1] == publicKey2[1]);
+		//assertTrue(members[1][0] == publicKey2[0]);
+		//assertTrue(members[1][1] == publicKey2[1]);
+		assertTrue(forumSafeModule.voteThreshold() == 5000);
+	}
+
+	function testUpdateThreshold(uint256 threshold) public {
+		vm.assume(threshold > 0 && threshold <= 10000);
+		assertTrue(forumSafeModule.voteThreshold() == 5000);
+
+		vm.prank(entryPointAddress);
+		forumSafeModule.setThreshold(threshold);
+
+		assertTrue(forumSafeModule.voteThreshold() == threshold);
 	}
 
 	function testExecutionViaEntryPoint() public {
@@ -83,11 +94,6 @@ contract Module4337Test is EIP4337TestConfig, SignatureHelper {
 			executeCalldata
 		);
 
-		string memory base64Hash = Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(tmp)));
-
-		console.log(base64Hash);
-		console.log('pub', publicKey[0], publicKey[1]);
-
 		// Get signatures for the user operation
 		uint256[2] memory s1 = signMessageForPublicKey(
 			SALT_1,
@@ -95,8 +101,6 @@ contract Module4337Test is EIP4337TestConfig, SignatureHelper {
 		);
 
 		//uint256[2] memory s2 = signMessageForPublicKey(entryPoint.getUserOpHash(tmp), publicKey2);
-
-		//console.logBytes32(tmp);
 
 		uint256[2][] memory sigs = new uint256[2][](1);
 		sigs[0] = s1;

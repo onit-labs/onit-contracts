@@ -84,6 +84,7 @@ contract ForumGroupFactory {
 	 */
 	function deployForumGroup(
 		string calldata _name,
+		uint256 _voteThreshold,
 		uint256[] calldata _ownersX,
 		uint256[] calldata _ownersY
 	) external payable virtual returns (ForumGroupModule forumModule, GnosisSafe _safe) {
@@ -133,7 +134,7 @@ contract ForumGroupFactory {
 		}
 
 		// Set up the module
-		forumModule.setUp(address(_safe), _ownersX, _ownersY);
+		forumModule.setUp(address(_safe), _voteThreshold, _ownersX, _ownersY);
 
 		emit ForumSafeDeployed(forumModule, address(_safe), _name);
 	}
