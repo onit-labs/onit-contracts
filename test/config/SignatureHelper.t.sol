@@ -3,8 +3,8 @@ pragma solidity ^0.8.13;
 
 /* solhint-disable no-console */
 
-import './BasicTestConfig.t.sol';
-import '@openzeppelin/contracts/utils/Strings.sol';
+import {BasicTestConfig} from './BasicTestConfig.t.sol';
+import {Strings} from '@openzeppelin/contracts/utils/Strings.sol';
 
 /**
  * @notice - This contract runs the signatureHelper.ts script
@@ -23,49 +23,39 @@ contract SignatureHelper is BasicTestConfig {
 
 		bytes memory res = vm.ffi(cmd);
 
-		uint256[2] memory s = abi.decode(res, (uint256[2]));
+		uint256[2] memory publicKey = abi.decode(res, (uint256[2]));
 
-		console.log(s[0]);
-		console.log(s[1]);
+		// console.log('keys');
+		// console.log(publicKey[0]);
+		// console.log(s[1]);
 
-		return s;
+		return publicKey;
 	}
 
 	function signMessageForPublicKey(
-		bytes32 message,
-		uint256[2] memory publicKey
+		string memory salt,
+		string memory message
 	) public returns (uint256[2] memory) {
-		string[] memory cmd = new string[](8);
+		string[] memory cmd = new string[](7);
 
 		cmd[0] = 'yarn';
 		cmd[1] = '--silent';
 		cmd[2] = 'ts-node';
 		cmd[3] = 'script/signatureHelper.ts';
 		cmd[4] = 'sign';
-		cmd[5] = bytes32ToString(message);
-		cmd[6] = Strings.toString(publicKey[0]);
-		cmd[7] = Strings.toString(publicKey[1]);
+		cmd[5] = salt;
+		cmd[6] = message;
 
 		bytes memory res = vm.ffi(cmd);
 
-		//bytes memory sig = vm.ffi(cmd);
+		//console.log(string(res));
+
 		uint256[2] memory sig = abi.decode(res, (uint256[2]));
 
-		console.log(sig[0]);
-		console.log(sig[1]);
+		// console.log('sigs');
+		// console.log(sig[0]);
+		// console.log(sig[1]);
 
 		return sig;
-	}
-
-	function bytes32ToString(bytes32 _bytes32) public pure returns (string memory) {
-		uint8 i = 0;
-		while (i < 32 && _bytes32[i] != 0) {
-			i++;
-		}
-		bytes memory bytesArray = new bytes(i);
-		for (i = 0; i < 32 && _bytes32[i] != 0; i++) {
-			bytesArray[i] = _bytes32[i];
-		}
-		return string(bytesArray);
 	}
 }

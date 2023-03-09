@@ -18,13 +18,16 @@ contract Module4337Test is EIP4337TestConfig, SignatureHelper {
 	uint256[2] internal publicKey;
 	uint256[2] internal publicKey2;
 
+	string internal SALT_1 = '1';
+	string internal SALT_2 = '2';
+
 	/// -----------------------------------------------------------------------
 	/// Setup
 	/// -----------------------------------------------------------------------
 
 	function setUp() public {
-		publicKey = createPublicKey('1');
-		publicKey2 = createPublicKey('2');
+		publicKey = createPublicKey(SALT_1);
+		//publicKey2 = createPublicKey('2');
 
 		uint256[] memory membersX = new uint256[](1);
 		membersX[0] = publicKey[0];
@@ -86,9 +89,10 @@ contract Module4337Test is EIP4337TestConfig, SignatureHelper {
 		console.log('pub', publicKey[0], publicKey[1]);
 
 		// Get signatures for the user operation
-		uint256[2] memory s1 = signMessageForPublicKey(entryPoint.getUserOpHash(tmp), publicKey);
-
-		console.log(s1[0], s1[1]);
+		uint256[2] memory s1 = signMessageForPublicKey(
+			SALT_1,
+			Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(tmp)))
+		);
 
 		//uint256[2] memory s2 = signMessageForPublicKey(entryPoint.getUserOpHash(tmp), publicKey2);
 
