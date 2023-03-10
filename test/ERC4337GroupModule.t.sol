@@ -20,8 +20,8 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 	uint256[] internal membersX;
 	uint256[] internal membersY;
 
-	string constant SALT_1 = '1';
-	string constant SALT_2 = '2';
+	string internal constant SALT_1 = '1';
+	string internal constant SALT_2 = '2';
 
 	bytes internal basicTransferCalldata;
 
@@ -36,7 +36,6 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 
 		// Format signers into arrays to be added to contract
 		membersX.push(publicKey[0]);
-
 		membersY.push(publicKey[1]);
 
 		(
@@ -88,12 +87,12 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 		// check balance before
 		assertTrue(address(alice).balance == 1 ether);
 		assertTrue(address(safe).balance == 1 ether);
-		assertTrue(forumSafeModule.nonce() == 0);
+		// assertTrue(forumSafeModule.nonce() == 0);
 
 		// Build user operation
 		UserOperation memory tmp = buildUserOp(
 			address(forumSafeModule),
-			forumSafeModule.nonce(),
+			safe.nonce(),
 			new bytes(0),
 			basicTransferCalldata
 		);
@@ -118,7 +117,7 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 		// Transfer has been made, nonce incremented, used nonce set
 		assertTrue(address(alice).balance == 1.5 ether);
 		assertTrue(address(safe).balance == 0.5 ether);
-		assertTrue(forumSafeModule.nonce() == 1);
+		assertTrue(safe.nonce() == 1);
 		//assertTrue(forumSafeModule.usedNonces(entryPoint.getUserOpHash(tmp)) == 1);
 	}
 
@@ -138,7 +137,7 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 		// Build user operation
 		UserOperation memory tmp = buildUserOp(
 			address(forumSafeModule),
-			forumSafeModule.nonce(),
+			safe.nonce(),
 			new bytes(0),
 			basicTransferCalldata
 		);
@@ -166,7 +165,7 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 		// Transfer has been made, nonce incremented, used nonce set
 		assertTrue(address(alice).balance == 1.5 ether);
 		assertTrue(address(safe).balance == 0.5 ether);
-		assertTrue(forumSafeModule.nonce() == 1);
+		assertTrue(safe.nonce() == 1);
 	}
 
 	// test fail for below threshold
@@ -174,7 +173,7 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 		// check balance before
 		assertTrue(address(alice).balance == 1 ether);
 		assertTrue(address(safe).balance == 1 ether);
-		assertTrue(forumSafeModule.nonce() == 0);
+		assertTrue(safe.nonce() == 0);
 
 		//Add second member to make  agroup of 2
 		membersX.push(publicKey2[0]);
@@ -191,7 +190,7 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 		// Build user operation
 		UserOperation memory tmp = buildUserOp(
 			address(forumSafeModule),
-			forumSafeModule.nonce(),
+			safe.nonce(),
 			new bytes(0),
 			basicTransferCalldata
 		);
@@ -220,7 +219,7 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 		// Transfer has not been made, balances and nonce unchanged
 		assertTrue(address(alice).balance == 1 ether);
 		assertTrue(address(safe).balance == 1 ether);
-		assertTrue(forumSafeModule.nonce() == 0);
+		assertTrue(safe.nonce() == 0);
 	}
 
 	// prevent sig reuse

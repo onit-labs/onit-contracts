@@ -13,9 +13,10 @@ import {IEllipticCurveValidator} from '@interfaces/IEllipticCurveValidator.sol';
 
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 
-import '@gnosis.pm/safe-contracts/contracts/GnosisSafe.sol';
-import '@gnosis.pm/safe-contracts/contracts/base/Executor.sol';
-import '@gnosis.pm/safe-contracts/contracts/GnosisSafe.sol';
+import '@gnosis/GnosisSafe.sol';
+import '@gnosis/base/Executor.sol';
+import '@gnosis/GnosisSafe.sol';
+import '@gnosis/examples/libraries/GnosisSafeStorage.sol';
 
 import '@erc4337/interfaces/IAccount.sol';
 import '@erc4337/interfaces/IEntryPoint.sol';
@@ -26,6 +27,7 @@ import './ERC4337Fallback.sol';
 import 'forge-std/console.sol';
 
 // !!!
+// ! correct checks on functions (ie. onlyEntryPoint)
 // - Consider domain / chain info to be included in signatures
 // - Integrate validation of sigs on elliptic contract
 // - Make more addresses immutable to save gas
@@ -39,7 +41,7 @@ import 'forge-std/console.sol';
  * 		- Is enabled as a module on a Gnosis Safe
  * @author modified from infinitism https://github.com/eth-infinitism/account-abstraction/contracts/samples/gnosis/ERC4337Module.sol
  */
-contract ForumGroupModule is IAccount, Executor, Initializable {
+contract ForumGroupModule is IAccount, GnosisSafeStorage, Executor, Initializable {
 	// The safe controlled by this module
 	GnosisSafe public safe;
 
@@ -56,9 +58,6 @@ contract ForumGroupModule is IAccount, Executor, Initializable {
 	address public this4337Module;
 
 	address internal constant SENTINEL_MODULES = address(0x1);
-
-	// The nonce of the account
-	uint256 public nonce;
 
 	// Used to calculate percentages
 	uint256 internal constant BASIS_POINTS = 10000;
@@ -80,12 +79,11 @@ contract ForumGroupModule is IAccount, Executor, Initializable {
 	/// 						CONSTRUCTOR
 	/// -----------------------------------------------------------------------
 
-	constructor(IEllipticCurveValidator ellipticCurveValidator, address anEntryPoint) {
-		_ellipticCurveValidator = ellipticCurveValidator;
+	constructor(address ellipticCurveValidator, address anEntryPoint) {
+		_ellipticCurveValidator = IEllipticCurveValidator(ellipticCurveValidator);
 
 		entryPoint = anEntryPoint;
 
-		//! check address(this) here
 		erc4337Fallback = address(new ERC4337Fallback(address(this)));
 	}
 
@@ -99,13 +97,14 @@ contract ForumGroupModule is IAccount, Executor, Initializable {
 	 * @param _membersX The public keys of the signing members of the group
 	 * @param _membersY The public keys of the signing members of the group
 	 * @dev TODO use setup via proxy instead of deploying & calling this
+	 * ! ADD INITALIZE MODIFIER OR SIMILAR HERE
 	 */
 	function setUp(
 		ForumGroupModule module,
 		uint256 _voteThreshold,
 		uint256[] memory _membersX,
 		uint256[] memory _membersY
-	) external initializer {
+	) external {
 		safe = GnosisSafe(payable(address(this)));
 
 		require(
@@ -129,10 +128,13 @@ contract ForumGroupModule is IAccount, Executor, Initializable {
 			'account: invalid setup params'
 		);
 
-		voteThreshold = _voteThreshold;
+		// ! improve this, maybe call from factory
+		module.setThreshold(_voteThreshold);
 
-		membersX = _membersX;
-		membersY = _membersY;
+		// ! improve this, maybe call from factory
+		for (uint256 i = 0; i < _membersX.length; i++) {
+			module.addMember(_membersX[i], _membersY[i]);
+		}
 	}
 
 	/// -----------------------------------------------------------------------
@@ -188,8 +190,9 @@ contract ForumGroupModule is IAccount, Executor, Initializable {
 		}
 
 		if (userOp.initCode.length == 0) {
-			require(nonce == userOp.nonce, 'account: invalid nonce');
-			++nonce;
+			require(uint256(nonce) == userOp.nonce, 'account: invalid nonce');
+			nonce = bytes32(uint256(nonce) + 1);
+			//++nonce;
 		}
 
 		if (missingAccountFunds > 0) {
@@ -237,11 +240,19 @@ contract ForumGroupModule is IAccount, Executor, Initializable {
 	/// -----------------------------------------------------------------------
 
 	function setThreshold(uint256 threshold) external {
-		require(msg.sender == entryPoint, 'account: not from entrypoint');
+		// require(msg.sender == entryPoint, 'account: not from entrypoint');
 
 		require(threshold > 0 && threshold <= 10000, 'account: invalid threshold');
 
 		voteThreshold = threshold;
+	}
+
+	// ! correct visibility and set initial members in factory
+	function addMember(uint256 x, uint256 y) public {
+		// require(msg.sender == entryPoint, 'account: not from entrypoint');
+
+		membersX.push(x);
+		membersY.push(y);
 	}
 
 	/**

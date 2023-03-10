@@ -2,10 +2,14 @@
 
 pragma solidity ^0.8.15;
 
+/* solhint-disable no-console */
+
 import {GnosisSafe, Enum} from '@gnosis/GnosisSafe.sol';
 import {GnosisSafeProxyFactory} from '@gnosis/proxies/GnosisSafeProxyFactory.sol';
 
 import {ForumGroupModule} from './ForumGroupModule.sol';
+
+import 'forge-std/console.sol';
 
 /// @notice Factory to deploy forum group.
 contract ForumGroupFactory {
@@ -49,6 +53,9 @@ contract ForumGroupFactory {
 	// Forum initial extensions
 	address public immutable entryPoint;
 
+	// Elliptic curve validator contract used for signing
+	address public immutable ellipticValidator;
+
 	/// ----------------------------------------------------------------------------------------
 	/// Constructor
 	/// ----------------------------------------------------------------------------------------
@@ -59,7 +66,8 @@ contract ForumGroupFactory {
 		address _gnosisFallbackLibrary,
 		address _gnosisMultisendLibrary,
 		address _gnosisSafeProxyFactory,
-		address _entryPoint
+		address _entryPoint,
+		address _ellipticValidator
 	) {
 		forumGroupFactory = address(this);
 		forumGroupSingleton = _forumGroupSingleton;
@@ -68,6 +76,7 @@ contract ForumGroupFactory {
 		gnosisMultisendLibrary = _gnosisMultisendLibrary;
 		gnosisSafeProxyFactory = GnosisSafeProxyFactory(_gnosisSafeProxyFactory);
 		entryPoint = _entryPoint;
+		ellipticValidator = _ellipticValidator;
 	}
 
 	/// ----------------------------------------------------------------------------------------
@@ -88,53 +97,38 @@ contract ForumGroupFactory {
 		uint256[] calldata _ownersX,
 		uint256[] calldata _ownersY
 	) external payable virtual returns (ForumGroupModule forumModule, GnosisSafe _safe) {
-		// Deploy new safe but do not set it up yet
-		_safe = GnosisSafe(
-			payable(gnosisSafeProxyFactory.createProxy(gnosisSingleton, abi.encodePacked(_name)))
+		// Deploy new Forum group module but do not set it up yet
+		forumModule = new ForumGroupModule(ellipticValidator, entryPoint);
+
+		bytes memory setup4337Modules = abi.encodeCall(
+			ForumGroupModule.setUp,
+			(forumModule, _voteThreshold, _ownersX, _ownersY)
 		);
 
-		// Deploy new Forum group but do not set it up yet
-		forumModule = ForumGroupModule(_cloneAsMinimalProxy(forumGroupSingleton, _name));
+		// Create array of owners
+		address[] memory ownerPlaceholder = new address[](1);
+		ownerPlaceholder[0] = address(0xdead);
 
-		{
-			// Payload to enable the forum group module on the safe
-			bytes memory _enableForumGroup = abi.encodeWithSignature(
-				'enableModule(address)',
-				address(forumModule)
-			);
-			// Generate payload for the safe to call enableModule on itself via multisend
-			bytes memory _enableForumGroupMultisend = abi.encodePacked(
-				Enum.Operation.Call,
-				address(_safe),
-				uint256(0),
-				uint256(_enableForumGroup.length),
-				bytes(_enableForumGroup)
-			);
-			// Encode data to be sent to multisend
-			bytes memory _multisendAction = abi.encodeWithSignature(
-				'multiSend(bytes)',
-				_enableForumGroupMultisend
-			);
-
-			// Create array of owners
-			address[] memory ownerPlaceholder = new address[](1);
-			ownerPlaceholder[0] = address(0xdead);
-
-			// Call setup on safe adding owners and enabling module
-			_safe.setup(
+		bytes memory create = abi.encodeCall(
+			GnosisSafe.setup,
+			(
 				ownerPlaceholder,
 				1,
-				gnosisMultisendLibrary,
-				_multisendAction,
-				gnosisFallbackLibrary,
+				address(forumModule),
+				setup4337Modules,
+				forumModule.erc4337Fallback(),
 				address(0),
 				0,
 				payable(address(0))
-			);
-		}
+			)
+		);
 
-		// Set up the module
-		forumModule.setUp(address(_safe), _voteThreshold, _ownersX, _ownersY);
+		// Deploy new safe but do not set it up yet
+		_safe = GnosisSafe(
+			payable(
+				gnosisSafeProxyFactory.createProxyWithNonce(gnosisSingleton, create, uint256(1))
+			)
+		);
 
 		emit ForumSafeDeployed(forumModule, address(_safe), _name);
 	}

@@ -57,7 +57,10 @@ contract ERC4337TestConfig is Test, SafeTestConfig, ForumModuleTestConfig {
 		);
 
 		erc4337Singleton = new ERC4337Account(ellipticCurveValidator);
-		erc4337GroupSingleton = new ForumGroupModule(entryPointAddress, ellipticCurveValidator);
+		erc4337GroupSingleton = new ForumGroupModule(
+			address(ellipticCurveValidator),
+			entryPointAddress
+		);
 
 		erc4337AccountFactory = new ERC4337AccountFactory(
 			erc4337Singleton,
@@ -71,7 +74,8 @@ contract ERC4337TestConfig is Test, SafeTestConfig, ForumModuleTestConfig {
 			address(handler),
 			address(multisend),
 			address(safeProxyFactory),
-			address(entryPoint)
+			address(entryPoint),
+			address(ellipticCurveValidator)
 		);
 	}
 
