@@ -32,10 +32,6 @@ contract ERC4337TestConfig is Test, SafeTestConfig, ForumModuleTestConfig {
 	// Singleton for Forum 4337 group account implementation
 	ForumGroupModule public erc4337GroupSingleton;
 
-	// Validation manager used to check signatures for a 4337 group
-	//ERC4337ValidationManager public erc4337ValidationManager;
-	address internal erc4337ValidationManager = 0xBa81560Ae6Bd24D34BB24084993AfdaFad3cfeff; //on mumbai
-
 	// Factory for individual 4337 accounts
 	ERC4337AccountFactory public erc4337AccountFactory;
 
@@ -48,19 +44,14 @@ contract ERC4337TestConfig is Test, SafeTestConfig, ForumModuleTestConfig {
 	// Addresses for easy use in tests
 	address internal entryPointAddress;
 
-	//address internal erc4337ValidationManagerAddress;
-
-	string authentacatorData =
+	string internal authentacatorData =
 		'1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000';
 
 	constructor() {
 		entryPoint = new EntryPoint();
 		entryPointAddress = address(entryPoint);
 
-		//erc4337ValidationManager = new ERC4337ValidationManager();
-		//erc4337ValidationManagerAddress = address(erc4337ValidationManager);
-
-		// Validator used for p256 curves
+		// Validator used for p256 curves - 0xBa81560Ae6Bd24D34BB24084993AfdaFad3cfeff can be used on mumbai forks
 		ellipticCurveValidator = IEllipticCurveValidator(
 			deployCode('EllipticCurve5.sol:EllipticCurve5')
 		);
@@ -107,7 +98,6 @@ contract ERC4337TestConfig is Test, SafeTestConfig, ForumModuleTestConfig {
 		return account.nonce();
 	}
 
-	// ! This should be replaced when generation of signatures is done programatically
 	function buildUserOp(
 		address sender,
 		uint256 nonce,
