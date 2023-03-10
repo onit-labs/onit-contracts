@@ -21,6 +21,8 @@ import '@erc4337/interfaces/IAccount.sol';
 import '@erc4337/interfaces/IEntryPoint.sol';
 import '@utils/Exec.sol';
 
+import './ERC4337Fallback.sol';
+
 import 'forge-std/console.sol';
 
 // !!!
@@ -38,14 +40,17 @@ import 'forge-std/console.sol';
  * @author modified from infinitism https://github.com/eth-infinitism/account-abstraction/contracts/samples/gnosis/ERC4337Module.sol
  */
 contract ForumGroupModule is IAccount, Executor, Initializable {
-	// Immutable reference to latest entrypoint
-	address public immutable entryPoint;
+	// The safe controlled by this module
+	GnosisSafe public safe;
 
 	// Immutable reference to validator of the secp256r1 signatures
 	IEllipticCurveValidator internal immutable _ellipticCurveValidator;
 
-	// The safe controlled by this module
-	GnosisSafe public safe;
+	// Immutable reference to latest entrypoint
+	address public immutable entryPoint;
+
+	// Immutable reference to fallback module for the safe
+	address public immutable erc4337Fallback;
 
 	// Set to address(this) so we can know the current 4337 module enabled on a safe
 	address public this4337Module;
@@ -75,31 +80,54 @@ contract ForumGroupModule is IAccount, Executor, Initializable {
 	/// 						CONSTRUCTOR
 	/// -----------------------------------------------------------------------
 
-	constructor(address anEntryPoint, IEllipticCurveValidator ellipticCurveValidator) {
+	constructor(IEllipticCurveValidator ellipticCurveValidator, address anEntryPoint) {
+		_ellipticCurveValidator = ellipticCurveValidator;
+
 		entryPoint = anEntryPoint;
 
-		_ellipticCurveValidator = ellipticCurveValidator;
+		//! check address(this) here
+		erc4337Fallback = address(new ERC4337Fallback(address(this)));
 	}
 
+	/**
+	 * @notice Setup the module.
+	 * @dev - Called from the GnosisSafeAccountFactory during construction time
+	 * 		- Enable this module
+	 * 		- This method is called with delegateCall, so the module (usually itself) is passed as parameter, and "this" is the safe itself
+	 * @param module The module to be enabled (should be this address)
+	 * @param _voteThreshold Vote threshold to pass (basis points of 10,000 ie. 6,000 = 60%)
+	 * @param _membersX The public keys of the signing members of the group
+	 * @param _membersY The public keys of the signing members of the group
+	 * @dev TODO use setup via proxy instead of deploying & calling this
+	 */
 	function setUp(
-		address _safe,
+		ForumGroupModule module,
 		uint256 _voteThreshold,
 		uint256[] memory _membersX,
 		uint256[] memory _membersY
 	) external initializer {
-		this4337Module = address(this);
+		safe = GnosisSafe(payable(address(this)));
 
 		require(
-			_safe != address(0) &&
-				_voteThreshold > 0 &&
+			!safe.isModuleEnabled(module.entryPoint()),
+			'setup4337Modules: entrypoint already enabled'
+		);
+		require(
+			!safe.isModuleEnabled(module.erc4337Fallback()),
+			'setup4337Modules: eip4337Fallback already enabled'
+		);
+
+		safe.enableModule(module.entryPoint());
+		safe.enableModule(module.erc4337Fallback());
+
+		require(
+			_voteThreshold > 0 &&
 				_voteThreshold <= 10000 &&
 				_membersX.length > 0 &&
 				_membersY.length > 0 &&
 				_membersX.length == _membersY.length,
 			'account: invalid setup params'
 		);
-
-		safe = GnosisSafe(payable(_safe));
 
 		voteThreshold = _voteThreshold;
 
@@ -214,23 +242,6 @@ contract ForumGroupModule is IAccount, Executor, Initializable {
 		require(threshold > 0 && threshold <= 10000, 'account: invalid threshold');
 
 		voteThreshold = threshold;
-	}
-
-	/**
-	 * set up a safe as ERC-4337 enabled.
-	 * called from the GnosisSafeAccountFactory during construction time
-	 * - enable this module
-	 * - this method is called with delegateCall, so the module (usually itself) is passed as parameter, and "this" is the safe itself
-	 */
-	function setup4337Module() external {
-		GnosisSafe safe = GnosisSafe(payable(address(this)));
-
-		require(
-			!safe.isModuleEnabled(this4337Module),
-			'setup4337Module: erc4337Module already enabled'
-		);
-
-		safe.enableModule(this4337Module);
 	}
 
 	/**
