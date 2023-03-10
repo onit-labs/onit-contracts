@@ -50,6 +50,9 @@ contract EIP4337TestConfig is Test, SafeTestConfig, ForumModuleTestConfig {
 
 	//address internal eip4337ValidationManagerAddress;
 
+	string authentacatorData =
+		'1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000';
+
 	constructor() {
 		entryPoint = new EntryPoint();
 		entryPointAddress = address(entryPoint);

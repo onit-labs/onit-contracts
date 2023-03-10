@@ -17,11 +17,14 @@ contract Module4337Test is EIP4337TestConfig, SignatureHelper {
 	// Some public keys used as signers in tests
 	uint256[2] internal publicKey;
 	uint256[2] internal publicKey2;
+	uint256[] internal membersX;
+	uint256[] internal membersY;
 
 	string constant SALT_1 = '1';
 	string constant SALT_2 = '2';
 
-	bytes memory basicTransferCalldata;
+	bytes internal basicTransferCalldata;
+
 	/// -----------------------------------------------------------------------
 	/// Setup
 	/// -----------------------------------------------------------------------
@@ -29,16 +32,12 @@ contract Module4337Test is EIP4337TestConfig, SignatureHelper {
 	function setUp() public {
 		// Create passkey signers
 		publicKey = createPublicKey(SALT_1);
-		//publicKey2 = createPublicKey('2');
+		publicKey2 = createPublicKey(SALT_2);
 
 		// Format signers into arrays to be added to contract
-		uint256[] memory membersX = new uint256[](1);
-		membersX[0] = publicKey[0];
-		//membersX[1] = publicKey2[0];
+		membersX.push(publicKey[0]);
 
-		uint256[] memory membersY = new uint256[](1);
-		membersY[0] = publicKey[1];
-		//membersY[1] = publicKey2[1];
+		membersY.push(publicKey[1]);
 
 		(
 			// Deploy a forum safe from the factory
@@ -63,13 +62,11 @@ contract Module4337Test is EIP4337TestConfig, SignatureHelper {
 	/// -----------------------------------------------------------------------
 
 	function testSetupGroup() public {
-		// check the members are set
+		// check the members and threshold are set
 		uint256[2][] memory members = forumSafeModule.getMembers();
 
 		assertTrue(members[0][0] == publicKey[0]);
 		assertTrue(members[0][1] == publicKey[1]);
-		//assertTrue(members[1][0] == publicKey2[0]);
-		//assertTrue(members[1][1] == publicKey2[1]);
 		assertTrue(forumSafeModule.voteThreshold() == 5000);
 	}
 
@@ -86,32 +83,6 @@ contract Module4337Test is EIP4337TestConfig, SignatureHelper {
 	/// -----------------------------------------------------------------------
 	/// EXECUTION TESTS
 	/// -----------------------------------------------------------------------
-
-	function testVoting() public {
-		// Build user operation
-		UserOperation memory tmp = buildUserOp(
-			address(forumSafeModule),
-			forumSafeModule.nonce(),
-			new bytes(0),
-			basicTransferCalldata
-		);
-
-		//uint256[2] memory s2 = signMessageForPublicKey(entryPoint.getUserOpHash(tmp), publicKey2);
-
-		uint256[2][] memory sigs = new uint256[2][](1);
-		sigs[0] = sig;
-		//sigs[1] = s2;
-
-		tmp.signature = abi.encode(
-			sigs,
-			'1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000'
-		);
-
-		UserOperation[] memory tmp1 = new UserOperation[](1);
-		tmp1[0] = tmp;
-
-		entryPoint.handleOps(tmp1, payable(alice));
-	}
 
 	function testExecutionViaEntryPoint() public {
 		// check balance before
@@ -133,16 +104,11 @@ contract Module4337Test is EIP4337TestConfig, SignatureHelper {
 			Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(tmp)))
 		);
 
-		//uint256[2] memory s2 = signMessageForPublicKey(entryPoint.getUserOpHash(tmp), publicKey2);
-
+		// @dev signatures must be in the order members are added to the group (can be retrieved using getMembers())
 		uint256[2][] memory sigs = new uint256[2][](1);
 		sigs[0] = s1;
-		//sigs[1] = s2;
 
-		tmp.signature = abi.encode(
-			sigs,
-			'1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000'
-		);
+		tmp.signature = abi.encode(sigs, authentacatorData);
 
 		UserOperation[] memory tmp1 = new UserOperation[](1);
 		tmp1[0] = tmp;
@@ -156,26 +122,108 @@ contract Module4337Test is EIP4337TestConfig, SignatureHelper {
 		//assertTrue(forumSafeModule.usedNonces(entryPoint.getUserOpHash(tmp)) == 1);
 	}
 
-	// function testManageAdminViaEntryPoint() public {
-	// 	// check balance before
-	// 	assertTrue(forumSafeModule.memberVoteThreshold() == 50);
+	function testVotingWithEmptySig() public {
+		// Add second member to make  agroup of 2
+		membersX.push(publicKey2[0]);
+		membersY.push(publicKey2[1]);
 
-	// 	// build a proposal
-	// 	bytes memory manageAdminCalldata = buildManageAdminPayload(
-	// 		IForumSafeModuleTypes.ProposalType.MEMBER_THRESHOLD,
-	// 		[address(0)],
-	// 		[uint256(60)],
-	// 		[new bytes(0)]
-	// 	);
+		(
+			// Deploy a forum safe from the factory with 2 signers
+			forumSafeModule,
+			safe
+		) = forumGroupFactory.deployForumGroup('test2', 5000, membersX, membersY);
 
-	// 	// build user operation
-	// 	UserOperation memory tmp = buildUserOp(forumSafeModule, manageAdminCalldata, alicePk);
+		deal(address(forumSafeModule), 10 ether);
 
-	// 	UserOperation[] memory tmp1 = new UserOperation[](1);
-	// 	tmp1[0] = tmp;
+		// Build user operation
+		UserOperation memory tmp = buildUserOp(
+			address(forumSafeModule),
+			forumSafeModule.nonce(),
+			new bytes(0),
+			basicTransferCalldata
+		);
 
-	// 	entryPoint.handleOps(tmp1, payable(alice));
+		// Get signatures for the user operation
+		uint256[2] memory s1 = signMessageForPublicKey(
+			SALT_1,
+			Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(tmp)))
+		);
+		uint256[2] memory s2 = [uint256(0), uint256(0)];
 
-	// 	assertTrue(forumSafeModule.memberVoteThreshold() == 60);
-	// }
+		uint256[2][] memory sigs = new uint256[2][](2);
+		sigs[0] = s1;
+		sigs[1] = s2;
+
+		tmp.signature = abi.encode(sigs, authentacatorData);
+
+		UserOperation[] memory tmp1 = new UserOperation[](1);
+		tmp1[0] = tmp;
+
+		entryPoint.handleOps(tmp1, payable(address(this)));
+
+		uint256 gas = calculateGas(tmp);
+
+		// Transfer has been made, nonce incremented, used nonce set
+		assertTrue(address(alice).balance == 1.5 ether);
+		assertTrue(address(safe).balance == 0.5 ether);
+		assertTrue(forumSafeModule.nonce() == 1);
+	}
+
+	// test fail for below threshold
+	function testRevertsIfUnderThreshold() public {
+		// check balance before
+		assertTrue(address(alice).balance == 1 ether);
+		assertTrue(address(safe).balance == 1 ether);
+		assertTrue(forumSafeModule.nonce() == 0);
+
+		//Add second member to make  agroup of 2
+		membersX.push(publicKey2[0]);
+		membersY.push(publicKey2[1]);
+
+		(
+			// Deploy a forum safe from the factory with 2 signers, over 50% threshold
+			forumSafeModule,
+			safe
+		) = forumGroupFactory.deployForumGroup('test2', 5001, membersX, membersY);
+
+		deal(address(forumSafeModule), 10 ether);
+
+		// Build user operation
+		UserOperation memory tmp = buildUserOp(
+			address(forumSafeModule),
+			forumSafeModule.nonce(),
+			new bytes(0),
+			basicTransferCalldata
+		);
+
+		// Get signatures for the user operation
+		uint256[2] memory s1 = signMessageForPublicKey(
+			SALT_1,
+			Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(tmp)))
+		);
+		// Empty as member 2 did not vote
+		uint256[2] memory s2 = [uint256(0), uint256(0)];
+
+		uint256[2][] memory sigs = new uint256[2][](2);
+		sigs[0] = s1;
+		sigs[1] = s2;
+
+		tmp.signature = abi.encode(sigs, authentacatorData);
+
+		UserOperation[] memory tmp1 = new UserOperation[](1);
+		tmp1[0] = tmp;
+
+		// Revert as not enough votes
+		vm.expectRevert(bytes('FailedOp(0, AA24 signature error)'));
+		entryPoint.handleOps(tmp1, payable(address(this)));
+
+		// Transfer has not been made, balances and nonce unchanged
+		assertTrue(address(alice).balance == 1 ether);
+		assertTrue(address(safe).balance == 1 ether);
+		assertTrue(forumSafeModule.nonce() == 0);
+	}
+
+	// prevent sig reuse
+
+	receive() external payable {}
 }

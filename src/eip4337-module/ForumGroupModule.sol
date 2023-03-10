@@ -55,6 +55,9 @@ contract ForumGroupModule is IAccount, Executor, Initializable {
 	// The nonce of the account
 	uint256 public nonce;
 
+	// Used to calculate percentages
+	uint256 internal constant BASIS_POINTS = 10000;
+
 	// Vote threshold to pass (basis points of 10,000 ie. 6,000 = 60%)
 	uint256 public voteThreshold;
 
@@ -146,13 +149,13 @@ contract ForumGroupModule is IAccount, Executor, Initializable {
 					[sig[i][0], sig[i][1]],
 					[membersX[i], membersY[i]]
 				)
-			) {
-				++count;
-			}
+			) ++count;
+
 			++i;
 		}
 
-		if (count < (len * voteThreshold) / 10000) {
+		// Take the ceiling of the division (ie. 1.1 => 2 votes are needed to pass)
+		if (count < (len * voteThreshold + BASIS_POINTS - 1) / BASIS_POINTS) {
 			validationData = SIG_VALIDATION_FAILED;
 		}
 
