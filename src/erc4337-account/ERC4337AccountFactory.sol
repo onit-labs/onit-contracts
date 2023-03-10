@@ -5,11 +5,11 @@ pragma solidity ^0.8.15;
 
 import {GnosisSafe, Enum} from '@gnosis/GnosisSafe.sol';
 
-import {EIP4337Account, IEntryPoint} from './EIP4337Account.sol';
+import {ERC4337Account, IEntryPoint} from './ERC4337Account.sol';
 
 /// @notice Factory to deploy an ERC4337 Account
 /// @author ForumDAOs (https://forumdaos.com)
-contract EIP4337AccountFactory {
+contract ERC4337AccountFactory {
 	/// ----------------------------------------------------------------------------------------
 	/// Errors and Events
 	/// ----------------------------------------------------------------------------------------
@@ -23,7 +23,7 @@ contract EIP4337AccountFactory {
 	/// ----------------------------------------------------------------------------------------
 
 	// Template contract to use for new individual ERC4337 accounts
-	EIP4337Account public immutable eip4337AccountSingleton;
+	ERC4337Account public immutable erc4337AccountSingleton;
 
 	// Entry point used for ERC4337 accounts
 	IEntryPoint public immutable entryPoint;
@@ -43,11 +43,11 @@ contract EIP4337AccountFactory {
 	/// ----------------------------------------------------------------------------------------
 
 	constructor(
-		EIP4337Account _eip4337AccountSingleton,
+		ERC4337Account _erc4337AccountSingleton,
 		IEntryPoint _entryPoint,
 		address _gnosisFallbackLibrary
 	) {
-		eip4337AccountSingleton = _eip4337AccountSingleton;
+		erc4337AccountSingleton = _erc4337AccountSingleton;
 
 		entryPoint = _entryPoint;
 
@@ -59,7 +59,7 @@ contract EIP4337AccountFactory {
 			bytes10(0x3d602d80600a3d3981f3),
 			// proxy code
 			bytes10(0x363d3d373d3d3d363d73),
-			eip4337AccountSingleton,
+			erc4337AccountSingleton,
 			bytes15(0x5af43d82803e903d91602b57fd5bf3)
 		);
 	}
@@ -101,7 +101,7 @@ contract EIP4337AccountFactory {
 		// Initialize the account and Safe
 		(bool successInit, ) = account.call(
 			abi.encodeCall(
-				eip4337AccountSingleton.initialize,
+				erc4337AccountSingleton.initialize,
 				abi.encode(entryPoint, owner, gnosisFallbackLibrary)
 			)
 		);

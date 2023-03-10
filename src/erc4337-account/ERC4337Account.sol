@@ -11,7 +11,7 @@ import {BaseAccount, IEntryPoint, UserOperation} from '@interfaces/BaseAccount.s
 import {Base64} from '@libraries/Base64.sol';
 
 /**
- * @notice EIP4337 Managed Gnosis Safe Account Implementation
+ * @notice ERC4337 Managed Gnosis Safe Account Implementation
  * @author Forum (https://forumdaos.com)
  * @dev Uses infinitism style base 4337 interface, with gnosis safe account
  */
@@ -27,7 +27,7 @@ import {Base64} from '@libraries/Base64.sol';
  * - Add guardians and account recovery
  */
 
-contract EIP4337Account is GnosisSafe, BaseAccount {
+contract ERC4337Account is GnosisSafe, BaseAccount {
 	/// ----------------------------------------------------------------------------------------
 	///							ACCOUNT STORAGE
 	/// ----------------------------------------------------------------------------------------
@@ -88,14 +88,14 @@ contract EIP4337Account is GnosisSafe, BaseAccount {
 	}
 
 	/// ----------------------------------------------------------------------------------------
-	///							EIP-712 STYLE LOGIC
+	///							ERC-712 STYLE LOGIC
 	/// ----------------------------------------------------------------------------------------
 
 	function DOMAIN_SEPARATOR() public view virtual returns (bytes32) {
 		return
 			keccak256(
 				abi.encode(
-					// keccak256('EIP712Domain(string version,uint256 chainId,address verifyingContract)')
+					// keccak256('ERC712Domain(string version,uint256 chainId,address verifyingContract)')
 					0x8990460956f759a70e263603272cebd0a6ac6dc523b7334ddce05daee4d94d83,
 					//keccak256('0.1.0'),
 					0x20c949dc33efc49625bfe13e8da716e725117224147d54a7f00c902f6bf68693,

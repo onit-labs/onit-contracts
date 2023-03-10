@@ -2,15 +2,15 @@
 pragma solidity ^0.8.15;
 
 // 4337 imports
-import {EntryPoint} from '@eip4337/core/EntryPoint.sol';
-import {BaseAccount, UserOperation} from '@eip4337/core/BaseAccount.sol';
+import {EntryPoint} from '@erc4337/core/EntryPoint.sol';
+import {BaseAccount, UserOperation} from '@erc4337/core/BaseAccount.sol';
 
 // 4337 contracts
-import {EIP4337Account} from '../../src/eip4337-account/EIP4337Account.sol';
-import {EIP4337AccountFactory} from '../../src/eip4337-account/EIP4337AccountFactory.sol';
-//import {EIP4337ValidationManager} from '../../src/eip4337-account/EIP4337ValidationManager.sol';
-import {ForumGroupModule} from '../../src/eip4337-module/ForumGroupModule.sol';
-import {ForumGroupFactory} from '../../src/eip4337-module/ForumGroupFactory.sol';
+import {ERC4337Account} from '../../src/erc4337-account/ERC4337Account.sol';
+import {ERC4337AccountFactory} from '../../src/erc4337-account/ERC4337AccountFactory.sol';
+//import {ERC4337ValidationManager} from '../../src/erc4337-account/ERC4337ValidationManager.sol';
+import {ForumGroupModule} from '../../src/erc4337-module/ForumGroupModule.sol';
+import {ForumGroupFactory} from '../../src/erc4337-module/ForumGroupFactory.sol';
 
 // EllipticCurve validator used for p256 curves - compiled with v0.5.0
 /// @dev To save changes to folder structure, this is built elsewhere and added to the ./out folder
@@ -20,24 +20,24 @@ import {IEllipticCurveValidator} from '@interfaces/IEllipticCurveValidator.sol';
 import './SafeTestConfig.t.sol';
 import './ForumModuleTestConfig.t.sol';
 
-contract EIP4337TestConfig is Test, SafeTestConfig, ForumModuleTestConfig {
+contract ERC4337TestConfig is Test, SafeTestConfig, ForumModuleTestConfig {
 	// 4337 Account Types
 
 	// Entry point
 	EntryPoint public entryPoint;
 
 	// Singleton for Forum 4337 account implementation
-	EIP4337Account public eip4337Singleton;
+	ERC4337Account public erc4337Singleton;
 
 	// Singleton for Forum 4337 group account implementation
-	ForumGroupModule public eip4337GroupSingleton;
+	ForumGroupModule public erc4337GroupSingleton;
 
 	// Validation manager used to check signatures for a 4337 group
-	//EIP4337ValidationManager public eip4337ValidationManager;
-	address internal eip4337ValidationManager = 0xBa81560Ae6Bd24D34BB24084993AfdaFad3cfeff; //on mumbai
+	//ERC4337ValidationManager public erc4337ValidationManager;
+	address internal erc4337ValidationManager = 0xBa81560Ae6Bd24D34BB24084993AfdaFad3cfeff; //on mumbai
 
 	// Factory for individual 4337 accounts
-	EIP4337AccountFactory public eip4337AccountFactory;
+	ERC4337AccountFactory public erc4337AccountFactory;
 
 	// Factory for 4337 group accounts
 	ForumGroupFactory public forumGroupFactory;
@@ -48,7 +48,7 @@ contract EIP4337TestConfig is Test, SafeTestConfig, ForumModuleTestConfig {
 	// Addresses for easy use in tests
 	address internal entryPointAddress;
 
-	//address internal eip4337ValidationManagerAddress;
+	//address internal erc4337ValidationManagerAddress;
 
 	string authentacatorData =
 		'1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000';
@@ -57,25 +57,25 @@ contract EIP4337TestConfig is Test, SafeTestConfig, ForumModuleTestConfig {
 		entryPoint = new EntryPoint();
 		entryPointAddress = address(entryPoint);
 
-		//eip4337ValidationManager = new EIP4337ValidationManager();
-		//eip4337ValidationManagerAddress = address(eip4337ValidationManager);
+		//erc4337ValidationManager = new ERC4337ValidationManager();
+		//erc4337ValidationManagerAddress = address(erc4337ValidationManager);
 
 		// Validator used for p256 curves
 		ellipticCurveValidator = IEllipticCurveValidator(
 			deployCode('EllipticCurve5.sol:EllipticCurve5')
 		);
 
-		eip4337Singleton = new EIP4337Account(ellipticCurveValidator);
-		eip4337GroupSingleton = new ForumGroupModule(entryPointAddress, ellipticCurveValidator);
+		erc4337Singleton = new ERC4337Account(ellipticCurveValidator);
+		erc4337GroupSingleton = new ForumGroupModule(entryPointAddress, ellipticCurveValidator);
 
-		eip4337AccountFactory = new EIP4337AccountFactory(
-			eip4337Singleton,
+		erc4337AccountFactory = new ERC4337AccountFactory(
+			erc4337Singleton,
 			entryPoint,
 			address(handler)
 		);
 
 		forumGroupFactory = new ForumGroupFactory(
-			payable(address(eip4337GroupSingleton)),
+			payable(address(erc4337GroupSingleton)),
 			address(safeSingleton),
 			address(handler),
 			address(multisend),

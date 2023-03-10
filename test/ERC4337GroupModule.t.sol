@@ -4,13 +4,13 @@ pragma solidity ^0.8.15;
 /* solhint-disable no-console */
 
 // import './helpers/ForumSafeTestConfig.t.sol';
-import './config/EIP4337TestConfig.t.sol';
+import './config/ERC4337TestConfig.t.sol';
 
 import {SignatureHelper} from './config/SignatureHelper.t.sol';
 
 import {Base64} from '@libraries/Base64.sol';
 
-contract Module4337Test is EIP4337TestConfig, SignatureHelper {
+contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 	ForumGroupModule private forumSafeModule;
 	GnosisSafe private safe;
 

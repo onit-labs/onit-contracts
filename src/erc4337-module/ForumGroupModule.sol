@@ -17,8 +17,8 @@ import '@gnosis.pm/safe-contracts/contracts/GnosisSafe.sol';
 import '@gnosis.pm/safe-contracts/contracts/base/Executor.sol';
 import '@gnosis.pm/safe-contracts/contracts/GnosisSafe.sol';
 
-import '@eip4337/interfaces/IAccount.sol';
-import '@eip4337/interfaces/IEntryPoint.sol';
+import '@erc4337/interfaces/IAccount.sol';
+import '@erc4337/interfaces/IEntryPoint.sol';
 import '@utils/Exec.sol';
 
 import 'forge-std/console.sol';
@@ -35,7 +35,7 @@ import 'forge-std/console.sol';
  * @dev - Called directly from entrypoint so must implement validateUserOp
  * 		- Holds an immutable reference to the EntryPoint
  * 		- Is enabled as a module on a Gnosis Safe
- * @author modified from infinitism https://github.com/eth-infinitism/account-abstraction/contracts/samples/gnosis/EIP4337Module.sol
+ * @author modified from infinitism https://github.com/eth-infinitism/account-abstraction/contracts/samples/gnosis/ERC4337Module.sol
  */
 contract ForumGroupModule is IAccount, Executor, Initializable {
 	// Immutable reference to latest entrypoint
@@ -188,7 +188,7 @@ contract ForumGroupModule is IAccount, Executor, Initializable {
 		// Entry point calls this method directly, and from here we call the safe
 		//address msgSender = address(bytes20(msg.data[msg.data.length - 20:]));
 		require(msg.sender == entryPoint, 'account: not from entrypoint');
-		//require(msg.sender == eip4337Fallback, 'account: not from EIP4337Fallback');
+		//require(msg.sender == erc4337Fallback, 'account: not from ERC4337Fallback');
 
 		bool success = execute(to, value, data, operation, type(uint256).max);
 
@@ -217,7 +217,7 @@ contract ForumGroupModule is IAccount, Executor, Initializable {
 	}
 
 	/**
-	 * set up a safe as EIP-4337 enabled.
+	 * set up a safe as ERC-4337 enabled.
 	 * called from the GnosisSafeAccountFactory during construction time
 	 * - enable this module
 	 * - this method is called with delegateCall, so the module (usually itself) is passed as parameter, and "this" is the safe itself
@@ -227,20 +227,20 @@ contract ForumGroupModule is IAccount, Executor, Initializable {
 
 		require(
 			!safe.isModuleEnabled(this4337Module),
-			'setup4337Module: eip4337Module already enabled'
+			'setup4337Module: erc4337Module already enabled'
 		);
 
 		safe.enableModule(this4337Module);
 	}
 
 	/**
-	 * replace EIP4337 module, to support a new EntryPoint.
+	 * replace ERC4337 module, to support a new EntryPoint.
 	 * must be called using execTransaction and Enum.Operation.DelegateCall
-	 * @param prevModule returned by getCurrentEIP4337Module
-	 * @param oldModule the old EIP4337 module to remove, returned by getCurrentEIP4337Module
-	 * @param newModule the new EIP4337Module, usually with a new EntryPoint
+	 * @param prevModule returned by getCurrentERC4337Module
+	 * @param oldModule the old ERC4337 module to remove, returned by getCurrentERC4337Module
+	 * @param newModule the new ERC4337Module, usually with a new EntryPoint
 	 */
-	function replaceEIP4337Module(
+	function replaceERC4337Module(
 		address prevModule,
 		ForumGroupModule oldModule,
 		ForumGroupModule newModule
@@ -249,14 +249,14 @@ contract ForumGroupModule is IAccount, Executor, Initializable {
 
 		require(
 			pThis.isModuleEnabled(address(oldModule)),
-			'replaceEIP4337Manager: oldModule is not active'
+			'replaceERC4337Manager: oldModule is not active'
 		);
 
 		pThis.disableModule(prevModule, oldModule.this4337Module());
 
 		pThis.enableModule(newModule.this4337Module());
 
-		validateEip4337(pThis, newModule);
+		validateErc4337(pThis, newModule);
 	}
 
 	/**
@@ -264,8 +264,8 @@ contract ForumGroupModule is IAccount, Executor, Initializable {
 	 * the test is might be incomplete: we check that we reach our validateUserOp and fail on signature.
 	 *  we don't test full transaction
 	 */
-	function validateEip4337(GnosisSafe safe, ForumGroupModule module) public {
-		// this prevents mistaken replaceEIP4337Module to disable the module completely.
+	function validateErc4337(GnosisSafe safe, ForumGroupModule module) public {
+		// this prevents mistaken replaceERC4337Module to disable the module completely.
 		// minimal signature that pass "recover"
 		bytes memory sig = new bytes(65);
 		sig[64] = bytes1(uint8(27));
@@ -288,7 +288,7 @@ contract ForumGroupModule is IAccount, Executor, Initializable {
 		userOps[0] = userOp;
 		IEntryPoint _entryPoint = IEntryPoint(payable(module.entryPoint()));
 		try _entryPoint.handleOps(userOps, payable(msg.sender)) {
-			revert('validateEip4337: handleOps must fail');
+			revert('validateErc4337: handleOps must fail');
 		} catch (bytes memory error) {
 			if (
 				keccak256(error) !=
@@ -306,11 +306,11 @@ contract ForumGroupModule is IAccount, Executor, Initializable {
 	/// -----------------------------------------------------------------------
 
 	/**
-	 * enumerate modules, and find the currently active EIP4337 manager (and previous module)
-	 * @return prev prev module, needed by replaceEIP4337Manager
-	 * @return manager the current active EIP4337Manager
+	 * enumerate modules, and find the currently active ERC4337 manager (and previous module)
+	 * @return prev prev module, needed by replaceERC4337Manager
+	 * @return manager the current active ERC4337Manager
 	 */
-	function getCurrentEIP4337Manager(
+	function getCurrentERC4337Manager(
 		GnosisSafe _safe
 	) public view returns (address prev, address manager) {
 		prev = address(SENTINEL_MODULES);

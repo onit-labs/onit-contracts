@@ -37,7 +37,7 @@ contract ForumGroupFactory {
 	// Template contract to use for new Gnosis safe proxies
 	address public immutable gnosisSingleton;
 
-	// Library to use for EIP1271 compatability
+	// Library to use for ERC1271 compatability
 	address public immutable gnosisFallbackLibrary;
 
 	// Library to use for all safe transaction executions

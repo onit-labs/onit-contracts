@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {EIP4337Account} from '../../src/eip4337-account/EIP4337Account.sol';
+import {ERC4337Account} from '../../src/erc4337-account/ERC4337Account.sol';
 import {IEllipticCurveValidator} from '@interfaces/IEllipticCurveValidator.sol';
 import {DeploymentSelector} from '../../lib/foundry-deployment-manager/src/DeploymentSelector.sol';
 
 /**
- * @dev This contract is used to deploy the EIP4337Account contract
- * For now this must be run before the EIP4337FactoryDeployer
+ * @dev This contract is used to deploy the ERC4337Account contract
+ * For now this must be run before the ERC4337FactoryDeployer
  * Improvements to the deployment manager will allow this to be run in any order
  */
-contract EIP4337AccountDeployer is DeploymentSelector {
-	EIP4337Account internal account;
+contract ERC4337AccountDeployer is DeploymentSelector {
+	ERC4337Account internal account;
 
 	address internal validator = 0xBa81560Ae6Bd24D34BB24084993AfdaFad3cfeff;
 
@@ -26,11 +26,11 @@ contract EIP4337AccountDeployer is DeploymentSelector {
 		bytes memory initData = abi.encode(validator);
 
 		(address contractAddress, bytes memory deploymentBytecode) = SelectDeployment(
-			'EIP4337Account',
+			'ERC4337Account',
 			initData
 		);
 
-		fork.set('EIP4337Account', contractAddress, deploymentBytecode);
+		fork.set('ERC4337Account', contractAddress, deploymentBytecode);
 
 		stopBroadcast();
 	}

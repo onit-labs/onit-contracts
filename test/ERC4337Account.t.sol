@@ -2,24 +2,24 @@
 pragma solidity ^0.8.15;
 
 // Forum 4337 contracts
-import {EIP4337Account} from '../src/eip4337-account/EIP4337Account.sol';
-import {EIP4337AccountFactory} from '../src/eip4337-account/EIP4337AccountFactory.sol';
+import {ERC4337Account} from '../src/erc4337-account/ERC4337Account.sol';
+import {ERC4337AccountFactory} from '../src/erc4337-account/ERC4337AccountFactory.sol';
 
 // Infinitism 4337 contracts
-import {EntryPoint} from '@eip4337/core/EntryPoint.sol';
+import {EntryPoint} from '@erc4337/core/EntryPoint.sol';
 
 // Gnosis Safe contracts
 import {CompatibilityFallbackHandler} from '@gnosis/handler/CompatibilityFallbackHandler.sol';
 
-import './config/EIP4337TestConfig.t.sol';
+import './config/ERC4337TestConfig.t.sol';
 import {ERC4337SignatureStore} from './config/ERC4337SignatureStore.t.sol';
 
 // ! need a way to generate test passkey sigs that match owner addresses
 // ! until then some manual effor it required to run each test
 
-contract Module4337Test is EIP4337TestConfig, ERC4337SignatureStore {
-	// Variable used for test eip4337 account
-	EIP4337Account private deployed4337Account;
+contract Module4337Test is ERC4337TestConfig, ERC4337SignatureStore {
+	// Variable used for test erc4337 account
+	ERC4337Account private deployed4337Account;
 	address payable private deployed4337AccountAddress;
 
 	// Some salts
@@ -35,29 +35,29 @@ contract Module4337Test is EIP4337TestConfig, ERC4337SignatureStore {
 	function setUp() public {
 		// Check 4337 singelton is set in factory (base implementation for Forum 4337 accounts)
 		assertEq(
-			address(eip4337AccountFactory.eip4337AccountSingleton()),
-			address(eip4337Singleton),
-			'eip4337Singleton not set'
+			address(erc4337AccountFactory.erc4337AccountSingleton()),
+			address(erc4337Singleton),
+			'erc4337Singleton not set'
 		);
 		// Check 4337 entryPoint is set in factory
 		assertEq(
-			address(eip4337AccountFactory.entryPoint()),
+			address(erc4337AccountFactory.entryPoint()),
 			address(entryPoint),
 			'entryPoint not set'
 		);
 		// Check 4337 gnosis fallback handler is set in factory
 		assertEq(
-			address(eip4337AccountFactory.gnosisFallbackLibrary()),
+			address(erc4337AccountFactory.gnosisFallbackLibrary()),
 			address(handler),
 			'handler not set'
 		);
 
 		// Deploy an account to be used in tests later
-		deployed4337AccountAddress = eip4337AccountFactory.createAccount(
+		deployed4337AccountAddress = erc4337AccountFactory.createAccount(
 			accountSalt(SALT_1, signers[TestSigner.SignerB]),
 			signers[TestSigner.SignerB]
 		);
-		deployed4337Account = EIP4337Account(deployed4337AccountAddress);
+		deployed4337Account = ERC4337Account(deployed4337AccountAddress);
 
 		// Deal funds to account
 		deal(deployed4337AccountAddress, 1 ether);
@@ -101,16 +101,16 @@ contract Module4337Test is EIP4337TestConfig, ERC4337SignatureStore {
 		// );
 
 		// Prepend the address of the factory
-		// bytes memory initCode = abi.encodePacked(eip4337AccountFactory, factoryCalldata);
+		// bytes memory initCode = abi.encodePacked(erc4337AccountFactory, factoryCalldata);
 
 		// Calculate address in advance to use as sender
-		address preCalculatedAccountAddress = (eip4337AccountFactory).getAddress(
+		address preCalculatedAccountAddress = (erc4337AccountFactory).getAddress(
 			accountSalt(SALT_2, signers[TestSigner.SignerB])
 		);
 		// Deal funds to account
 		deal(preCalculatedAccountAddress, 1 ether);
-		// Cast to EIP4337Account - used to make some test assertions easier
-		EIP4337Account testNew4337Account = EIP4337Account(payable(preCalculatedAccountAddress));
+		// Cast to ERC4337Account - used to make some test assertions easier
+		ERC4337Account testNew4337Account = ERC4337Account(payable(preCalculatedAccountAddress));
 
 		// Retrieve the userOp from signature store (in future generate this and sign it here)
 		UserOperation[] memory userOps = new UserOperation[](1);
@@ -142,14 +142,14 @@ contract Module4337Test is EIP4337TestConfig, ERC4337SignatureStore {
 		// Fork Mumbai and create an account from a fcatory
 		vm.createSelectFork(vm.envString('MUMBAI_RPC_URL'));
 
-		eip4337AccountFactory = new EIP4337AccountFactory(
-			eip4337Singleton,
+		erc4337AccountFactory = new ERC4337AccountFactory(
+			erc4337Singleton,
 			entryPoint,
 			address(handler)
 		);
 
 		// Deploy an account to be used in tests
-		tmpMumbai = eip4337AccountFactory.createAccount(
+		tmpMumbai = erc4337AccountFactory.createAccount(
 			accountSalt(SALT_1, signers[TestSigner.SignerB]),
 			signers[TestSigner.SignerB]
 		);
@@ -157,14 +157,14 @@ contract Module4337Test is EIP4337TestConfig, ERC4337SignatureStore {
 		// Fork Fuji and create an account from a fcatory
 		vm.createSelectFork(vm.envString('FUJI_RPC_URL'));
 
-		eip4337AccountFactory = new EIP4337AccountFactory(
-			eip4337Singleton,
+		erc4337AccountFactory = new ERC4337AccountFactory(
+			erc4337Singleton,
 			entryPoint,
 			address(handler)
 		);
 
 		// Deploy an account to be used in tests
-		tmpFuji = eip4337AccountFactory.createAccount(
+		tmpFuji = erc4337AccountFactory.createAccount(
 			accountSalt(SALT_1, signers[TestSigner.SignerB]),
 			signers[TestSigner.SignerB]
 		);
