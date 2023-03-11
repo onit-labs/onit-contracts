@@ -9,6 +9,7 @@ import {IEllipticCurveValidator} from '@interfaces/IEllipticCurveValidator.sol';
 import {BaseAccount, IEntryPoint, UserOperation} from '@interfaces/BaseAccount.sol';
 
 import {Base64} from '@libraries/Base64.sol';
+import {HexToLiteralBytes} from '@libraries/HexToLiteralBytes.sol';
 
 /**
  * @notice ERC4337 Managed Gnosis Safe Account Implementation
@@ -181,36 +182,11 @@ contract ERC4337Account is GnosisSafe, BaseAccount {
 
 		return
 			_ellipticCurveValidator.validateSignature(
-				sha256(abi.encodePacked(fromHex(authData), hashedClientData)),
+				sha256(abi.encodePacked(HexToLiteralBytes.fromHex(authData), hashedClientData)),
 				sig,
 				_owner
 			)
 				? 0
 				: SIG_VALIDATION_FAILED;
-	}
-
-	// Convert an hexadecimal string to raw bytes
-	function fromHex(string memory s) internal pure returns (bytes memory) {
-		bytes memory ss = bytes(s);
-		require(ss.length % 2 == 0, 'hex length not even');
-		bytes memory r = new bytes(ss.length / 2);
-		for (uint i = 0; i < ss.length / 2; ++i) {
-			r[i] = bytes1(fromHexChar(uint8(ss[2 * i])) * 16 + fromHexChar(uint8(ss[2 * i + 1])));
-		}
-		return r;
-	}
-
-	// Convert an hexadecimal character to their value
-	function fromHexChar(uint8 c) internal pure returns (uint8) {
-		if (bytes1(c) >= bytes1('0') && bytes1(c) <= bytes1('9')) {
-			return c - uint8(bytes1('0'));
-		}
-		if (bytes1(c) >= bytes1('a') && bytes1(c) <= bytes1('f')) {
-			return 10 + c - uint8(bytes1('a'));
-		}
-		if (bytes1(c) >= bytes1('A') && bytes1(c) <= bytes1('F')) {
-			return 10 + c - uint8(bytes1('A'));
-		}
-		revert('failed hex conversion');
 	}
 }
