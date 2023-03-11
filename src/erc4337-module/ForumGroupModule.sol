@@ -1,5 +1,5 @@
-//SPDX-License-Identifier: GPL
-pragma solidity ^0.8.7;
+// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity ^0.8.15;
 
 /* solhint-disable avoid-low-level-calls */
 /* solhint-disable no-inline-assembly */
@@ -11,10 +11,6 @@ import {Base64} from '@libraries/Base64.sol';
 // Interface of the elliptic curve validator contract
 import {IEllipticCurveValidator} from '@interfaces/IEllipticCurveValidator.sol';
 
-import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
-
-import '@gnosis/GnosisSafe.sol';
-import '@gnosis/base/Executor.sol';
 import '@gnosis/GnosisSafe.sol';
 import '@gnosis/examples/libraries/GnosisSafeStorage.sol';
 
@@ -41,7 +37,27 @@ import 'forge-std/console.sol';
  * 		- Is enabled as a module on a Gnosis Safe
  * @author modified from infinitism https://github.com/eth-infinitism/account-abstraction/contracts/samples/gnosis/ERC4337Module.sol
  */
-contract ForumGroupModule is IAccount, GnosisSafeStorage, Executor, Initializable {
+contract ForumGroupModule is IAccount, GnosisSafeStorage, Executor {
+	/// ----------------------------------------------------------------------------------------
+	///							EVENTS & ERRORS
+	/// ----------------------------------------------------------------------------------------
+
+	error ModuleAlreadySetUp();
+
+	error ModuleAlreadyEnabled();
+
+	error NotFromEntrypoint();
+
+	error InvalidInitialisation();
+
+	error InvalidNonce();
+
+	error InvalidThreshold();
+
+	/// ----------------------------------------------------------------------------------------
+	///							MODULE STORAGE
+	/// ----------------------------------------------------------------------------------------
+
 	// The safe controlled by this module
 	GnosisSafe public safe;
 
@@ -96,8 +112,7 @@ contract ForumGroupModule is IAccount, GnosisSafeStorage, Executor, Initializabl
 	 * @param _voteThreshold Vote threshold to pass (basis points of 10,000 ie. 6,000 = 60%)
 	 * @param _membersX The public keys of the signing members of the group
 	 * @param _membersY The public keys of the signing members of the group
-	 * @dev TODO use setup via proxy instead of deploying & calling this
-	 * ! ADD INITALIZE MODIFIER OR SIMILAR HERE
+	 * @dev TODO use setup via proxy instead of deploying & calling this (check setup is sufficiently protected)
 	 */
 	function setUp(
 		ForumGroupModule module,
@@ -105,28 +120,23 @@ contract ForumGroupModule is IAccount, GnosisSafeStorage, Executor, Initializabl
 		uint256[] memory _membersX,
 		uint256[] memory _membersY
 	) external {
+		if (voteThreshold != 0) revert ModuleAlreadySetUp();
+
 		safe = GnosisSafe(payable(address(this)));
 
-		require(
-			!safe.isModuleEnabled(module.entryPoint()),
-			'setup4337Modules: entrypoint already enabled'
-		);
-		require(
-			!safe.isModuleEnabled(module.erc4337Fallback()),
-			'setup4337Modules: eip4337Fallback already enabled'
-		);
+		if (safe.isModuleEnabled(module.entryPoint())) revert ModuleAlreadyEnabled();
+
+		if (safe.isModuleEnabled(module.erc4337Fallback())) revert ModuleAlreadyEnabled();
 
 		safe.enableModule(module.entryPoint());
 		safe.enableModule(module.erc4337Fallback());
 
-		require(
-			_voteThreshold > 0 &&
-				_voteThreshold <= 10000 &&
-				_membersX.length > 0 &&
-				_membersY.length > 0 &&
-				_membersX.length == _membersY.length,
-			'account: invalid setup params'
-		);
+		if (
+			_voteThreshold <= 0 ||
+			_voteThreshold > 10000 ||
+			_membersX.length <= 0 ||
+			_membersX.length != _membersY.length
+		) revert InvalidInitialisation();
 
 		// ! improve this, maybe call from factory
 		module.setThreshold(_voteThreshold);
@@ -146,7 +156,7 @@ contract ForumGroupModule is IAccount, GnosisSafeStorage, Executor, Initializabl
 		bytes32 userOpHash,
 		uint256 missingAccountFunds
 	) external override returns (uint256 validationData) {
-		require(msg.sender == entryPoint, 'account: not from entrypoint');
+		if (msg.sender != entryPoint) revert NotFromEntrypoint();
 
 		// Extract the passkey generated signature and authentacator data
 		(uint256[2][] memory sig, string memory authData) = abi.decode(
@@ -190,7 +200,7 @@ contract ForumGroupModule is IAccount, GnosisSafeStorage, Executor, Initializabl
 		}
 
 		if (userOp.initCode.length == 0) {
-			require(uint256(nonce) == userOp.nonce, 'account: invalid nonce');
+			if (uint256(nonce) != userOp.nonce) revert InvalidNonce();
 			nonce = bytes32(uint256(nonce) + 1);
 			//++nonce;
 		}
@@ -218,7 +228,7 @@ contract ForumGroupModule is IAccount, GnosisSafeStorage, Executor, Initializabl
 	) external {
 		// Entry point calls this method directly, and from here we call the safe
 		//address msgSender = address(bytes20(msg.data[msg.data.length - 20:]));
-		require(msg.sender == entryPoint, 'account: not from entrypoint');
+		if (msg.sender != entryPoint) revert NotFromEntrypoint();
 		//require(msg.sender == erc4337Fallback, 'account: not from ERC4337Fallback');
 
 		bool success = execute(to, value, data, operation, type(uint256).max);
@@ -242,7 +252,7 @@ contract ForumGroupModule is IAccount, GnosisSafeStorage, Executor, Initializabl
 	function setThreshold(uint256 threshold) external {
 		// require(msg.sender == entryPoint, 'account: not from entrypoint');
 
-		require(threshold > 0 && threshold <= 10000, 'account: invalid threshold');
+		if (threshold <= 0 || threshold > 10000) revert InvalidThreshold();
 
 		voteThreshold = threshold;
 	}
@@ -255,73 +265,73 @@ contract ForumGroupModule is IAccount, GnosisSafeStorage, Executor, Initializabl
 		membersY.push(y);
 	}
 
-	/**
-	 * replace ERC4337 module, to support a new EntryPoint.
-	 * must be called using execTransaction and Enum.Operation.DelegateCall
-	 * @param prevModule returned by getCurrentERC4337Module
-	 * @param oldModule the old ERC4337 module to remove, returned by getCurrentERC4337Module
-	 * @param newModule the new ERC4337Module, usually with a new EntryPoint
-	 */
-	function replaceERC4337Module(
-		address prevModule,
-		ForumGroupModule oldModule,
-		ForumGroupModule newModule
-	) public {
-		GnosisSafe pThis = GnosisSafe(payable(address(this)));
+	// /**
+	//  * replace ERC4337 module, to support a new EntryPoint.
+	//  * must be called using execTransaction and Enum.Operation.DelegateCall
+	//  * @param prevModule returned by getCurrentERC4337Module
+	//  * @param oldModule the old ERC4337 module to remove, returned by getCurrentERC4337Module
+	//  * @param newModule the new ERC4337Module, usually with a new EntryPoint
+	//  */
+	// function replaceERC4337Module(
+	// 	address prevModule,
+	// 	ForumGroupModule oldModule,
+	// 	ForumGroupModule newModule
+	// ) public {
+	// 	GnosisSafe pThis = GnosisSafe(payable(address(this)));
 
-		require(
-			pThis.isModuleEnabled(address(oldModule)),
-			'replaceERC4337Manager: oldModule is not active'
-		);
+	// 	require(
+	// 		pThis.isModuleEnabled(address(oldModule)),
+	// 		'replaceERC4337Manager: oldModule is not active'
+	// 	);
 
-		pThis.disableModule(prevModule, oldModule.this4337Module());
+	// 	pThis.disableModule(prevModule, oldModule.this4337Module());
 
-		pThis.enableModule(newModule.this4337Module());
+	// 	pThis.enableModule(newModule.this4337Module());
 
-		validateErc4337(pThis, newModule);
-	}
+	// 	validateErc4337(pThis, newModule);
+	// }
 
-	/**
-	 * Validate this gnosisSafe is callable through the EntryPoint.
-	 * the test is might be incomplete: we check that we reach our validateUserOp and fail on signature.
-	 *  we don't test full transaction
-	 */
-	function validateErc4337(GnosisSafe safe, ForumGroupModule module) public {
-		// this prevents mistaken replaceERC4337Module to disable the module completely.
-		// minimal signature that pass "recover"
-		bytes memory sig = new bytes(65);
-		sig[64] = bytes1(uint8(27));
-		sig[2] = bytes1(uint8(1));
-		sig[35] = bytes1(uint8(1));
-		UserOperation memory userOp = UserOperation(
-			address(safe),
-			uint256(safe.nonce()),
-			'',
-			'',
-			0,
-			1000000,
-			0,
-			0,
-			0,
-			'',
-			sig
-		);
-		UserOperation[] memory userOps = new UserOperation[](1);
-		userOps[0] = userOp;
-		IEntryPoint _entryPoint = IEntryPoint(payable(module.entryPoint()));
-		try _entryPoint.handleOps(userOps, payable(msg.sender)) {
-			revert('validateErc4337: handleOps must fail');
-		} catch (bytes memory error) {
-			if (
-				keccak256(error) !=
-				keccak256(
-					abi.encodeWithSignature('FailedOp(uint256,string)', 0, 'AA24 signature error')
-				)
-			) {
-				revert(string(error));
-			}
-		}
-	}
+	// /**
+	//  * Validate this gnosisSafe is callable through the EntryPoint.
+	//  * the test is might be incomplete: we check that we reach our validateUserOp and fail on signature.
+	//  *  we don't test full transaction
+	//  */
+	// function validateErc4337(GnosisSafe safe, ForumGroupModule module) public {
+	// 	// this prevents mistaken replaceERC4337Module to disable the module completely.
+	// 	// minimal signature that pass "recover"
+	// 	bytes memory sig = new bytes(65);
+	// 	sig[64] = bytes1(uint8(27));
+	// 	sig[2] = bytes1(uint8(1));
+	// 	sig[35] = bytes1(uint8(1));
+	// 	UserOperation memory userOp = UserOperation(
+	// 		address(safe),
+	// 		uint256(safe.nonce()),
+	// 		'',
+	// 		'',
+	// 		0,
+	// 		1000000,
+	// 		0,
+	// 		0,
+	// 		0,
+	// 		'',
+	// 		sig
+	// 	);
+	// 	UserOperation[] memory userOps = new UserOperation[](1);
+	// 	userOps[0] = userOp;
+	// 	IEntryPoint _entryPoint = IEntryPoint(payable(module.entryPoint()));
+	// 	try _entryPoint.handleOps(userOps, payable(msg.sender)) {
+	// 		revert('validateErc4337: handleOps must fail');
+	// 	} catch (bytes memory error) {
+	// 		if (
+	// 			keccak256(error) !=
+	// 			keccak256(
+	// 				abi.encodeWithSignature('FailedOp(uint256,string)', 0, 'AA24 signature error')
+	// 			)
+	// 		) {
+	// 			revert(string(error));
+	// 		}
+	// 	}
+	// }
 
 	/// -----------------------------------------------------------------------
 	/// 						VIEW FUNCTIONS
