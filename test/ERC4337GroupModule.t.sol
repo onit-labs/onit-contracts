@@ -64,6 +64,8 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 		// check the members and threshold are set
 		uint256[2][] memory members = forumSafeModule.getMembers();
 
+		forumSafeModule.setUp(forumSafeModule, 5000, membersX, membersY);
+
 		assertTrue(members[0][0] == publicKey[0]);
 		assertTrue(members[0][1] == publicKey[1]);
 		assertTrue(forumSafeModule.voteThreshold() == 5000);
@@ -77,6 +79,19 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 		forumSafeModule.setThreshold(threshold);
 
 		assertTrue(forumSafeModule.voteThreshold() == threshold);
+	}
+
+	function testAddMember() public {
+		assertTrue(forumSafeModule.getMembers().length == 1);
+
+		vm.prank(entryPointAddress);
+		forumSafeModule.addMember(publicKey2[0], publicKey2[1]);
+
+		uint256[2][] memory members = forumSafeModule.getMembers();
+
+		assertTrue(members[1][0] == publicKey2[0]);
+		assertTrue(members[1][1] == publicKey2[1]);
+		assertTrue(forumSafeModule.getMembers().length == 2);
 	}
 
 	/// -----------------------------------------------------------------------
