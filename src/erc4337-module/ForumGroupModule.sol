@@ -91,6 +91,9 @@ contract ForumGroupModule is IAccount, GnosisSafeStorage, Executor {
 	uint256[] internal membersX;
 	uint256[] internal membersY;
 
+	// Used nonces; 1 = used (prevents replaying the same userOp)
+	mapping(uint256 => uint) internal usedNonces;
+
 	/// -----------------------------------------------------------------------
 	/// 						CONSTRUCTOR
 	/// -----------------------------------------------------------------------
@@ -156,7 +159,8 @@ contract ForumGroupModule is IAccount, GnosisSafeStorage, Executor {
 		bytes32 userOpHash,
 		uint256 missingAccountFunds
 	) external override returns (uint256 validationData) {
-		if (msg.sender != entryPoint) revert NotFromEntrypoint();
+		address msgSender = address(bytes20(msg.data[msg.data.length - 20:]));
+		if (msgSender != entryPoint) revert NotFromEntrypoint();
 
 		// Extract the passkey generated signature and authentacator data
 		(uint256[2][] memory sig, string memory authData) = abi.decode(
@@ -201,15 +205,17 @@ contract ForumGroupModule is IAccount, GnosisSafeStorage, Executor {
 			validationData = SIG_VALIDATION_FAILED;
 		}
 
+		// TODO improve used nonce tracking
 		if (userOp.initCode.length == 0) {
-			if (uint256(nonce) != userOp.nonce) revert InvalidNonce();
+			if (usedNonces[userOp.nonce] == 1) revert InvalidNonce();
 			nonce = bytes32(uint256(nonce) + 1);
+			usedNonces[userOp.nonce] == 1;
 			//++nonce;
 		}
 
 		if (missingAccountFunds > 0) {
 			//Note: MAY pay more than the minimum, to deposit for future transactions
-			(bool success, ) = payable(msg.sender).call{value: missingAccountFunds}('');
+			(bool success, ) = payable(msgSender).call{value: missingAccountFunds}('');
 			(success);
 			//ignore failure (its EntryPoint's job to verify, not account.)
 		}
@@ -222,16 +228,16 @@ contract ForumGroupModule is IAccount, GnosisSafeStorage, Executor {
 	 * EntryPoint wouldn't know to emit the UserOperationRevertReason event,
 	 * which the frontend/client uses to capture the reason for the failure.
 	 */
-	function execute(
+	function executeAndRevert(
 		address to,
 		uint256 value,
 		bytes memory data,
 		Enum.Operation operation
 	) external {
 		// Entry point calls this method directly, and from here we call the safe
-		//address msgSender = address(bytes20(msg.data[msg.data.length - 20:]));
-		if (msg.sender != entryPoint) revert NotFromEntrypoint();
-		//require(msg.sender == erc4337Fallback, 'account: not from ERC4337Fallback');
+		address msgSender = address(bytes20(msg.data[msg.data.length - 20:]));
+		if (msgSender != entryPoint) revert NotFromEntrypoint();
+		require(msg.sender == erc4337Fallback, 'account: not from ERC4337Fallback');
 
 		bool success = execute(to, value, data, operation, type(uint256).max);
 

@@ -106,7 +106,7 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 
 		// Build user operation
 		UserOperation memory tmp = buildUserOp(
-			address(forumSafeModule),
+			address(safe),
 			safe.nonce(),
 			new bytes(0),
 			basicTransferCalldata
@@ -129,9 +129,11 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 
 		entryPoint.handleOps(tmp1, payable(alice));
 
+		// ! correct gas cost - take it from the useroperation event
+		uint256 gas = calculateGas(tmp);
 		// Transfer has been made, nonce incremented, used nonce set
-		assertTrue(address(alice).balance == 1.5 ether);
-		assertTrue(address(safe).balance == 0.5 ether);
+		assertTrue(address(alice).balance == 1.5 ether + gas);
+		assertTrue(address(safe).balance == 0.5 ether - gas);
 		assertTrue(safe.nonce() == 1);
 		//assertTrue(forumSafeModule.usedNonces(entryPoint.getUserOpHash(tmp)) == 1);
 	}
@@ -151,7 +153,7 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 
 		// Build user operation
 		UserOperation memory tmp = buildUserOp(
-			address(forumSafeModule),
+			address(safe),
 			safe.nonce(),
 			new bytes(0),
 			basicTransferCalldata

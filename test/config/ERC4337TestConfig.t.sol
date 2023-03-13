@@ -127,7 +127,7 @@ contract ERC4337TestConfig is Test, SafeTestConfig, ForumModuleTestConfig {
 	) internal pure returns (bytes memory) {
 		return
 			abi.encodeWithSignature(
-				'execute(address,uint256,bytes,uint8)',
+				'executeAndRevert(address,uint256,bytes,uint8)',
 				to,
 				value,
 				data,
