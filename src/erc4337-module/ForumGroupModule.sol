@@ -114,12 +114,15 @@ contract ForumGroupModule is IAccount, GnosisSafeStorage, Executor {
 	 * @dev TODO use setup via proxy instead of deploying & calling this (check setup is sufficiently protected)
 	 */
 	function setUp(
+		address _safe,
 		address _erc4337Fallback,
 		uint256 _voteThreshold,
 		uint256[] memory _membersX,
 		uint256[] memory _membersY
 	) external {
 		if (voteThreshold != 0) revert ModuleAlreadySetUp();
+
+		safe = GnosisSafe(payable(_safe));
 
 		// Set the fallback
 		erc4337Fallback = _erc4337Fallback;

@@ -30,10 +30,11 @@ contract ForumGroupFactory {
 	/// Factory Storage
 	/// ----------------------------------------------------------------------------------------
 
-	GnosisSafeProxyFactory public gnosisSafeProxyFactory;
-
 	// This address - stored for delegate call checks
 	address public immutable forumGroupFactory;
+
+	// Template contract to use for new forum groups
+	address public immutable forumGroupSingleton;
 
 	// Template contract to use for new Gnosis safe proxies
 	address public immutable gnosisSingleton;
@@ -44,8 +45,11 @@ contract ForumGroupFactory {
 	// Library to use for all safe transaction executions
 	address public immutable gnosisMultisendLibrary;
 
-	// Template contract to use for new forum groups
-	address public immutable forumGroupSingleton;
+	// Factory to deploy new Gnosis safe proxies
+	GnosisSafeProxyFactory public gnosisSafeProxyFactory;
+
+	// Entry Point
+	address public immutable entryPoint;
 
 	// Address of deterministic deployment proxy, allowing address generation independent of deployer or nonce
 	// https://github.com/Arachnid/deterministic-deployment-proxy
@@ -74,6 +78,7 @@ contract ForumGroupFactory {
 		gnosisFallbackLibrary = _gnosisFallbackLibrary;
 		gnosisMultisendLibrary = _gnosisMultisendLibrary;
 		gnosisSafeProxyFactory = GnosisSafeProxyFactory(_gnosisSafeProxyFactory);
+		entryPoint = _entryPoint;
 
 		// Data sent to the deterministic deployment proxy to deploy a new ERC4337 account
 		createProxyData = abi.encodePacked(
@@ -113,6 +118,15 @@ contract ForumGroupFactory {
 		// 	return payable(addr);
 		// }
 
+		// Deploy new safe with salt and init data
+		forumGroupSafe = payable(
+			gnosisSafeProxyFactory.createProxyWithNonce(
+				gnosisSingleton,
+				new bytes(0),
+				uint256(accountSalt)
+			)
+		);
+
 		// Deploy the module determinstically based on the salt (for now a hash of _name)
 		(bool successCreate, bytes memory responseCreate) = DETERMINISTIC_DEPLOYMENT_PROXY.call{
 			value: 0
@@ -123,45 +137,56 @@ contract ForumGroupFactory {
 
 		if (!successCreate || address(_forumModule) == address(0)) revert NullDeploy();
 
-		// Create array of owners
-		address[] memory _ownerPlaceholder = new address[](1);
-		_ownerPlaceholder[0] = address(0xdead);
-
-		// Create multicall to
-		// 1) setup the module
-
+		// Deploy the fallback handler, setting the module in the constructor
 		address _fallbackHandler = address(new ERC4337Fallback(address(_forumModule)));
 
+		// Build multisend action to setup the module and enable modules on the safe
 		bytes memory _multisendAction = buildMultisend(
 			_forumModule,
+			forumGroupSafe,
 			_fallbackHandler,
 			_voteThreshold,
 			_ownersX,
 			_ownersY
 		);
 
-		bytes memory _setupSafe = abi.encodeCall(
-			GnosisSafe.setup,
-			(
-				_ownerPlaceholder,
-				1,
-				gnosisMultisendLibrary,
-				_multisendAction,
-				_fallbackHandler,
-				address(0),
-				0,
-				payable(address(0))
-			)
+		// Create a placeholder owner
+		address[] memory _ownerPlaceholder = new address[](1);
+		_ownerPlaceholder[0] = address(0xdead);
+
+		GnosisSafe(forumGroupSafe).setup(
+			_ownerPlaceholder,
+			1,
+			gnosisMultisendLibrary,
+			_multisendAction,
+			_fallbackHandler,
+			address(0),
+			0,
+			payable(address(0))
 		);
 
-		// Deploy new safe with salt and init data
-		forumGroupSafe = payable(
-			gnosisSafeProxyFactory.createProxyWithNonce(
-				gnosisSingleton,
-				_setupSafe,
-				uint256(accountSalt)
-			)
-		);
+		// bytes memory _setupSafe = abi.encodeCall(
+		// 	GnosisSafe.setup,
+		// 	(
+		// 		_ownerPlaceholder,
+		// 		1,
+		// 		gnosisMultisendLibrary,
+		// 		_multisendAction,
+		// 		_fallbackHandler,
+		// 		address(0),
+		// 		0,
+		// 		payable(address(0))
+		// 	)
+		// );
+
+		// // Deploy new safe with salt and init data
+		// forumGroupSafe = payable(
+		// 	gnosisSafeProxyFactory.createProxyWithNonce(
+		// 		gnosisSingleton,
+		// 		_setupSafe,
+		// 		uint256(accountSalt)
+		// 	)
+		// );
 
 		emit ForumSafeDeployed(_forumModule, forumGroupSafe);
 	}
@@ -174,45 +199,71 @@ contract ForumGroupFactory {
 	 * @notice Get the address of an account that would be returned by createAccount()
 	 * @dev Salt should be keccak256(abi.encode(otherSalt, owner)) where otherSalt is some bytes32
 	 */
-	function getAddress(bytes32 salt) public view returns (address clone) {
+	function getAddress(bytes32 salt) public returns (address clone) {
 		return
 			address(
-				bytes20(
-					keccak256(
-						abi.encodePacked(
-							bytes1(0xff),
-							DETERMINISTIC_DEPLOYMENT_PROXY,
-							salt,
-							keccak256(createProxyData)
-						)
-					) << 96
+				gnosisSafeProxyFactory.calculateCreateProxyWithNonceAddress(
+					gnosisSingleton,
+					new bytes(0), // ! if deployed with initdata, this needs updated
+					uint256(salt)
 				)
 			);
+		// return
+		// 	address(
+		// 		bytes20(
+		// 			keccak256(
+		// 				abi.encodePacked(
+		// 					bytes1(0xff),
+		// 					DETERMINISTIC_DEPLOYMENT_PROXY,
+		// 					salt,
+		// 					keccak256(createProxyData)
+		// 				)
+		// 			) << 96
+		// 		)
+		// 	);
 	}
 
 	function buildMultisend(
 		ForumGroupModule _forumModule,
+		address _forumGroupSafe,
 		address _fallbackHandler,
 		uint256 _voteThreshold,
 		uint256[] memory _ownersX,
 		uint256[] memory _ownersY
-	) internal returns (bytes memory _multisendAction) {
-		// Encode call to setup safe modules
-		bytes memory _setupSafeModules = abi.encodeCall(_forumModule.setUpModules, ());
+	) internal view returns (bytes memory _multisendAction) {
+		// Payload to enable the fallback handler on the safe
+		bytes memory _enableFallbackHandler = abi.encodeWithSignature(
+			'enableModule(address)',
+			_fallbackHandler
+		);
 
-		// Generate payload for the safe to delegatecall setup on the module via multisend
-		bytes memory _setupSafeModulesMultisend = abi.encodePacked(
-			Enum.Operation.DelegateCall,
-			_forumModule,
+		// Generate payload for the safe to call enableModule on itself via multisend
+		bytes memory _enableFallbackHandlerMultisend = abi.encodePacked(
+			Enum.Operation.Call,
+			_forumGroupSafe,
 			uint256(0),
-			uint256(_setupSafeModules.length),
-			_setupSafeModules
+			uint256(_enableFallbackHandler.length),
+			bytes(_enableFallbackHandler)
+		);
+		// Payload to enable the forum entrypoint as a module on the safe
+		bytes memory _enableEntryPoint = abi.encodeWithSignature(
+			'enableModule(address)',
+			entryPoint
+		);
+
+		// Generate payload for the safe to call enableModule on itself via multisend
+		bytes memory _enableEntrypointMultisend = abi.encodePacked(
+			Enum.Operation.Call,
+			_forumGroupSafe,
+			uint256(0),
+			uint256(_enableEntryPoint.length),
+			bytes(_enableEntryPoint)
 		);
 
 		// Encode call to setup the module storage
 		bytes memory _setupModuleStorage = abi.encodeCall(
 			_forumModule.setUp,
-			(_fallbackHandler, _voteThreshold, _ownersX, _ownersY)
+			(_fallbackHandler, _forumGroupSafe, _voteThreshold, _ownersX, _ownersY)
 		);
 
 		// Generate payload for the safe to call setup on the module via multisend
@@ -228,7 +279,11 @@ contract ForumGroupFactory {
 		// Encode data to be sent to multisend
 		_multisendAction = abi.encodeWithSignature(
 			'multiSend(bytes)',
-			abi.encodePacked(_setupModuleStorageMultisend)
+			abi.encodePacked(
+				_setupModuleStorageMultisend,
+				_enableEntrypointMultisend,
+				_enableFallbackHandlerMultisend
+			)
 		);
 	}
 }
