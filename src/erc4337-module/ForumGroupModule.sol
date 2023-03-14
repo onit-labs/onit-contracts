@@ -67,8 +67,8 @@ contract ForumGroupModule is IAccount, GnosisSafeStorage, Executor {
 	// Immutable reference to latest entrypoint
 	address public immutable entryPoint;
 
-	// Immutable reference to fallback module for the safe
-	address public immutable erc4337Fallback;
+	// Reference to fallback module for the safe ! TODO make immutable
+	address public erc4337Fallback;
 
 	// Set to address(this) so we can know the current 4337 module enabled on a safe
 	address public this4337Module;
@@ -102,37 +102,27 @@ contract ForumGroupModule is IAccount, GnosisSafeStorage, Executor {
 		_ellipticCurveValidator = IEllipticCurveValidator(ellipticCurveValidator);
 
 		entryPoint = anEntryPoint;
-
-		erc4337Fallback = address(new ERC4337Fallback(address(this)));
 	}
 
 	/**
 	 * @notice Setup the module.
-	 * @dev - Called from the GnosisSafeAccountFactory during construction time
-	 * 		- Enable this module
-	 * 		- This method is called with delegateCall, so the module (usually itself) is passed as parameter, and "this" is the safe itself
-	 * @param module The module to be enabled (should be this address)
+	 * @dev - Called from the safe during the safe setup
+	 * 		- Enables the entrypoint & fallback for the safe and sets up this module
 	 * @param _voteThreshold Vote threshold to pass (basis points of 10,000 ie. 6,000 = 60%)
 	 * @param _membersX The public keys of the signing members of the group
 	 * @param _membersY The public keys of the signing members of the group
 	 * @dev TODO use setup via proxy instead of deploying & calling this (check setup is sufficiently protected)
 	 */
 	function setUp(
-		ForumGroupModule module,
+		address _erc4337Fallback,
 		uint256 _voteThreshold,
 		uint256[] memory _membersX,
 		uint256[] memory _membersY
 	) external {
 		if (voteThreshold != 0) revert ModuleAlreadySetUp();
 
-		safe = GnosisSafe(payable(address(this)));
-
-		if (safe.isModuleEnabled(module.entryPoint())) revert ModuleAlreadyEnabled();
-
-		if (safe.isModuleEnabled(module.erc4337Fallback())) revert ModuleAlreadyEnabled();
-
-		safe.enableModule(module.entryPoint());
-		safe.enableModule(module.erc4337Fallback());
+		// Set the fallback
+		erc4337Fallback = _erc4337Fallback;
 
 		if (
 			_voteThreshold <= 0 ||
@@ -141,13 +131,23 @@ contract ForumGroupModule is IAccount, GnosisSafeStorage, Executor {
 			_membersX.length != _membersY.length
 		) revert InvalidInitialisation();
 
-		// ! improve this, maybe call from factory
-		module.setThreshold(_voteThreshold);
+		voteThreshold = _voteThreshold;
 
-		// ! improve this, maybe call from factory
-		for (uint256 i = 0; i < _membersX.length; i++) {
-			module.addMember(_membersX[i], _membersY[i]);
-		}
+		membersX = _membersX;
+		membersY = _membersY;
+	}
+
+	function setUpModules() external {
+		if (voteThreshold != 0) revert ModuleAlreadySetUp();
+
+		safe = GnosisSafe(payable(msg.sender));
+
+		if (safe.isModuleEnabled(entryPoint)) revert ModuleAlreadyEnabled();
+
+		if (safe.isModuleEnabled(erc4337Fallback)) revert ModuleAlreadyEnabled();
+
+		safe.enableModule(entryPoint);
+		safe.enableModule(erc4337Fallback);
 	}
 
 	/// -----------------------------------------------------------------------
