@@ -73,9 +73,7 @@ contract ERC4337TestConfig is Test, SafeTestConfig, ForumModuleTestConfig {
 			address(safeSingleton),
 			address(handler),
 			address(multisend),
-			address(safeProxyFactory),
-			address(entryPoint),
-			address(ellipticCurveValidator)
+			address(entryPoint)
 		);
 	}
 

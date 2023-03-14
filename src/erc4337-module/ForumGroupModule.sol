@@ -140,19 +140,6 @@ contract ForumGroupModule is IAccount, GnosisSafeStorage, Executor {
 		membersY = _membersY;
 	}
 
-	function setUpModules() external {
-		if (voteThreshold != 0) revert ModuleAlreadySetUp();
-
-		safe = GnosisSafe(payable(msg.sender));
-
-		if (safe.isModuleEnabled(entryPoint)) revert ModuleAlreadyEnabled();
-
-		if (safe.isModuleEnabled(erc4337Fallback)) revert ModuleAlreadyEnabled();
-
-		safe.enableModule(entryPoint);
-		safe.enableModule(erc4337Fallback);
-	}
-
 	/// -----------------------------------------------------------------------
 	/// 						EXECUTION
 	/// -----------------------------------------------------------------------

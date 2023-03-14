@@ -72,13 +72,27 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 	/// -----------------------------------------------------------------------
 
 	function testSetupGroup() public {
-		console.log(address(forumSafeModule));
 		// check the members and threshold are set
 		uint256[2][] memory members = forumSafeModule.getMembers();
 
 		assertTrue(members[0][0] == publicKey[0]);
 		assertTrue(members[0][1] == publicKey[1]);
 		assertTrue(forumSafeModule.voteThreshold() == 5000);
+	}
+
+	function testGetAddress() public {
+		// Get address should predict correct deployed address
+		assertTrue(forumGroupFactory.getAddress(keccak256(abi.encode('test'))) == address(safe));
+	}
+
+	function testReturnAddressIfAlreadyDeployed() public {
+		// Deploy a second forum safe with the same name
+		GnosisSafe safe2 = GnosisSafe(
+			forumGroupFactory.deployForumGroup('test', 5000, membersX, membersY)
+		);
+
+		// Get address should return the address of the first safe
+		assertTrue(address(safe2) == address(safe));
 	}
 
 	function testUpdateThreshold(uint256 threshold) public {
