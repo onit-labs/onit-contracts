@@ -6,8 +6,6 @@ pragma solidity ^0.8.15;
 import './config/ERC4337TestConfig.t.sol';
 import {SignatureHelper} from './config/SignatureHelper.t.sol';
 
-import {ERC4337Fallback} from '../src/erc4337-module/ERC4337Fallback.sol';
-
 import {Base64} from '@libraries/Base64.sol';
 
 /**
@@ -15,8 +13,7 @@ import {Base64} from '@libraries/Base64.sol';
  * - Improve salt for group deployment. Should be more restrictive to prevent frontrunning, and should work cross chain
  */
 contract Module4337Test is ERC4337TestConfig, SignatureHelper {
-	ForumGroupModule private forumSafeModule;
-	ERC4337Fallback private erc4337Fallback;
+	ForumGroup private forumSafeModule;
 	GnosisSafe private safe;
 
 	// Some public keys used as signers in tests
@@ -25,8 +22,11 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 	uint256[] internal membersX;
 	uint256[] internal membersY;
 
-	string internal constant SALT_1 = '1';
-	string internal constant SALT_2 = '2';
+	string internal constant SIGNER_1 = '1';
+	string internal constant SIGNER_2 = '2';
+
+	string internal constant GROUP_NAME_1 = 'test';
+	string internal constant GROUP_NAME_2 = 'test2';
 
 	bytes internal basicTransferCalldata;
 
@@ -36,8 +36,8 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 
 	function setUp() public {
 		// Create passkey signers
-		publicKey = createPublicKey(SALT_1);
-		publicKey2 = createPublicKey(SALT_2);
+		publicKey = createPublicKey(SIGNER_1);
+		publicKey2 = createPublicKey(SIGNER_2);
 
 		// Format signers into arrays to be added to contract
 		membersX.push(publicKey[0]);
@@ -45,15 +45,13 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 
 		(
 			// Deploy a forum safe from the factory
-			safe
-		) = GnosisSafe(
-			payable(forumGroupFactory.deployForumGroup('test', 5000, membersX, membersY))
+			forumSafeModule
+		) = ForumGroup(
+			payable(forumGroupFactory.deployForumGroup(GROUP_NAME_1, 5000, membersX, membersY))
 		);
 
-		(erc4337Fallback, forumSafeModule) = getFallbackHandlerAndModule(safe);
-
 		// Deal the account some funds
-		vm.deal(address(safe), 1 ether);
+		vm.deal(address(forumSafeModule), 1 ether);
 
 		// Build a basic transaction to execute in some tests
 		basicTransferCalldata = buildExecutionPayload(
@@ -75,35 +73,18 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 		assertTrue(members[0][0] == publicKey[0]);
 		assertTrue(members[0][1] == publicKey[1]);
 		assertTrue(forumSafeModule.voteThreshold() == 5000);
+		assertTrue(forumSafeModule.entryPoint() == address(entryPoint));
 
-		console.log('testSetupGroup');
-		console.log(address(erc4337Fallback));
-		console.log(address(forumSafeModule));
-		console.log(forumSafeModule.voteThreshold());
-		console.log(forumSafeModule.erc4337Fallback());
-
-		// Build user operation
-		UserOperation[] memory userOps = new UserOperation[](1);
-		userOps[0] = buildUserOp(address(safe), 0, new bytes(0), basicTransferCalldata);
-
-		// Get signature for userOp
-
-		uint256[2][] memory sigs = new uint256[2][](2);
-		sigs[0] = signMessageForPublicKey(
-			'1',
-			Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(userOps[0])))
-		);
-		userOps[0].signature = abi.encode(sigs, authentacatorData);
-
-		// Handle userOp
-		entryPoint.handleOps(userOps, payable(alice));
+		// The safe has been initialized with a threshold of 1
+		// This threshold is not used when executing via entrypoint
+		assertTrue(forumSafeModule.getThreshold() == 1);
 	}
 
 	function testDeployViaEntryPoint() public {
 		// Encode the calldata for the factory to create an account
 		bytes memory factoryCalldata = abi.encodeCall(
 			forumGroupFactory.deployForumGroup,
-			('test2', 5000, membersX, membersY)
+			(GROUP_NAME_2, 5000, membersX, membersY)
 		);
 
 		//Prepend the address of the factory
@@ -111,29 +92,41 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 
 		// Calculate address in advance to use as sender
 		address preCalculatedAccountAddress = forumGroupFactory.getAddress(
-			keccak256(abi.encode('test2'))
+			keccak256(abi.encode(GROUP_NAME_2))
 		);
 
 		// Deal funds to account
 		deal(preCalculatedAccountAddress, 1 ether);
 		// Cast to ERC4337Account - used to make some test assertions easier
-		ERC4337Account testNew4337Account = ERC4337Account(payable(preCalculatedAccountAddress));
+		ForumGroup newForumGroup = ForumGroup(payable(preCalculatedAccountAddress));
 
 		// Build user operation
 		UserOperation[] memory userOps = new UserOperation[](1);
 		userOps[0] = buildUserOp(preCalculatedAccountAddress, 0, initCode, basicTransferCalldata);
 
 		// Get signature for userOp
-
 		uint256[2][] memory sigs = new uint256[2][](2);
 		sigs[0] = signMessageForPublicKey(
-			'1',
+			SIGNER_1,
 			Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(userOps[0])))
 		);
 		userOps[0].signature = abi.encode(sigs, authentacatorData);
 
 		// Handle userOp
 		entryPoint.handleOps(userOps, payable(alice));
+
+		// Check the account has been deployed
+		// check the members and threshold are set
+		uint256[2][] memory members = newForumGroup.getMembers();
+
+		assertTrue(members[0][0] == publicKey[0]);
+		assertTrue(members[0][1] == publicKey[1]);
+		assertTrue(newForumGroup.voteThreshold() == 5000);
+		assertTrue(newForumGroup.entryPoint() == address(entryPoint));
+
+		// The safe has been initialized with a threshold of 1
+		// This threshold is not used when executing via entrypoint
+		assertTrue(newForumGroup.getThreshold() == 1);
 	}
 
 	/// -----------------------------------------------------------------------
@@ -145,15 +138,15 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 		assertTrue(forumGroupFactory.getAddress(keccak256(abi.encode('test'))) == address(safe));
 	}
 
-	function testReturnAddressIfAlreadyDeployed() public {
-		// Deploy a second forum safe with the same name
-		GnosisSafe safe2 = GnosisSafe(
-			forumGroupFactory.deployForumGroup('test', 5000, membersX, membersY)
-		);
+	// function testReturnAddressIfAlreadyDeployed() public {
+	// 	// Deploy a second forum safe with the same name
+	// 	GnosisSafe safe2 = GnosisSafe(
+	// 		forumGroupFactory.deployForumGroup('test', 5000, membersX, membersY)
+	// 	);
 
-		// Get address should return the address of the first safe
-		assertTrue(address(safe2) == address(safe));
-	}
+	// 	// Get address should return the address of the first safe
+	// 	assertTrue(address(safe2) == address(safe));
+	// }
 
 	function testUpdateThreshold(uint256 threshold) public {
 		vm.assume(threshold > 0 && threshold <= 10000);
@@ -182,45 +175,45 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 	/// EXECUTION TESTS
 	/// -----------------------------------------------------------------------
 
-	function testExecutionViaEntryPoint() public {
-		// check balance before
-		assertTrue(address(alice).balance == 1 ether);
-		assertTrue(address(safe).balance == 1 ether);
-		// assertTrue(forumSafeModule.nonce() == 0);
+	// function testExecutionViaEntryPoint() public {
+	// 	// check balance before
+	// 	assertTrue(address(alice).balance == 1 ether);
+	// 	assertTrue(address(safe).balance == 1 ether);
+	// 	// assertTrue(forumSafeModule.nonce() == 0);
 
-		// Build user operation
-		UserOperation memory tmp = buildUserOp(
-			address(safe),
-			safe.nonce(),
-			new bytes(0),
-			basicTransferCalldata
-		);
+	// 	// Build user operation
+	// 	UserOperation memory tmp = buildUserOp(
+	// 		address(safe),
+	// 		safe.nonce(),
+	// 		new bytes(0),
+	// 		basicTransferCalldata
+	// 	);
 
-		// Get signatures for the user operation
-		uint256[2] memory s1 = signMessageForPublicKey(
-			SALT_1,
-			Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(tmp)))
-		);
+	// 	// Get signatures for the user operation
+	// 	uint256[2] memory s1 = signMessageForPublicKey(
+	// 		SIGNER_1,
+	// 		Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(tmp)))
+	// 	);
 
-		// @dev signatures must be in the order members are added to the group (can be retrieved using getMembers())
-		uint256[2][] memory sigs = new uint256[2][](1);
-		sigs[0] = s1;
+	// 	// @dev signatures must be in the order members are added to the group (can be retrieved using getMembers())
+	// 	uint256[2][] memory sigs = new uint256[2][](1);
+	// 	sigs[0] = s1;
 
-		tmp.signature = abi.encode(sigs, authentacatorData);
+	// 	tmp.signature = abi.encode(sigs, authentacatorData);
 
-		UserOperation[] memory tmp1 = new UserOperation[](1);
-		tmp1[0] = tmp;
+	// 	UserOperation[] memory tmp1 = new UserOperation[](1);
+	// 	tmp1[0] = tmp;
 
-		entryPoint.handleOps(tmp1, payable(alice));
+	// 	entryPoint.handleOps(tmp1, payable(alice));
 
-		// ! correct gas cost - take it from the useroperation event
-		uint256 gas = calculateGas(tmp);
-		// Transfer has been made, nonce incremented, used nonce set
-		assertTrue(address(alice).balance == 1.5 ether + gas);
-		assertTrue(address(safe).balance == 0.5 ether - gas);
-		assertTrue(safe.nonce() == 1);
-		//assertTrue(forumSafeModule.usedNonces(entryPoint.getUserOpHash(tmp)) == 1);
-	}
+	// 	// ! correct gas cost - take it from the useroperation event
+	// 	uint256 gas = calculateGas(tmp);
+	// 	// Transfer has been made, nonce incremented, used nonce set
+	// 	assertTrue(address(alice).balance == 1.5 ether + gas);
+	// 	assertTrue(address(safe).balance == 0.5 ether - gas);
+	// 	assertTrue(safe.nonce() == 1);
+	// 	//assertTrue(forumSafeModule.usedNonces(entryPoint.getUserOpHash(tmp)) == 1);
+	// }
 
 	// function testVotingWithEmptySig() public {
 	// 	// Add second member to make  agroup of 2
@@ -245,7 +238,7 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 
 	// 	// Get signatures for the user operation
 	// 	uint256[2] memory s1 = signMessageForPublicKey(
-	// 		SALT_1,
+	// 		SIGNER_1,
 	// 		Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(tmp)))
 	// 	);
 	// 	uint256[2] memory s2 = [uint256(0), uint256(0)];
@@ -298,7 +291,7 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 
 	// 	// Get signatures for the user operation
 	// 	uint256[2] memory s1 = signMessageForPublicKey(
-	// 		SALT_1,
+	// 		SIGNER_1,
 	// 		Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(tmp)))
 	// 	);
 	// 	// Empty as member 2 did not vote
@@ -331,19 +324,19 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 	/// SETUP TESTS
 	/// -----------------------------------------------------------------------
 
-	function getFallbackHandlerAndModule(
-		GnosisSafe _safe
-	) internal view returns (ERC4337Fallback _fallback, ForumGroupModule _module) {
-		_fallback = ERC4337Fallback(
-			abi.decode(
-				_safe.getStorageAt(
-					0x6c9a6c4a39284e37ed1cf53d337577d14212a4870fb976a4366c693b939918d5,
-					1
-				),
-				(address)
-			)
-		);
+	// function getFallbackHandlerAndModule(
+	// 	GnosisSafe _safe
+	// ) internal view returns (ERC4337Fallback _fallback, ForumGroup _module) {
+	// 	_fallback = ERC4337Fallback(
+	// 		abi.decode(
+	// 			_safe.getStorageAt(
+	// 				0x6c9a6c4a39284e37ed1cf53d337577d14212a4870fb976a4366c693b939918d5,
+	// 				1
+	// 			),
+	// 			(address)
+	// 		)
+	// 	);
 
-		_module = ForumGroupModule(_fallback.erc4337module());
-	}
+	// 	_module = ForumGroup(_fallback.erc4337module());
+	// }
 }

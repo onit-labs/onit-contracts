@@ -8,8 +8,7 @@ import {BaseAccount, UserOperation} from '@erc4337/core/BaseAccount.sol';
 // 4337 contracts
 import {ERC4337Account} from '../../src/erc4337-account/ERC4337Account.sol';
 import {ERC4337AccountFactory} from '../../src/erc4337-account/ERC4337AccountFactory.sol';
-//import {ERC4337ValidationManager} from '../../src/erc4337-account/ERC4337ValidationManager.sol';
-import {ForumGroupModule} from '../../src/erc4337-module/ForumGroupModule.sol';
+import {ForumGroup} from '../../src/erc4337-module/ForumGroup.sol';
 import {ForumGroupFactory} from '../../src/erc4337-module/ForumGroupFactory.sol';
 
 // EllipticCurve validator used for p256 curves - compiled with v0.5.0
@@ -30,7 +29,7 @@ contract ERC4337TestConfig is Test, SafeTestConfig, ForumModuleTestConfig {
 	ERC4337Account public erc4337Singleton;
 
 	// Singleton for Forum 4337 group account implementation
-	ForumGroupModule public erc4337GroupSingleton;
+	ForumGroup public erc4337GroupSingleton;
 
 	// Factory for individual 4337 accounts
 	ERC4337AccountFactory public erc4337AccountFactory;
@@ -57,10 +56,7 @@ contract ERC4337TestConfig is Test, SafeTestConfig, ForumModuleTestConfig {
 		);
 
 		erc4337Singleton = new ERC4337Account(ellipticCurveValidator);
-		erc4337GroupSingleton = new ForumGroupModule(
-			address(ellipticCurveValidator),
-			entryPointAddress
-		);
+		erc4337GroupSingleton = new ForumGroup(address(ellipticCurveValidator), entryPointAddress);
 
 		erc4337AccountFactory = new ERC4337AccountFactory(
 			erc4337Singleton,
@@ -70,10 +66,9 @@ contract ERC4337TestConfig is Test, SafeTestConfig, ForumModuleTestConfig {
 
 		forumGroupFactory = new ForumGroupFactory(
 			payable(address(erc4337GroupSingleton)),
+			entryPointAddress,
 			address(safeSingleton),
-			address(handler),
-			address(multisend),
-			address(entryPoint)
+			address(handler)
 		);
 	}
 

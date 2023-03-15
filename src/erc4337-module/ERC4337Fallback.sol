@@ -8,7 +8,7 @@ import {GnosisSafe, Enum} from '@gnosis/GnosisSafe.sol';
 import {IERC1271} from '@openzeppelin/contracts/interfaces/IERC1271.sol';
 import {ECDSA} from '@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
 import {IAccount, UserOperation} from '@erc4337/interfaces/IAccount.sol';
-import {ForumGroupModule} from './ForumGroupModule.sol';
+import {ForumGroup} from './ForumGroup.sol';
 
 using ECDSA for bytes32;
 
