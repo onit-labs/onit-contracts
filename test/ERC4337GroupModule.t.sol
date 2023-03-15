@@ -10,8 +10,13 @@ import {ERC4337Fallback} from '../src/erc4337-module/ERC4337Fallback.sol';
 
 import {Base64} from '@libraries/Base64.sol';
 
+/**
+ * TODO
+ * - Improve salt for group deployment. Should be more restrictive to prevent frontrunning, and should work cross chain
+ */
 contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 	ForumGroupModule private forumSafeModule;
+	ERC4337Fallback private erc4337Fallback;
 	GnosisSafe private safe;
 
 	// Some public keys used as signers in tests
@@ -41,19 +46,11 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 		(
 			// Deploy a forum safe from the factory
 			safe
-		) = GnosisSafe(forumGroupFactory.deployForumGroup('test', 5000, membersX, membersY));
-
-		ERC4337Fallback erc4337Fallback = ERC4337Fallback(
-			abi.decode(
-				safe.getStorageAt(
-					0x6c9a6c4a39284e37ed1cf53d337577d14212a4870fb976a4366c693b939918d5,
-					1
-				),
-				(address)
-			)
+		) = GnosisSafe(
+			payable(forumGroupFactory.deployForumGroup('test', 5000, membersX, membersY))
 		);
 
-		forumSafeModule = ForumGroupModule(erc4337Fallback.erc4337module());
+		(erc4337Fallback, forumSafeModule) = getFallbackHandlerAndModule(safe);
 
 		// Deal the account some funds
 		vm.deal(address(safe), 1 ether);
@@ -68,7 +65,7 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 	}
 
 	/// -----------------------------------------------------------------------
-	/// SETUP AND FUNCTION TESTS
+	/// SETUP TESTS
 	/// -----------------------------------------------------------------------
 
 	function testSetupGroup() public {
@@ -78,7 +75,70 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 		assertTrue(members[0][0] == publicKey[0]);
 		assertTrue(members[0][1] == publicKey[1]);
 		assertTrue(forumSafeModule.voteThreshold() == 5000);
+
+		console.log('testSetupGroup');
+		console.log(address(erc4337Fallback));
+		console.log(address(forumSafeModule));
+		console.log(forumSafeModule.voteThreshold());
+		console.log(forumSafeModule.erc4337Fallback());
+
+		// Build user operation
+		UserOperation[] memory userOps = new UserOperation[](1);
+		userOps[0] = buildUserOp(address(safe), 0, new bytes(0), basicTransferCalldata);
+
+		// Get signature for userOp
+
+		uint256[2][] memory sigs = new uint256[2][](2);
+		sigs[0] = signMessageForPublicKey(
+			'1',
+			Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(userOps[0])))
+		);
+		userOps[0].signature = abi.encode(sigs, authentacatorData);
+
+		// Handle userOp
+		entryPoint.handleOps(userOps, payable(alice));
 	}
+
+	function testDeployViaEntryPoint() public {
+		// Encode the calldata for the factory to create an account
+		bytes memory factoryCalldata = abi.encodeCall(
+			forumGroupFactory.deployForumGroup,
+			('test2', 5000, membersX, membersY)
+		);
+
+		//Prepend the address of the factory
+		bytes memory initCode = abi.encodePacked(address(forumGroupFactory), factoryCalldata);
+
+		// Calculate address in advance to use as sender
+		address preCalculatedAccountAddress = forumGroupFactory.getAddress(
+			keccak256(abi.encode('test2'))
+		);
+
+		// Deal funds to account
+		deal(preCalculatedAccountAddress, 1 ether);
+		// Cast to ERC4337Account - used to make some test assertions easier
+		ERC4337Account testNew4337Account = ERC4337Account(payable(preCalculatedAccountAddress));
+
+		// Build user operation
+		UserOperation[] memory userOps = new UserOperation[](1);
+		userOps[0] = buildUserOp(preCalculatedAccountAddress, 0, initCode, basicTransferCalldata);
+
+		// Get signature for userOp
+
+		uint256[2][] memory sigs = new uint256[2][](2);
+		sigs[0] = signMessageForPublicKey(
+			'1',
+			Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(userOps[0])))
+		);
+		userOps[0].signature = abi.encode(sigs, authentacatorData);
+
+		// Handle userOp
+		entryPoint.handleOps(userOps, payable(alice));
+	}
+
+	/// -----------------------------------------------------------------------
+	/// FUNCTION TESTS
+	/// -----------------------------------------------------------------------
 
 	function testGetAddress() public {
 		// Get address should predict correct deployed address
@@ -266,4 +326,24 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 	// prevent sig reuse
 
 	receive() external payable {}
+
+	/// -----------------------------------------------------------------------
+	/// SETUP TESTS
+	/// -----------------------------------------------------------------------
+
+	function getFallbackHandlerAndModule(
+		GnosisSafe _safe
+	) internal view returns (ERC4337Fallback _fallback, ForumGroupModule _module) {
+		_fallback = ERC4337Fallback(
+			abi.decode(
+				_safe.getStorageAt(
+					0x6c9a6c4a39284e37ed1cf53d337577d14212a4870fb976a4366c693b939918d5,
+					1
+				),
+				(address)
+			)
+		);
+
+		_module = ForumGroupModule(_fallback.erc4337module());
+	}
 }

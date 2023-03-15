@@ -106,7 +106,7 @@ contract ForumGroupFactory {
 		uint256 _voteThreshold,
 		uint256[] calldata _ownersX,
 		uint256[] calldata _ownersY
-	) external payable virtual returns (address payable forumGroupSafe) {
+	) external payable virtual returns (address forumGroupSafe) {
 		// ! Improve this salt - should be safely unique, and easily reusuable across chain
 		// ! Should also prevent any frontrunning to deploy to this address by anyone else
 		bytes32 accountSalt = keccak256(abi.encode(_name));
@@ -120,30 +120,43 @@ contract ForumGroupFactory {
 			}
 		}
 
-		// Deploy the module determinstically based on the salt (for now a hash of _name)
-		(bool successCreate, bytes memory responseCreate) = DETERMINISTIC_DEPLOYMENT_PROXY.call{
-			value: 0
-		}(abi.encodePacked(accountSalt, createForumGroupModuleProxyData));
+		ForumGroupModule _forumGroupModule;
 
-		// Convert response to address to be returned
-		ForumGroupModule _forumGroupModule = ForumGroupModule(
-			address(uint160(bytes20(responseCreate)))
-		);
-		// If not successful, revert
-		if (!successCreate || address(_forumGroupModule) == address(0)) revert NullDeploy();
+		// Scoped to prevent stack too deep errors
+		{
+			// Deploy module determinstically based on the salt (for now a hash of _name)
+			(bool successCreate, bytes memory responseCreate) = DETERMINISTIC_DEPLOYMENT_PROXY.call{
+				value: 0
+			}(abi.encodePacked(accountSalt, createForumGroupModuleProxyData));
 
-		// Deploy new safe determinstically based on the salt (for now a hash of _name)
-		(successCreate, responseCreate) = DETERMINISTIC_DEPLOYMENT_PROXY.call{value: 0}(
-			abi.encodePacked(accountSalt, createGnosisSafeProxyData)
-		);
+			// Convert response to address to be returned
+			_forumGroupModule = ForumGroupModule(address(uint160(bytes20(responseCreate))));
 
-		// Convert response to address to be returned
-		forumGroupSafe = payable(address(uint160(bytes20(responseCreate))));
-		// If not successful, revert
-		if (!successCreate || address(forumGroupSafe) == address(0)) revert NullDeploy();
+			// If not successful, revert
+			if (!successCreate || address(_forumGroupModule) == address(0)) revert NullDeploy();
+
+			// Deploy safe determinstically based on the salt (for now a hash of _name)
+			(successCreate, responseCreate) = DETERMINISTIC_DEPLOYMENT_PROXY.call{value: 0}(
+				abi.encodePacked(accountSalt, createGnosisSafeProxyData)
+			);
+
+			// Convert response to address to be returned
+			forumGroupSafe = payable(address(uint160(bytes20(responseCreate))));
+
+			// If not successful, revert
+			if (!successCreate || address(forumGroupSafe) == address(0)) revert NullDeploy();
+		}
 
 		// Deploy the fallback handler, setting the module in the constructor
-		address _fallbackHandler = address(new ERC4337Fallback(address(_forumGroupModule)));
+		bytes memory depcode = abi.encodePacked(
+			type(ERC4337Fallback).creationCode,
+			abi.encode(address(_forumGroupModule))
+		);
+		address _fallbackHandler;
+
+		assembly {
+			_fallbackHandler := create2(0, add(0x20, depcode), mload(depcode), accountSalt)
+		}
 
 		// Build multisend action to setup the module and enable modules on the safe
 		bytes memory _multisendAction = buildMultisend(
@@ -159,7 +172,7 @@ contract ForumGroupFactory {
 		address[] memory _ownerPlaceholder = new address[](1);
 		_ownerPlaceholder[0] = address(0xdead);
 
-		GnosisSafe(forumGroupSafe).setup(
+		GnosisSafe(payable(forumGroupSafe)).setup(
 			_ownerPlaceholder,
 			1,
 			gnosisMultisendLibrary,
@@ -219,6 +232,7 @@ contract ForumGroupFactory {
 			uint256(_enableFallbackHandler.length),
 			bytes(_enableFallbackHandler)
 		);
+
 		// Payload to enable the forum entrypoint as a module on the safe
 		bytes memory _enableEntryPoint = abi.encodeWithSignature(
 			'enableModule(address)',
@@ -237,7 +251,7 @@ contract ForumGroupFactory {
 		// Encode call to setup the module storage
 		bytes memory _setupModuleStorage = abi.encodeCall(
 			_forumGroupModule.setUp,
-			(_fallbackHandler, _forumGroupSafe, _voteThreshold, _ownersX, _ownersY)
+			(_forumGroupSafe, _fallbackHandler, _voteThreshold, _ownersX, _ownersY)
 		);
 
 		// Generate payload for the safe to call setup on the module via multisend
