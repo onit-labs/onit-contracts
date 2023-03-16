@@ -8,9 +8,6 @@ import {ForumAccountFactory} from '../src/erc4337-account/ForumAccountFactory.so
 // Infinitism 4337 contracts
 import {EntryPoint} from '@erc4337/core/EntryPoint.sol';
 
-// Gnosis Safe contracts
-import {CompatibilityFallbackHandler} from '@gnosis/handler/CompatibilityFallbackHandler.sol';
-
 import './config/ERC4337TestConfig.t.sol';
 import {ERC4337SignatureStore} from './config/ERC4337SignatureStore.t.sol';
 

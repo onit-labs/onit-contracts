@@ -5,11 +5,12 @@ pragma solidity ^0.8.15;
 import {EntryPoint} from '@erc4337/core/EntryPoint.sol';
 import {BaseAccount, UserOperation} from '@erc4337/core/BaseAccount.sol';
 
-// 4337 contracts
+// Forum 4337 contracts
 import {ForumAccount} from '../../src/erc4337-account/ForumAccount.sol';
 import {ForumAccountFactory} from '../../src/erc4337-account/ForumAccountFactory.sol';
 import {ForumGroup} from '../../src/erc4337-module/ForumGroup.sol';
 import {ForumGroupFactory} from '../../src/erc4337-module/ForumGroupFactory.sol';
+import {MemberManager} from '@utils/MemberManager.sol';
 
 // EllipticCurve validator used for p256 curves - compiled with v0.5.0
 /// @dev To save changes to folder structure, this is built elsewhere and added to the ./out folder
@@ -17,9 +18,9 @@ import {ForumGroupFactory} from '../../src/erc4337-module/ForumGroupFactory.sol'
 import {IEllipticCurveValidator} from '@interfaces/IEllipticCurveValidator.sol';
 
 import './SafeTestConfig.t.sol';
-import './ForumModuleTestConfig.t.sol';
+import './BasicTestConfig.t.sol';
 
-contract ERC4337TestConfig is Test, SafeTestConfig, ForumModuleTestConfig {
+contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig {
 	// 4337 Account Types
 
 	// Entry point

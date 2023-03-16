@@ -4,11 +4,10 @@ pragma solidity ^0.8.15;
 /* solhint-disable no-console */
 
 import './config/ERC4337TestConfig.t.sol';
+
 import {SignatureHelper} from './config/SignatureHelper.t.sol';
 
 import {Base64} from '@libraries/Base64.sol';
-
-import {MemberManager} from '@utils/MemberManager.sol';
 
 /**
  * TODO
