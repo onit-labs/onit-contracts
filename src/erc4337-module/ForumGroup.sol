@@ -69,7 +69,7 @@ contract ForumGroup is IAccount, GnosisSafe {
 	// Equivalent to _packValidationData(true,0,0);
 	uint256 internal constant SIG_VALIDATION_FAILED = 1;
 
-	// TODO convert below x and y mappings to linked list
+	// ! Convert below x and y mappings to linked list, and manage threashold like safe
 	// The public keys of the signing members of the group
 	uint256[] internal _membersX;
 	uint256[] internal _membersY;
@@ -240,7 +240,7 @@ contract ForumGroup is IAccount, GnosisSafe {
 	function setThreshold(uint256 threshold) external {
 		if (msg.sender != _entryPoint) revert NotFromEntrypoint();
 
-		if (threshold <= 0 || threshold > 10000) revert InvalidThreshold();
+		if (threshold < 1 || threshold > 10000) revert InvalidThreshold();
 
 		voteThreshold = threshold;
 	}

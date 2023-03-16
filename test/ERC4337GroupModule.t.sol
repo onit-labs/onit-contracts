@@ -67,7 +67,7 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 	/// -----------------------------------------------------------------------
 
 	function testSetupGroup() public {
-		// check the members and threshold are set
+		// Check the members and threshold are set
 		uint256[2][] memory members = forumSafeModule.getMembers();
 
 		assertTrue(members[0][0] == publicKey[0]);
@@ -135,25 +135,33 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 
 	function testGetAddress() public {
 		// Get address should predict correct deployed address
-		assertTrue(forumGroupFactory.getAddress(keccak256(abi.encode('test'))) == address(safe));
+		assertTrue(
+			forumGroupFactory.getAddress(keccak256(abi.encode(GROUP_NAME_1))) == address(safe)
+		);
 	}
 
-	// function testReturnAddressIfAlreadyDeployed() public {
-	// 	// Deploy a second forum safe with the same name
-	// 	GnosisSafe safe2 = GnosisSafe(
-	// 		forumGroupFactory.deployForumGroup('test', 5000, membersX, membersY)
-	// 	);
+	function testReturnAddressIfAlreadyDeployed() public {
+		// Deploy a second forum safe with the same name
+		ForumGroup newForumGroup = ForumGroup(
+			payable(forumGroupFactory.deployForumGroup(GROUP_NAME_1, 5000, membersX, membersY))
+		);
 
-	// 	// Get address should return the address of the first safe
-	// 	assertTrue(address(safe2) == address(safe));
-	// }
+		// Get address should return the address of the first safe
+		assertTrue(address(newForumGroup) == address(forumSafeModule));
+	}
 
 	function testUpdateThreshold(uint256 threshold) public {
-		vm.assume(threshold > 0 && threshold <= 10000);
 		assertTrue(forumSafeModule.voteThreshold() == 5000);
 
-		vm.prank(entryPointAddress);
-		forumSafeModule.setThreshold(threshold);
+		vm.startPrank(entryPointAddress);
+
+		if (threshold < 1 || threshold > 10000) {
+			vm.expectRevert(ForumGroup.InvalidThreshold.selector);
+			forumSafeModule.setThreshold(threshold);
+			threshold = 5000; // fallback to default so final assertiion is correctly evaluated
+		} else {
+			forumSafeModule.setThreshold(threshold);
+		}
 
 		assertTrue(forumSafeModule.voteThreshold() == threshold);
 	}
