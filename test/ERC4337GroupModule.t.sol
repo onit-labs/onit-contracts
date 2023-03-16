@@ -15,7 +15,7 @@ import {MemberManager} from '@utils/MemberManager.sol';
  * - Improve salt for group deployment. Should be more restrictive to prevent frontrunning, and should work cross chain
  */
 contract Module4337Test is ERC4337TestConfig, SignatureHelper {
-	ForumGroup private forumSafeModule;
+	ForumGroup private forumGroup;
 	GnosisSafe private safe;
 
 	// Some public keys used as signers in tests
@@ -47,13 +47,13 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 
 		(
 			// Deploy a forum safe from the factory
-			forumSafeModule
+			forumGroup
 		) = ForumGroup(
 			payable(forumGroupFactory.deployForumGroup(GROUP_NAME_1, 5000, membersX, membersY))
 		);
 
 		// Deal the account some funds
-		vm.deal(address(forumSafeModule), 1 ether);
+		vm.deal(address(forumGroup), 1 ether);
 
 		// Build a basic transaction to execute in some tests
 		basicTransferCalldata = buildExecutionPayload(
@@ -70,16 +70,16 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 
 	function testSetupGroup() public {
 		// Check the members and threshold are set
-		uint256[2][] memory members = forumSafeModule.getMembers();
+		uint256[2][] memory members = forumGroup.getMembers();
 
 		assertTrue(members[0][0] == publicKey[0]);
 		assertTrue(members[0][1] == publicKey[1]);
-		assertTrue(forumSafeModule.voteThreshold() == 5000);
-		assertTrue(forumSafeModule.entryPoint() == address(entryPoint));
+		assertTrue(forumGroup.voteThreshold() == 5000);
+		assertTrue(forumGroup.entryPoint() == address(entryPoint));
 
 		// The safe has been initialized with a threshold of 1
 		// This threshold is not used when executing via entrypoint
-		assertTrue(forumSafeModule.getThreshold() == 1);
+		assertTrue(forumGroup.getThreshold() == 1);
 	}
 
 	function testDeployViaEntryPoint() public {
@@ -149,53 +149,53 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 		);
 
 		// Get address should return the address of the first safe
-		assertTrue(address(newForumGroup) == address(forumSafeModule));
+		assertTrue(address(newForumGroup) == address(forumGroup));
 	}
 
 	// ! update to new member manager
 	// function testUpdateThreshold(uint256 threshold) public {
-	// 	assertTrue(forumSafeModule.voteThreshold() == 5000);
+	// 	assertTrue(forumGroup.voteThreshold() == 5000);
 
 	// 	vm.startPrank(entryPointAddress);
 
 	// 	if (threshold < 1 || threshold > 10000) {
 	// 		vm.expectRevert(ForumGroup.InvalidThreshold.selector);
-	// 		forumSafeModule.setThreshold(threshold);
+	// 		forumGroup.setThreshold(threshold);
 	// 		threshold = 5000; // fallback to default so final assertiion is correctly evaluated
 	// 	} else {
-	// 		forumSafeModule.setThreshold(threshold);
+	// 		forumGroup.setThreshold(threshold);
 	// 	}
 
-	// 	assertTrue(forumSafeModule.voteThreshold() == threshold);
+	// 	assertTrue(forumGroup.voteThreshold() == threshold);
 	// }
 
 	function testAddMemberWithThreshold() public {
-		assertTrue(forumSafeModule.getMembers().length == 1);
+		assertTrue(forumGroup.getMembers().length == 1);
 
-		vm.prank(address(forumSafeModule));
-		forumSafeModule.addMemberWithThreshold(
+		vm.prank(address(forumGroup));
+		forumGroup.addMemberWithThreshold(
 			MemberManager.Member({x: publicKey2[0], y: publicKey2[1]}),
 			2
 		);
-		uint256[2][] memory members = forumSafeModule.getMembers();
+		uint256[2][] memory members = forumGroup.getMembers();
 
 		assertTrue(members[0][0] == publicKey2[0]);
 		assertTrue(members[0][1] == publicKey2[1]);
 
-		assertTrue(forumSafeModule.getMembers().length == 2);
+		assertTrue(forumGroup.getMembers().length == 2);
 	}
 
 	function testUpdateEntryPoint() public {
-		assertTrue(forumSafeModule.entryPoint() == address(entryPoint));
+		assertTrue(forumGroup.entryPoint() == address(entryPoint));
 
 		// Reverts if not called by entrypoint
 		vm.expectRevert(ForumGroup.NotFromEntrypoint.selector);
-		forumSafeModule.setEntryPoint(address(this));
+		forumGroup.setEntryPoint(address(this));
 
 		vm.prank(address(entryPoint));
-		forumSafeModule.setEntryPoint(address(this));
+		forumGroup.setEntryPoint(address(this));
 
-		assertTrue(forumSafeModule.entryPoint() == address(this));
+		assertTrue(forumGroup.entryPoint() == address(this));
 	}
 
 	/// -----------------------------------------------------------------------
@@ -206,7 +206,7 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 	// 	// check balance before
 	// 	assertTrue(address(alice).balance == 1 ether);
 	// 	assertTrue(address(safe).balance == 1 ether);
-	// 	// assertTrue(forumSafeModule.nonce() == 0);
+	// 	// assertTrue(forumGroup.nonce() == 0);
 
 	// 	// Build user operation
 	// 	UserOperation memory tmp = buildUserOp(
@@ -239,7 +239,7 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 	// 	assertTrue(address(alice).balance == 1.5 ether + gas);
 	// 	assertTrue(address(safe).balance == 0.5 ether - gas);
 	// 	assertTrue(safe.nonce() == 1);
-	// 	//assertTrue(forumSafeModule.usedNonces(entryPoint.getUserOpHash(tmp)) == 1);
+	// 	//assertTrue(forumGroup.usedNonces(entryPoint.getUserOpHash(tmp)) == 1);
 	// }
 
 	// function testVotingWithEmptySig() public {
@@ -249,11 +249,11 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 
 	// 	(
 	// 		// Deploy a forum safe from the factory with 2 signers
-	// 		forumSafeModule,
+	// 		forumGroup,
 	// 		safe
 	// 	) = forumGroupFactory.deployForumGroup('test2', 5000, membersX, membersY);
 
-	// 	deal(address(forumSafeModule), 10 ether);
+	// 	deal(address(forumGroup), 10 ether);
 
 	// 	// Build user operation
 	// 	UserOperation memory tmp = buildUserOp(
@@ -302,15 +302,15 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 
 	// 	(
 	// 		// Deploy a forum safe from the factory with 2 signers, over 50% threshold
-	// 		forumSafeModule,
+	// 		forumGroup,
 	// 		safe
 	// 	) = forumGroupFactory.deployForumGroup('test2', 5001, membersX, membersY);
 
-	// 	deal(address(forumSafeModule), 10 ether);
+	// 	deal(address(forumGroup), 10 ether);
 
 	// 	// Build user operation
 	// 	UserOperation memory tmp = buildUserOp(
-	// 		address(forumSafeModule),
+	// 		address(forumGroup),
 	// 		safe.nonce(),
 	// 		new bytes(0),
 	// 		basicTransferCalldata

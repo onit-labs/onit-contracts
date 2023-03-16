@@ -7,7 +7,6 @@ pragma solidity ^0.8.15;
 import {GnosisSafe, Enum} from '@gnosis/GnosisSafe.sol';
 
 import {ForumGroup} from './ForumGroup.sol';
-import {ERC4337Fallback} from './ERC4337Fallback.sol';
 
 import 'forge-std/console.sol';
 
@@ -17,7 +16,7 @@ contract ForumGroupFactory {
 	/// Errors and Events
 	/// ----------------------------------------------------------------------------------------
 
-	event ForumGroupDeployed(ForumGroup indexed forumGroup);
+	event ForumGroupDeployed(address indexed forumGroup);
 
 	error NullDeploy();
 
@@ -43,7 +42,7 @@ contract ForumGroupFactory {
 		0x4e59b44847b379578588920cA78FbF26c0B4956C;
 
 	// Data sent to the deterministic deployment proxy to deploy a new group module
-	bytes private createForumGroupProxyData;
+	bytes private _createForumGroupProxyData;
 
 	/// ----------------------------------------------------------------------------------------
 	/// Constructor
@@ -61,7 +60,7 @@ contract ForumGroupFactory {
 		gnosisFallbackLibrary = _gnosisFallbackLibrary;
 
 		// Data sent to the deterministic deployment proxy to deploy a new forum group module
-		createForumGroupProxyData = abi.encodePacked(
+		_createForumGroupProxyData = abi.encodePacked(
 			// constructor
 			bytes10(0x3d602d80600a3d3981f3),
 			// proxy code
@@ -99,25 +98,29 @@ contract ForumGroupFactory {
 			return payable(addr);
 		}
 
-		ForumGroup forumGroup;
-
 		// Deploy module determinstically based on the salt (for now a hash of _name)
 		(bool successCreate, bytes memory responseCreate) = DETERMINISTIC_DEPLOYMENT_PROXY.call{
 			value: 0
-		}(abi.encodePacked(accountSalt, createForumGroupProxyData));
+		}(abi.encodePacked(accountSalt, _createForumGroupProxyData));
 
 		// Convert response to address to be returned
-		forumGroup = ForumGroup(payable(address(uint160(bytes20(responseCreate)))));
+		forumGroup = address(uint160(bytes20(responseCreate)));
 
 		// If not successful, revert
-		if (!successCreate || address(forumGroup) == address(0)) revert NullDeploy();
+		if (!successCreate || forumGroup == address(0)) revert NullDeploy();
 
 		// ! check fallback here
-		forumGroup.setUp(entryPoint, gnosisFallbackLibrary, _voteThreshold, _ownersX, _ownersY);
+		ForumGroup(payable(forumGroup)).setUp(
+			entryPoint,
+			gnosisFallbackLibrary,
+			_voteThreshold,
+			_ownersX,
+			_ownersY
+		);
 
 		emit ForumGroupDeployed(forumGroup);
 
-		return address(forumGroup);
+		return forumGroup;
 	}
 
 	/// ----------------------------------------------------------------------------------------
@@ -137,7 +140,7 @@ contract ForumGroupFactory {
 							bytes1(0xff),
 							DETERMINISTIC_DEPLOYMENT_PROXY,
 							salt,
-							keccak256(createForumGroupProxyData)
+							keccak256(_createForumGroupProxyData)
 						)
 					) << 96
 				)
