@@ -66,7 +66,7 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 	uint256 internal constant SIG_VALIDATION_FAILED = 1;
 
 	// Used nonces; 1 = used (prevents replaying the same userOp)
-	mapping(uint256 => uint) public usedNonces;
+	mapping(uint256 => uint256) public usedNonces;
 
 	/// -----------------------------------------------------------------------
 	/// 						CONSTRUCTOR
@@ -180,9 +180,11 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 			validationData = SIG_VALIDATION_FAILED;
 		}
 
+		// usedNonces mapping keeps the option to execute nonces out of order
+		// We increment nonce so we have a way to keep track of the next available nonce
 		if (userOp.initCode.length == 0) {
 			if (usedNonces[userOp.nonce] == 1) revert InvalidNonce();
-			usedNonces[userOp.nonce] == 1;
+			++usedNonces[userOp.nonce];
 			++nonce;
 		}
 

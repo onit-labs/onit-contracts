@@ -13,6 +13,7 @@ import {MemberManager} from '@utils/MemberManager.sol';
 /**
  * TODO
  * - Improve salt for group deployment. Should be more restrictive to prevent frontrunning, and should work cross chain
+ * - Improve test code - still some repeated code that could be broken into functions
  */
 contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 	ForumGroup private forumGroup;
@@ -45,10 +46,8 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 		membersX.push(publicKey[0]);
 		membersY.push(publicKey[1]);
 
-		(
-			// Deploy a forum safe from the factory
-			forumGroup
-		) = ForumGroup(
+		// Deploy a forum safe from the factory
+		forumGroup = ForumGroup(
 			payable(forumGroupFactory.deployForumGroup(GROUP_NAME_1, 1, membersX, membersY))
 		);
 
@@ -282,134 +281,104 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 		uint256 gas = calculateGas(tmp);
 
 		// Transfer has been made, nonce incremented, used nonce set
-		assertTrue(address(alice).balance == 1.5 ether + gas);
+		assertTrue(address(alice).balance == 1.5 ether);
 		assertTrue(address(forumGroup).balance == 0.5 ether - gas);
 		assertTrue(forumGroup.nonce() == 1);
 		assertTrue(forumGroup.usedNonces(tmp.nonce) == 1);
 	}
 
-	// function testVotingWithEmptySig() public {
-	// 	// Add second member to make  agroup of 2
-	// 	membersX.push(publicKey2[0]);
-	// 	membersY.push(publicKey2[1]);
+	function testVotingWithEmptySig() public {
+		// Add second member to make a group of 2
+		membersX.push(publicKey2[0]);
+		membersY.push(publicKey2[1]);
 
-	// 	(
-	// 		// Deploy a forum safe from the factory with 2 signers
-	// 		forumGroup,
-	// 		safe
-	// 	) = forumGroupFactory.deployForumGroup('test2', 5000, membersX, membersY);
+		forumGroup = ForumGroup(
+			payable(forumGroupFactory.deployForumGroup(GROUP_NAME_2, 1, membersX, membersY))
+		);
 
-	// 	deal(address(forumGroup), 10 ether);
+		deal(address(forumGroup), 10 ether);
 
-	// 	// Build user operation
-	// 	UserOperation memory tmp = buildUserOp(
-	// 		address(safe),
-	// 		safe.nonce(),
-	// 		new bytes(0),
-	// 		basicTransferCalldata
-	// 	);
+		// Build user operation
+		UserOperation memory tmp = buildUserOp(
+			address(forumGroup),
+			forumGroup.nonce(),
+			new bytes(0),
+			basicTransferCalldata
+		);
 
-	// 	// Get signatures for the user operation
-	// 	uint256[2] memory s1 = signMessageForPublicKey(
-	// 		SIGNER_1,
-	// 		Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(tmp)))
-	// 	);
-	// 	uint256[2] memory s2 = [uint256(0), uint256(0)];
+		// Get signatures for the user operation
+		uint256[2] memory s1 = signMessageForPublicKey(
+			SIGNER_1,
+			Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(tmp)))
+		);
+		uint256[2] memory s2 = [uint256(0), uint256(0)];
 
-	// 	uint256[2][] memory sigs = new uint256[2][](2);
-	// 	sigs[0] = s1;
-	// 	sigs[1] = s2;
+		uint256[2][] memory sigs = new uint256[2][](2);
+		sigs[0] = s1;
+		sigs[1] = s2;
 
-	// 	tmp.signature = abi.encode(sigs, authentacatorData);
+		tmp.signature = abi.encode(sigs, authentacatorData);
 
-	// 	UserOperation[] memory tmp1 = new UserOperation[](1);
-	// 	tmp1[0] = tmp;
+		UserOperation[] memory tmp1 = new UserOperation[](1);
+		tmp1[0] = tmp;
 
-	// 	entryPoint.handleOps(tmp1, payable(address(this)));
+		entryPoint.handleOps(tmp1, payable(address(this)));
 
-	// 	uint256 gas = calculateGas(tmp);
+		uint256 gas = calculateGas(tmp);
 
-	// 	// Transfer has been made, nonce incremented, used nonce set
-	// 	assertTrue(address(alice).balance == 1.5 ether);
-	// 	assertTrue(address(safe).balance == 0.5 ether);
-	// 	assertTrue(safe.nonce() == 1);
-	// }
+		// Transfer has been made, nonce incremented, used nonce set
+		assertTrue(address(alice).balance == 1.5 ether);
+		assertTrue(address(forumGroup).balance == 0.5 ether - gas);
+		assertTrue(forumGroup.nonce() == 1);
+		assertTrue(forumGroup.usedNonces(tmp.nonce) == 1);
+	}
 
-	// // test fail for below threshold
-	// function testRevertsIfUnderThreshold() public {
-	// 	// check balance before
-	// 	assertTrue(address(alice).balance == 1 ether);
-	// 	assertTrue(address(safe).balance == 1 ether);
-	// 	assertTrue(safe.nonce() == 0);
+	function testRevertsIfUnderThreshold() public {
+		//Add second member to make  agroup of 2
+		membersX.push(publicKey2[0]);
+		membersY.push(publicKey2[1]);
 
-	// 	//Add second member to make  agroup of 2
-	// 	membersX.push(publicKey2[0]);
-	// 	membersY.push(publicKey2[1]);
+		// Deploy a forum safe from the factory with 2 signers and threshold 2
+		forumGroup = ForumGroup(
+			payable(forumGroupFactory.deployForumGroup(GROUP_NAME_2, 2, membersX, membersY))
+		);
 
-	// 	(
-	// 		// Deploy a forum safe from the factory with 2 signers, over 50% threshold
-	// 		forumGroup,
-	// 		safe
-	// 	) = forumGroupFactory.deployForumGroup('test2', 5001, membersX, membersY);
+		deal(address(forumGroup), 10 ether);
 
-	// 	deal(address(forumGroup), 10 ether);
+		// Build user operation
+		UserOperation memory tmp = buildUserOp(
+			address(forumGroup),
+			forumGroup.nonce(),
+			new bytes(0),
+			basicTransferCalldata
+		);
 
-	// 	// Build user operation
-	// 	UserOperation memory tmp = buildUserOp(
-	// 		address(forumGroup),
-	// 		safe.nonce(),
-	// 		new bytes(0),
-	// 		basicTransferCalldata
-	// 	);
+		// Get signatures for the user operation
+		uint256[2] memory s1 = signMessageForPublicKey(
+			SIGNER_1,
+			Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(tmp)))
+		);
+		// Empty as member 2 did not vote
+		uint256[2] memory s2 = [uint256(0), uint256(0)];
 
-	// 	// Get signatures for the user operation
-	// 	uint256[2] memory s1 = signMessageForPublicKey(
-	// 		SIGNER_1,
-	// 		Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(tmp)))
-	// 	);
-	// 	// Empty as member 2 did not vote
-	// 	uint256[2] memory s2 = [uint256(0), uint256(0)];
+		uint256[2][] memory sigs = new uint256[2][](2);
+		sigs[0] = s1;
+		sigs[1] = s2;
 
-	// 	uint256[2][] memory sigs = new uint256[2][](2);
-	// 	sigs[0] = s1;
-	// 	sigs[1] = s2;
+		tmp.signature = abi.encode(sigs, authentacatorData);
 
-	// 	tmp.signature = abi.encode(sigs, authentacatorData);
+		UserOperation[] memory tmp1 = new UserOperation[](1);
+		tmp1[0] = tmp;
 
-	// 	UserOperation[] memory tmp1 = new UserOperation[](1);
-	// 	tmp1[0] = tmp;
+		// Revert as not enough votes
+		vm.expectRevert('FailedOp(0, AA24 signature error)');
+		entryPoint.handleOps(tmp1, payable(address(this)));
 
-	// 	// Revert as not enough votes
-	// 	vm.expectRevert(bytes('FailedOp(0, AA24 signature error)'));
-	// 	entryPoint.handleOps(tmp1, payable(address(this)));
-
-	// 	// Transfer has not been made, balances and nonce unchanged
-	// 	assertTrue(address(alice).balance == 1 ether);
-	// 	assertTrue(address(safe).balance == 1 ether);
-	// 	assertTrue(safe.nonce() == 0);
-	// }
-
-	// prevent sig reuse
+		// Transfer has not been made, balances and nonce unchanged
+		assertTrue(address(alice).balance == 1 ether);
+		assertTrue(address(forumGroup).balance == 10 ether);
+		assertTrue(forumGroup.nonce() == 0);
+	}
 
 	receive() external payable {}
-
-	/// -----------------------------------------------------------------------
-	/// SETUP TESTS
-	/// -----------------------------------------------------------------------
-
-	// function getFallbackHandlerAndModule(
-	// 	GnosisSafe _safe
-	// ) internal view returns (ERC4337Fallback _fallback, ForumGroup _module) {
-	// 	_fallback = ERC4337Fallback(
-	// 		abi.decode(
-	// 			_safe.getStorageAt(
-	// 				0x6c9a6c4a39284e37ed1cf53d337577d14212a4870fb976a4366c693b939918d5,
-	// 				1
-	// 			),
-	// 			(address)
-	// 		)
-	// 	);
-
-	// 	_module = ForumGroup(_fallback.erc4337module());
-	// }
 }
