@@ -5,11 +5,11 @@ pragma solidity ^0.8.15;
 
 import {GnosisSafe, Enum} from '@gnosis/GnosisSafe.sol';
 
-import {ERC4337Account, IEntryPoint} from './ERC4337Account.sol';
+import {ForumAccount, IEntryPoint} from './ForumAccount.sol';
 
 /// @notice Factory to deploy an ERC4337 Account
 /// @author ForumDAOs (https://forumdaos.com)
-contract ERC4337AccountFactory {
+contract ForumAccountFactory {
 	/// ----------------------------------------------------------------------------------------
 	/// Errors and Events
 	/// ----------------------------------------------------------------------------------------
@@ -23,7 +23,7 @@ contract ERC4337AccountFactory {
 	/// ----------------------------------------------------------------------------------------
 
 	// Template contract to use for new individual ERC4337 accounts
-	ERC4337Account public immutable erc4337AccountSingleton;
+	ForumAccount public immutable forumAccountSingleton;
 
 	// Entry point used for ERC4337 accounts
 	IEntryPoint public immutable entryPoint;
@@ -43,11 +43,11 @@ contract ERC4337AccountFactory {
 	/// ----------------------------------------------------------------------------------------
 
 	constructor(
-		ERC4337Account _erc4337AccountSingleton,
+		ForumAccount _forumAccountSingleton,
 		IEntryPoint _entryPoint,
 		address _gnosisFallbackLibrary
 	) {
-		erc4337AccountSingleton = _erc4337AccountSingleton;
+		forumAccountSingleton = _forumAccountSingleton;
 
 		entryPoint = _entryPoint;
 
@@ -59,7 +59,7 @@ contract ERC4337AccountFactory {
 			bytes10(0x3d602d80600a3d3981f3),
 			// proxy code
 			bytes10(0x363d3d373d3d3d363d73),
-			erc4337AccountSingleton,
+			forumAccountSingleton,
 			bytes15(0x5af43d82803e903d91602b57fd5bf3)
 		);
 	}
@@ -101,7 +101,7 @@ contract ERC4337AccountFactory {
 		// Initialize the account and Safe
 		(bool successInit, ) = account.call(
 			abi.encodeCall(
-				erc4337AccountSingleton.initialize,
+				forumAccountSingleton.initialize,
 				abi.encode(entryPoint, owner, gnosisFallbackLibrary)
 			)
 		);

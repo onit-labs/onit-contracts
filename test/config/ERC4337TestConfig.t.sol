@@ -6,8 +6,8 @@ import {EntryPoint} from '@erc4337/core/EntryPoint.sol';
 import {BaseAccount, UserOperation} from '@erc4337/core/BaseAccount.sol';
 
 // 4337 contracts
-import {ERC4337Account} from '../../src/erc4337-account/ERC4337Account.sol';
-import {ERC4337AccountFactory} from '../../src/erc4337-account/ERC4337AccountFactory.sol';
+import {ForumAccount} from '../../src/erc4337-account/ForumAccount.sol';
+import {ForumAccountFactory} from '../../src/erc4337-account/ForumAccountFactory.sol';
 import {ForumGroup} from '../../src/erc4337-module/ForumGroup.sol';
 import {ForumGroupFactory} from '../../src/erc4337-module/ForumGroupFactory.sol';
 
@@ -26,13 +26,13 @@ contract ERC4337TestConfig is Test, SafeTestConfig, ForumModuleTestConfig {
 	EntryPoint public entryPoint;
 
 	// Singleton for Forum 4337 account implementation
-	ERC4337Account public erc4337Singleton;
+	ForumAccount public forumAccountSingleton;
 
 	// Singleton for Forum 4337 group account implementation
-	ForumGroup public erc4337GroupSingleton;
+	ForumGroup public forumGroupSingleton;
 
 	// Factory for individual 4337 accounts
-	ERC4337AccountFactory public erc4337AccountFactory;
+	ForumAccountFactory public forumAccountFactory;
 
 	// Factory for 4337 group accounts
 	ForumGroupFactory public forumGroupFactory;
@@ -55,17 +55,17 @@ contract ERC4337TestConfig is Test, SafeTestConfig, ForumModuleTestConfig {
 			deployCode('EllipticCurve5.sol:EllipticCurve5')
 		);
 
-		erc4337Singleton = new ERC4337Account(ellipticCurveValidator);
-		erc4337GroupSingleton = new ForumGroup(address(ellipticCurveValidator), entryPointAddress);
+		forumAccountSingleton = new ForumAccount(ellipticCurveValidator);
+		forumGroupSingleton = new ForumGroup(address(ellipticCurveValidator), entryPointAddress);
 
-		erc4337AccountFactory = new ERC4337AccountFactory(
-			erc4337Singleton,
+		forumAccountFactory = new ForumAccountFactory(
+			forumAccountSingleton,
 			entryPoint,
 			address(handler)
 		);
 
 		forumGroupFactory = new ForumGroupFactory(
-			payable(address(erc4337GroupSingleton)),
+			payable(address(forumGroupSingleton)),
 			entryPointAddress,
 			address(safeSingleton),
 			address(handler)

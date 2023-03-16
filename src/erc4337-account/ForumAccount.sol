@@ -28,7 +28,7 @@ import {HexToLiteralBytes} from '@libraries/HexToLiteralBytes.sol';
  * - Add guardians and account recovery
  */
 
-contract ERC4337Account is GnosisSafe, BaseAccount {
+contract ForumAccount is GnosisSafe, BaseAccount {
 	/// ----------------------------------------------------------------------------------------
 	///							ACCOUNT STORAGE
 	/// ----------------------------------------------------------------------------------------
