@@ -12,11 +12,13 @@ import {HexToLiteralBytes} from '@libraries/HexToLiteralBytes.sol';
 // Interface of the elliptic curve validator contract
 import {IEllipticCurveValidator} from '@interfaces/IEllipticCurveValidator.sol';
 
-import '@gnosis/GnosisSafe.sol';
+import '@utils/Exec.sol';
 
+import '@gnosis/GnosisSafe.sol';
 import '@erc4337/interfaces/IAccount.sol';
 import '@erc4337/interfaces/IEntryPoint.sol';
-import '@utils/Exec.sol';
+
+import {MemberManager} from '@utils/MemberManager.sol';
 
 import 'forge-std/console.sol';
 
@@ -34,7 +36,7 @@ import 'forge-std/console.sol';
  * 		- Is enabled as a module on a Gnosis Safe
  * @author modified from infinitism https://github.com/eth-infinitism/account-abstraction/contracts/samples/gnosis/ERC4337Module.sol
  */
-contract ForumGroup is IAccount, GnosisSafe {
+contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 	/// ----------------------------------------------------------------------------------------
 	///							EVENTS & ERRORS
 	/// ----------------------------------------------------------------------------------------
@@ -130,6 +132,14 @@ contract ForumGroup is IAccount, GnosisSafe {
 		) revert InvalidInitialisation();
 
 		voteThreshold = _voteThreshold;
+
+		uint256[2][] memory members = new uint256[2][](membersX.length);
+		for (uint256 i = 0; i < membersX.length; i++) {
+			members[i] = [membersX[i], membersY[i]];
+		}
+
+		// Set up the members
+		setupMembers(members, 1);
 
 		_membersX = membersX;
 		_membersY = membersY;
@@ -237,20 +247,20 @@ contract ForumGroup is IAccount, GnosisSafe {
 	/// 						MODULE MANAGEMENT
 	/// -----------------------------------------------------------------------
 
-	function setThreshold(uint256 threshold) external {
-		if (msg.sender != _entryPoint) revert NotFromEntrypoint();
+	// function setThreshold(uint256 threshold) external {
+	// 	if (msg.sender != _entryPoint) revert NotFromEntrypoint();
 
-		if (threshold < 1 || threshold > 10000) revert InvalidThreshold();
+	// 	if (threshold < 1 || threshold > 10000) revert InvalidThreshold();
 
-		voteThreshold = threshold;
-	}
+	// 	voteThreshold = threshold;
+	// }
 
-	function addMember(uint256 x, uint256 y) external {
-		if (msg.sender != _entryPoint) revert NotFromEntrypoint();
+	// function addMember(uint256 x, uint256 y) external {
+	// 	if (msg.sender != _entryPoint) revert NotFromEntrypoint();
 
-		_membersX.push(x);
-		_membersY.push(y);
-	}
+	// 	_membersX.push(x);
+	// 	_membersY.push(y);
+	// }
 
 	function setEntryPoint(address anEntryPoint) external authorized {
 		if (msg.sender != _entryPoint) revert NotFromEntrypoint();
@@ -268,12 +278,12 @@ contract ForumGroup is IAccount, GnosisSafe {
 		return _entryPoint;
 	}
 
-	function getMembers() public view returns (uint256[2][] memory members) {
-		uint256 len = _membersX.length;
-		members = new uint256[2][](len);
-		for (uint i; i < len; ) {
-			members[i] = [_membersX[i], _membersY[i]];
-			++i;
-		}
-	}
+	// function getMembers() public view returns (uint256[2][] memory members) {
+	// 	uint256 len = _membersX.length;
+	// 	members = new uint256[2][](len);
+	// 	for (uint i; i < len; ) {
+	// 		members[i] = [_membersX[i], _membersY[i]];
+	// 		++i;
+	// 	}
+	// }
 }
