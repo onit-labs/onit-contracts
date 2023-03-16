@@ -66,7 +66,7 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 	uint256 internal constant SIG_VALIDATION_FAILED = 1;
 
 	// Used nonces; 1 = used (prevents replaying the same userOp)
-	mapping(uint256 => uint) internal usedNonces;
+	mapping(uint256 => uint) public usedNonces;
 
 	/// -----------------------------------------------------------------------
 	/// 						CONSTRUCTOR

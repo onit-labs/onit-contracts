@@ -247,45 +247,46 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 	/// EXECUTION TESTS
 	/// -----------------------------------------------------------------------
 
-	// function testExecutionViaEntryPoint() public {
-	// 	// check balance before
-	// 	assertTrue(address(alice).balance == 1 ether);
-	// 	assertTrue(address(safe).balance == 1 ether);
-	// 	// assertTrue(forumGroup.nonce() == 0);
+	function testExecutionViaEntryPoint() public {
+		// check balance before
+		assertTrue(address(alice).balance == 1 ether);
+		assertTrue(address(forumGroup).balance == 1 ether);
+		assertTrue(forumGroup.nonce() == 0);
 
-	// 	// Build user operation
-	// 	UserOperation memory tmp = buildUserOp(
-	// 		address(safe),
-	// 		safe.nonce(),
-	// 		new bytes(0),
-	// 		basicTransferCalldata
-	// 	);
+		// Build user operation
+		UserOperation memory tmp = buildUserOp(
+			address(forumGroup),
+			forumGroup.nonce(),
+			new bytes(0),
+			basicTransferCalldata
+		);
 
-	// 	// Get signatures for the user operation
-	// 	uint256[2] memory s1 = signMessageForPublicKey(
-	// 		SIGNER_1,
-	// 		Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(tmp)))
-	// 	);
+		// Get signatures for the user operation
+		uint256[2] memory s1 = signMessageForPublicKey(
+			SIGNER_1,
+			Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(tmp)))
+		);
 
-	// 	// @dev signatures must be in the order members are added to the group (can be retrieved using getMembers())
-	// 	uint256[2][] memory sigs = new uint256[2][](1);
-	// 	sigs[0] = s1;
+		// @dev signatures must be in the order members are added to the group (can be retrieved using getMembers())
+		uint256[2][] memory sigs = new uint256[2][](1);
+		sigs[0] = s1;
 
-	// 	tmp.signature = abi.encode(sigs, authentacatorData);
+		tmp.signature = abi.encode(sigs, authentacatorData);
 
-	// 	UserOperation[] memory tmp1 = new UserOperation[](1);
-	// 	tmp1[0] = tmp;
+		UserOperation[] memory tmp1 = new UserOperation[](1);
+		tmp1[0] = tmp;
 
-	// 	entryPoint.handleOps(tmp1, payable(alice));
+		entryPoint.handleOps(tmp1, payable(bob));
 
-	// 	// ! correct gas cost - take it from the useroperation event
-	// 	uint256 gas = calculateGas(tmp);
-	// 	// Transfer has been made, nonce incremented, used nonce set
-	// 	assertTrue(address(alice).balance == 1.5 ether + gas);
-	// 	assertTrue(address(safe).balance == 0.5 ether - gas);
-	// 	assertTrue(safe.nonce() == 1);
-	// 	//assertTrue(forumGroup.usedNonces(entryPoint.getUserOpHash(tmp)) == 1);
-	// }
+		// ! correct gas cost - take it from the useroperation event
+		uint256 gas = calculateGas(tmp);
+
+		// Transfer has been made, nonce incremented, used nonce set
+		assertTrue(address(alice).balance == 1.5 ether + gas);
+		assertTrue(address(forumGroup).balance == 0.5 ether - gas);
+		assertTrue(forumGroup.nonce() == 1);
+		assertTrue(forumGroup.usedNonces(tmp.nonce) == 1);
+	}
 
 	// function testVotingWithEmptySig() public {
 	// 	// Add second member to make  agroup of 2
