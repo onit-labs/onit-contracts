@@ -61,12 +61,6 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 	// Reference to latest entrypoint
 	address internal _entryPoint;
 
-	// Used to calculate percentages
-	uint256 internal constant BASIS_POINTS = 10000;
-
-	// Vote threshold to pass (basis points of 10,000 ie. 6,000 = 60%)
-	uint256 public voteThreshold;
-
 	// Return value in case of signature failure, with no time-range.
 	// Equivalent to _packValidationData(true,0,0);
 	uint256 internal constant SIG_VALIDATION_FAILED = 1;
@@ -126,15 +120,13 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 			membersX.length != membersY.length
 		) revert InvalidInitialisation();
 
-		voteThreshold = _voteThreshold;
-
 		uint256[2][] memory members = new uint256[2][](membersX.length);
 		for (uint256 i = 0; i < membersX.length; i++) {
 			members[i] = [membersX[i], membersY[i]];
 		}
 
 		// Set up the members
-		setupMembers(members, 1);
+		setupMembers(members, _voteThreshold);
 	}
 
 	/// -----------------------------------------------------------------------
@@ -184,8 +176,7 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 			++i;
 		}
 
-		// Take the ceiling of the division (ie. 1.1 => 2 votes are needed to pass)
-		if (count < (memberCount * voteThreshold + BASIS_POINTS - 1) / BASIS_POINTS) {
+		if (count < voteThreshold) {
 			validationData = SIG_VALIDATION_FAILED;
 		}
 
