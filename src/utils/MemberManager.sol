@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity >=0.7.0 <0.9.0;
+
 import '@gnosis/common/SelfAuthorized.sol';
 
 /// @title MemberManager - Manages a set of members and a vThreshold to perform actions.
@@ -32,10 +33,10 @@ contract MemberManager is SelfAuthorized {
 	// Initially, the head is set to 1
 	Member internal SENTINEL = Member({x: 1, y: 1});
 
-	mapping(uint256 => Member) internal members;
-
 	uint256 internal memberCount;
 	uint256 internal vThreshold;
+
+	mapping(uint256 => Member) internal members;
 
 	/// ----------------------------------------------------------------------------------------
 	///							WRITE FUNCTIONS

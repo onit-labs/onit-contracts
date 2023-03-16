@@ -169,7 +169,7 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 	// 	assertTrue(forumSafeModule.voteThreshold() == threshold);
 	// }
 
-	function testAddMember() public {
+	function testAddMemberWithThreshold() public {
 		assertTrue(forumSafeModule.getMembers().length == 1);
 
 		vm.prank(address(forumSafeModule));
@@ -179,10 +179,23 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 		);
 		uint256[2][] memory members = forumSafeModule.getMembers();
 
-		assertTrue(members[1][0] == publicKey2[0]);
-		assertTrue(members[1][1] == publicKey2[1]);
+		assertTrue(members[0][0] == publicKey2[0]);
+		assertTrue(members[0][1] == publicKey2[1]);
 
 		assertTrue(forumSafeModule.getMembers().length == 2);
+	}
+
+	function testUpdateEntryPoint() public {
+		assertTrue(forumSafeModule.entryPoint() == address(entryPoint));
+
+		// Reverts if not called by entrypoint
+		vm.expectRevert(ForumGroup.NotFromEntrypoint.selector);
+		forumSafeModule.setEntryPoint(address(this));
+
+		vm.prank(address(entryPoint));
+		forumSafeModule.setEntryPoint(address(this));
+
+		assertTrue(forumSafeModule.entryPoint() == address(this));
 	}
 
 	/// -----------------------------------------------------------------------

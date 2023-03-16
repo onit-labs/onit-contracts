@@ -71,11 +71,6 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 	// Equivalent to _packValidationData(true,0,0);
 	uint256 internal constant SIG_VALIDATION_FAILED = 1;
 
-	// ! Convert below x and y mappings to linked list, and manage threashold like safe
-	// The public keys of the signing members of the group
-	uint256[] internal _membersX;
-	uint256[] internal _membersY;
-
 	// Used nonces; 1 = used (prevents replaying the same userOp)
 	mapping(uint256 => uint) internal usedNonces;
 
@@ -140,9 +135,6 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 
 		// Set up the members
 		setupMembers(members, 1);
-
-		_membersX = membersX;
-		_membersY = membersY;
 	}
 
 	/// -----------------------------------------------------------------------
@@ -175,19 +167,17 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 			abi.encodePacked(HexToLiteralBytes.fromHex(authData), hashedClientData)
 		);
 
-		uint256 len = _membersX.length;
-
 		uint256 count;
 
 		// ! Update this to avoid needing to pass empty sigs
-		for (uint i; i < len; ) {
+		for (uint i; i < memberCount; ) {
 			// Check if the signature is not empty, check if it's valid
 			if (
 				sig[i][0] != 0 &&
 				_ellipticCurveValidator.validateSignature(
 					fullMessage,
 					[sig[i][0], sig[i][1]],
-					[_membersX[i], _membersY[i]]
+					[members[i].x, members[i].y]
 				)
 			) ++count;
 
@@ -195,11 +185,10 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 		}
 
 		// Take the ceiling of the division (ie. 1.1 => 2 votes are needed to pass)
-		if (count < (len * voteThreshold + BASIS_POINTS - 1) / BASIS_POINTS) {
+		if (count < (memberCount * voteThreshold + BASIS_POINTS - 1) / BASIS_POINTS) {
 			validationData = SIG_VALIDATION_FAILED;
 		}
 
-		// TODO improve used nonce tracking
 		if (userOp.initCode.length == 0) {
 			if (usedNonces[userOp.nonce] == 1) revert InvalidNonce();
 			usedNonces[userOp.nonce] == 1;
@@ -247,22 +236,7 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 	/// 						MODULE MANAGEMENT
 	/// -----------------------------------------------------------------------
 
-	// function setThreshold(uint256 threshold) external {
-	// 	if (msg.sender != _entryPoint) revert NotFromEntrypoint();
-
-	// 	if (threshold < 1 || threshold > 10000) revert InvalidThreshold();
-
-	// 	voteThreshold = threshold;
-	// }
-
-	// function addMember(uint256 x, uint256 y) external {
-	// 	if (msg.sender != _entryPoint) revert NotFromEntrypoint();
-
-	// 	_membersX.push(x);
-	// 	_membersY.push(y);
-	// }
-
-	function setEntryPoint(address anEntryPoint) external authorized {
+	function setEntryPoint(address anEntryPoint) external {
 		if (msg.sender != _entryPoint) revert NotFromEntrypoint();
 
 		// ! consider checks that entrypoint is valid here !
@@ -277,13 +251,4 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 	function entryPoint() public view virtual returns (address) {
 		return _entryPoint;
 	}
-
-	// function getMembers() public view returns (uint256[2][] memory members) {
-	// 	uint256 len = _membersX.length;
-	// 	members = new uint256[2][](len);
-	// 	for (uint i; i < len; ) {
-	// 		members[i] = [_membersX[i], _membersY[i]];
-	// 		++i;
-	// 	}
-	// }
 }
