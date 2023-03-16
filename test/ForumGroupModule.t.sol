@@ -49,7 +49,7 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 			// Deploy a forum safe from the factory
 			forumGroup
 		) = ForumGroup(
-			payable(forumGroupFactory.deployForumGroup(GROUP_NAME_1, 5000, membersX, membersY))
+			payable(forumGroupFactory.deployForumGroup(GROUP_NAME_1, 1, membersX, membersY))
 		);
 
 		// Deal the account some funds
@@ -74,19 +74,19 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 
 		assertTrue(members[0][0] == publicKey[0]);
 		assertTrue(members[0][1] == publicKey[1]);
-		assertTrue(forumGroup.voteThreshold() == 5000);
+		assertTrue(forumGroup.getVoteThreshold() == 1);
 		assertTrue(forumGroup.entryPoint() == address(entryPoint));
 
 		// The safe has been initialized with a threshold of 1
 		// This threshold is not used when executing via entrypoint
-		assertTrue(forumGroup.getThreshold() == 1);
+		assertTrue(forumGroup.getVoteThreshold() == 1);
 	}
 
 	function testDeployViaEntryPoint() public {
 		// Encode the calldata for the factory to create an account
 		bytes memory factoryCalldata = abi.encodeCall(
 			forumGroupFactory.deployForumGroup,
-			(GROUP_NAME_2, 5000, membersX, membersY)
+			(GROUP_NAME_2, 1, membersX, membersY)
 		);
 
 		//Prepend the address of the factory
@@ -123,12 +123,8 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 
 		assertTrue(members[0][0] == publicKey[0]);
 		assertTrue(members[0][1] == publicKey[1]);
-		assertTrue(newForumGroup.voteThreshold() == 5000);
+		assertTrue(newForumGroup.getVoteThreshold() == 1);
 		assertTrue(newForumGroup.entryPoint() == address(entryPoint));
-
-		// The safe has been initialized with a threshold of 1
-		// This threshold is not used when executing via entrypoint
-		assertTrue(newForumGroup.getThreshold() == 1);
 	}
 
 	/// -----------------------------------------------------------------------
@@ -138,36 +134,49 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 	function testGetAddress() public {
 		// Get address should predict correct deployed address
 		assertTrue(
-			forumGroupFactory.getAddress(keccak256(abi.encode(GROUP_NAME_1))) == address(safe)
+			forumGroupFactory.getAddress(keccak256(abi.encode(GROUP_NAME_1))) == address(forumGroup)
 		);
 	}
 
 	function testReturnAddressIfAlreadyDeployed() public {
 		// Deploy a second forum safe with the same name
 		ForumGroup newForumGroup = ForumGroup(
-			payable(forumGroupFactory.deployForumGroup(GROUP_NAME_1, 5000, membersX, membersY))
+			payable(forumGroupFactory.deployForumGroup(GROUP_NAME_1, 1, membersX, membersY))
 		);
 
 		// Get address should return the address of the first safe
 		assertTrue(address(newForumGroup) == address(forumGroup));
 	}
 
-	// ! update to new member manager
-	// function testUpdateThreshold(uint256 threshold) public {
-	// 	assertTrue(forumGroup.voteThreshold() == 5000);
+	function testUpdateThreshold(uint256 threshold) public {
+		assertTrue(forumGroup.getVoteThreshold() == 1);
 
-	// 	vm.startPrank(entryPointAddress);
+		// Add a member so we can change threshold from 1-> 2 later
+		vm.prank(address(forumGroup));
+		forumGroup.addMemberWithThreshold(
+			MemberManager.Member({x: publicKey2[0], y: publicKey2[1]}),
+			1
+		);
 
-	// 	if (threshold < 1 || threshold > 10000) {
-	// 		vm.expectRevert(ForumGroup.InvalidThreshold.selector);
-	// 		forumGroup.setThreshold(threshold);
-	// 		threshold = 5000; // fallback to default so final assertiion is correctly evaluated
-	// 	} else {
-	// 		forumGroup.setThreshold(threshold);
-	// 	}
+		vm.startPrank(address(forumGroup));
 
-	// 	assertTrue(forumGroup.voteThreshold() == threshold);
-	// }
+		// Threshold must be greater than 1 and less then or equal to current member count (2)
+		if (threshold > 2) {
+			vm.expectRevert('MM201');
+			forumGroup.changeVoteThreshold(threshold);
+			threshold = 1; // fallback to default so final assertiion is correctly evaluated
+		} else {
+			if (threshold < 1) {
+				vm.expectRevert('MM202');
+				forumGroup.changeVoteThreshold(threshold);
+				threshold = 1; // fallback to default so final assertiion is correctly evaluated
+			} else {
+				forumGroup.changeVoteThreshold(threshold);
+			}
+		}
+
+		assertTrue(forumGroup.getVoteThreshold() == threshold);
+	}
 
 	function testAddMemberWithThreshold() public {
 		assertTrue(forumGroup.getMembers().length == 1);
@@ -183,6 +192,42 @@ contract Module4337Test is ERC4337TestConfig, SignatureHelper {
 		assertTrue(members[0][1] == publicKey2[1]);
 
 		assertTrue(forumGroup.getMembers().length == 2);
+	}
+
+	function testRemoveMember() public {
+		// Add a member so we can change threshold from 1-> 2 later
+		vm.prank(address(forumGroup));
+		forumGroup.addMemberWithThreshold(
+			MemberManager.Member({x: publicKey2[0], y: publicKey2[1]}),
+			2
+		);
+
+		// Get initial members
+		uint256[2][] memory members = forumGroup.getMembers();
+
+		assertTrue(members.length == 2);
+		assertTrue(forumGroup.getVoteThreshold() == 2);
+
+		MemberManager.Member memory prev = MemberManager.Member({
+			x: publicKey2[0],
+			y: publicKey2[1]
+		});
+
+		MemberManager.Member memory removee = MemberManager.Member({
+			x: publicKey[0],
+			y: publicKey[1]
+		});
+
+		vm.prank(address(forumGroup));
+		forumGroup.removeMember(prev, removee, 1);
+
+		members = forumGroup.getMembers();
+
+		// Length is 1, pk2 remains, pk is removed, threshold is updated
+		assertTrue(members.length == 1);
+		assertTrue(members[0][0] == publicKey2[0]);
+		assertTrue(members[0][1] == publicKey2[1]);
+		assertTrue(forumGroup.getVoteThreshold() == 1);
 	}
 
 	function testUpdateEntryPoint() public {
