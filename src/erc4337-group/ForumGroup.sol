@@ -14,27 +14,17 @@ import {IEllipticCurveValidator} from '@interfaces/IEllipticCurveValidator.sol';
 
 import '@utils/Exec.sol';
 
-import '@gnosis/GnosisSafe.sol';
-import '@erc4337/interfaces/IAccount.sol';
-import '@erc4337/interfaces/IEntryPoint.sol';
+import {GnosisSafe, Enum} from '@gnosis/GnosisSafe.sol';
+import {IAccount} from '@erc4337/interfaces/IAccount.sol';
+import {IEntryPoint, UserOperation} from '@erc4337/interfaces/IEntryPoint.sol';
 
 import {MemberManager} from '@utils/MemberManager.sol';
 
 import 'forge-std/console.sol';
 
-// !!!
-// ! correct checks on functions (ie. onlyEntryPoint)
-// - Consider domain / chain info to be included in signatures
-// - Integrate validation of sigs on elliptic contract
-// - Make more addresses immutable to save gas
-// !!!
-
 /**
- * @notice Forum Group Module.
- * @dev - Called directly from entrypoint so must implement validateUserOp
- * 		- Holds an immutable reference to the EntryPoint
- * 		- Is enabled as a module on a Gnosis Safe
- * @author modified from infinitism https://github.com/eth-infinitism/account-abstraction/contracts/samples/gnosis/ERC4337Module.sol
+ * @notice Forum Group
+ * @author Forum - Modified from infinitism https://github.com/eth-infinitism/account-abstraction/contracts/samples/gnosis/ERC4337Module.sol
  */
 contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 	/// ----------------------------------------------------------------------------------------
@@ -49,13 +39,11 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 
 	error InvalidNonce();
 
-	error InvalidThreshold();
-
 	/// ----------------------------------------------------------------------------------------
 	///							GROUP STORAGE
 	/// ----------------------------------------------------------------------------------------
 
-	// Immutable reference to validator of the secp256r1 signatures
+	// Immutable reference to validator of the SECP-256R1 (P-256) signatures
 	IEllipticCurveValidator internal immutable _ellipticCurveValidator;
 
 	// Reference to latest entrypoint
@@ -65,7 +53,7 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 	// Equivalent to _packValidationData(true,0,0);
 	uint256 internal constant SIG_VALIDATION_FAILED = 1;
 
-	// Used nonces; 1 = used (prevents replaying the same userOp)
+	// Used nonces; 1 = used (prevents replaying the same userOp, while allowing out of order execution)
 	mapping(uint256 => uint256) public usedNonces;
 
 	/// -----------------------------------------------------------------------
@@ -78,30 +66,25 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 
 	/**
 	 * @notice Setup the module.
-	 * @dev - Called from the safe during the safe setup
-	 * 		- Enables the entrypoint & fallback for the safe and sets up this module
-	 * @param anEntryPoint The entrypoint to use on the safe
+	 * @param _anEntryPoint The entrypoint to use on the safe
 	 * @param fallbackHandler The fallback handler to use on the safe
 	 * @param _voteThreshold Vote threshold to pass (basis points of 10,000 ie. 6,000 = 60%)
-	 * @param membersX The public keys of the signing members of the group
-	 * @param membersY The public keys of the signing members of the group
+	 * @param _members The public key pairs of the signing members of the group
 	 */
 	function setUp(
-		address anEntryPoint,
+		address _anEntryPoint,
 		address fallbackHandler,
 		uint256 _voteThreshold,
-		uint256[] memory membersX,
-		uint256[] memory membersY
+		uint256[2][] memory _members
 	) external {
+		// Can only be set up once
 		if (voteThreshold != 0) revert ModuleAlreadySetUp();
-
-		_entryPoint = anEntryPoint;
 
 		// Create a placeholder owner
 		address[] memory ownerPlaceholder = new address[](1);
 		ownerPlaceholder[0] = address(0xdead);
 
-		// Setup the safe
+		// Setup the safe with placeholder owner and threshold 1
 		this.setup(
 			ownerPlaceholder,
 			1,
@@ -114,19 +97,16 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 		);
 
 		if (
-			_voteThreshold <= 0 ||
+			_anEntryPoint == address(0) ||
+			_voteThreshold < 1 ||
 			_voteThreshold > 10000 ||
-			membersX.length <= 0 ||
-			membersX.length != membersY.length
+			_members.length < 1
 		) revert InvalidInitialisation();
 
-		uint256[2][] memory members = new uint256[2][](membersX.length);
-		for (uint256 i = 0; i < membersX.length; i++) {
-			members[i] = [membersX[i], membersY[i]];
-		}
+		_entryPoint = _anEntryPoint;
 
 		// Set up the members
-		setupMembers(members, _voteThreshold);
+		setupMembers(_members, _voteThreshold);
 	}
 
 	/// -----------------------------------------------------------------------

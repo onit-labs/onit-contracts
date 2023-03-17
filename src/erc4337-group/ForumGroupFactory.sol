@@ -77,16 +77,14 @@ contract ForumGroupFactory {
 	/**
 	 * @notice Deploys a new Forum group which manages a safe account
 	 * @param _name Name of the forum group
-	 * @param _ownersX Array of initial owners on safe
-	 * @param _ownersY Array of initial owners on safe
+	 * @param _members Array of key pairs for initial members on the group
 	 * @return forumGroup The deployed forum group
 	 * @dev Returns an existing account address so that entryPoint.getSenderAddress() works even after account creation
 	 */
 	function deployForumGroup(
 		string calldata _name,
 		uint256 _voteThreshold,
-		uint256[] calldata _ownersX,
-		uint256[] calldata _ownersY
+		uint256[2][] calldata _members
 	) external payable virtual returns (address forumGroup) {
 		// ! Improve this salt - should be safely unique, and easily reusuable across chain
 		// ! Should also prevent any frontrunning to deploy to this address by anyone else
@@ -114,8 +112,7 @@ contract ForumGroupFactory {
 			entryPoint,
 			gnosisFallbackLibrary,
 			_voteThreshold,
-			_ownersX,
-			_ownersY
+			_members
 		);
 
 		emit ForumGroupDeployed(forumGroup);

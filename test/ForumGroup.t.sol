@@ -21,8 +21,7 @@ contract ForumGroupTest is ERC4337TestConfig, SignatureHelper {
 	// Some public keys used as signers in tests
 	uint256[2] internal publicKey;
 	uint256[2] internal publicKey2;
-	uint256[] internal membersX;
-	uint256[] internal membersY;
+	uint256[2][] internal inputMembers;
 
 	string internal constant SIGNER_1 = '1';
 	string internal constant SIGNER_2 = '2';
@@ -42,12 +41,11 @@ contract ForumGroupTest is ERC4337TestConfig, SignatureHelper {
 		publicKey2 = createPublicKey(SIGNER_2);
 
 		// Format signers into arrays to be added to contract
-		membersX.push(publicKey[0]);
-		membersY.push(publicKey[1]);
+		inputMembers.push([publicKey[0], publicKey[1]]);
 
 		// Deploy a forum safe from the factory
 		forumGroup = ForumGroup(
-			payable(forumGroupFactory.deployForumGroup(GROUP_NAME_1, 1, membersX, membersY))
+			payable(forumGroupFactory.deployForumGroup(GROUP_NAME_1, 1, inputMembers))
 		);
 
 		// Deal the account some funds
@@ -84,7 +82,7 @@ contract ForumGroupTest is ERC4337TestConfig, SignatureHelper {
 		// Encode the calldata for the factory to create an account
 		bytes memory factoryCalldata = abi.encodeCall(
 			forumGroupFactory.deployForumGroup,
-			(GROUP_NAME_2, 1, membersX, membersY)
+			(GROUP_NAME_2, 1, inputMembers)
 		);
 
 		//Prepend the address of the factory
@@ -139,7 +137,7 @@ contract ForumGroupTest is ERC4337TestConfig, SignatureHelper {
 	function testReturnAddressIfAlreadyDeployed() public {
 		// Deploy a second forum safe with the same name
 		ForumGroup newForumGroup = ForumGroup(
-			payable(forumGroupFactory.deployForumGroup(GROUP_NAME_1, 1, membersX, membersY))
+			payable(forumGroupFactory.deployForumGroup(GROUP_NAME_1, 1, inputMembers))
 		);
 
 		// Get address should return the address of the first safe
@@ -288,11 +286,10 @@ contract ForumGroupTest is ERC4337TestConfig, SignatureHelper {
 
 	function testVotingWithEmptySig() public {
 		// Add second member to make a group of 2
-		membersX.push(publicKey2[0]);
-		membersY.push(publicKey2[1]);
+		inputMembers.push([publicKey2[0], publicKey2[1]]);
 
 		forumGroup = ForumGroup(
-			payable(forumGroupFactory.deployForumGroup(GROUP_NAME_2, 1, membersX, membersY))
+			payable(forumGroupFactory.deployForumGroup(GROUP_NAME_2, 1, inputMembers))
 		);
 
 		deal(address(forumGroup), 10 ether);
@@ -327,19 +324,18 @@ contract ForumGroupTest is ERC4337TestConfig, SignatureHelper {
 
 		// Transfer has been made, nonce incremented, used nonce set
 		assertTrue(address(alice).balance == 1.5 ether);
-		assertTrue(address(forumGroup).balance == 0.5 ether - gas);
+		assertTrue(address(forumGroup).balance == 10.5 ether - gas);
 		assertTrue(forumGroup.nonce() == 1);
 		assertTrue(forumGroup.usedNonces(tmp.nonce) == 1);
 	}
 
 	function testRevertsIfUnderThreshold() public {
 		//Add second member to make  agroup of 2
-		membersX.push(publicKey2[0]);
-		membersY.push(publicKey2[1]);
+		inputMembers.push([publicKey2[0], publicKey2[1]]);
 
 		// Deploy a forum safe from the factory with 2 signers and threshold 2
 		forumGroup = ForumGroup(
-			payable(forumGroupFactory.deployForumGroup(GROUP_NAME_2, 2, membersX, membersY))
+			payable(forumGroupFactory.deployForumGroup(GROUP_NAME_2, 2, inputMembers))
 		);
 
 		deal(address(forumGroup), 10 ether);
@@ -370,7 +366,7 @@ contract ForumGroupTest is ERC4337TestConfig, SignatureHelper {
 		tmp1[0] = tmp;
 
 		// Revert as not enough votes
-		vm.expectRevert('FailedOp(0, AA24 signature error)');
+		vm.expectRevert(failedOpError(uint256(0), 'AA24 signature error'));
 		entryPoint.handleOps(tmp1, payable(address(this)));
 
 		// Transfer has not been made, balances and nonce unchanged
