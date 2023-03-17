@@ -4,7 +4,6 @@ pragma solidity ^0.8.15;
 /* solhint-disable avoid-low-level-calls */
 /* solhint-disable no-inline-assembly */
 /* solhint-disable reason-string */
-/* solhint-disable no-console */
 
 import {Base64} from '@libraries/Base64.sol';
 import {HexToLiteralBytes} from '@libraries/HexToLiteralBytes.sol';
@@ -12,15 +11,13 @@ import {HexToLiteralBytes} from '@libraries/HexToLiteralBytes.sol';
 // Interface of the elliptic curve validator contract
 import {IEllipticCurveValidator} from '@interfaces/IEllipticCurveValidator.sol';
 
-import '@utils/Exec.sol';
+import {Exec} from '@utils/Exec.sol';
 
 import {GnosisSafe, Enum} from '@gnosis/GnosisSafe.sol';
 import {IAccount} from '@erc4337/interfaces/IAccount.sol';
 import {IEntryPoint, UserOperation} from '@erc4337/interfaces/IEntryPoint.sol';
 
 import {MemberManager} from '@utils/MemberManager.sol';
-
-import 'forge-std/console.sol';
 
 /**
  * @notice Forum Group

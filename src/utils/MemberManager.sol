@@ -58,7 +58,6 @@ contract MemberManager is SelfAuthorized {
 		for (uint256 i = 0; i < _members.length; i++) {
 			// Member cannot be null.
 			uint256[2] memory member = _members[i];
-			// ! check this require
 			require(
 				member[0] != 0 &&
 					member[1] != 0 &&
@@ -66,8 +65,8 @@ contract MemberManager is SelfAuthorized {
 					member[1] != currentMember.y,
 				'MM203'
 			);
-			// No duplicate members allowed.
-			require(members[member[0]].x == 0, 'MM204');
+			// No duplicate members allowed. (check has small chance of not blocking members with matching x or y)
+			require(members[member[0]].x == 0 && members[member[0]].y == 0, 'MM204');
 			members[currentMember.x] = Member({x: member[0], y: member[1]});
 			currentMember = Member({x: member[0], y: member[1]});
 		}
@@ -85,14 +84,13 @@ contract MemberManager is SelfAuthorized {
 		Member memory member,
 		uint256 _voteThreshold
 	) public authorized {
-		// Member key pair cannot be null, the sentinel or the Safe itself.
-		// ! check this require
+		// Member key pair cannot be null or the sentinel
 		require(
 			member.x != 0 && member.y != 0 && member.x != SENTINEL.x && member.y != SENTINEL.y,
 			'MM203'
 		);
 		// No duplicate members allowed.
-		require(members[member.x].x == 0, 'MM204');
+		require(members[member.x].x == 0 && members[member[0]].y == 0, 'MM204');
 		members[member.x] = members[SENTINEL.x];
 		members[SENTINEL.x] = member;
 		memberCount++;
@@ -124,7 +122,6 @@ contract MemberManager is SelfAuthorized {
 			'MM205'
 		);
 		members[prevMember.x] = members[member.x];
-		// ! check this delete
 		delete members[member.x];
 		memberCount--;
 		emit RemovedMember(member);
@@ -191,8 +188,11 @@ contract MemberManager is SelfAuthorized {
 	}
 
 	function isMember(Member memory member) public view returns (bool) {
-		// ! consider y check too
-		return member.x != SENTINEL.x && members[member.x].x != 0;
+		return
+			member.x != SENTINEL.x &&
+			members[member.x].x != 0 &&
+			member.y != SENTINEL.y &&
+			members[member.x].y != 0;
 	}
 
 	/// @dev Returns array of members.
