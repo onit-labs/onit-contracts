@@ -12,6 +12,7 @@ via_ir = false # set to true to enable IR compiler
 # optimize_runs = 20000 
 solc = '0.8.15'
 fs_permissions = [{ access = "read-write", path = "./addresses/"}, { access ="read", path="./out/"}]
+ffi = true 
 
 # ! Profile not overriding default profile
 # Need to see why (potentially https://github.com/foundry-rs/foundry/issues/3120)

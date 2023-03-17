@@ -1,22 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {Module, Enum} from '@gnosis.pm/zodiac/contracts/core/Module.sol';
-
 // Gnosis Safe imports
-import {GnosisSafe} from '@gnosis/GnosisSafe.sol';
+import {GnosisSafe, Enum} from '@gnosis/GnosisSafe.sol';
 import {CompatibilityFallbackHandler} from '@gnosis/handler/CompatibilityFallbackHandler.sol';
 import {MultiSend} from '@gnosis/libraries/MultiSend.sol';
 import {GnosisSafeProxyFactory} from '@gnosis/proxies/GnosisSafeProxyFactory.sol';
 import {SignMessageLib} from '@gnosis/examples/libraries/SignMessage.sol';
 
-// Forum 4337 contracts
-import {ForumSafeModule} from '../../src/gnosis-forum/ForumSafeModule.sol';
-
-// Forum interfaces
-import {IForumSafeModuleTypes} from '../../src/interfaces/IForumSafeModuleTypes.sol';
-
-// Config for the Safe which the Forum Module will attach to
+// General setup helper for all safe contracts
 abstract contract SafeTestConfig {
 	// Safe contract types
 	GnosisSafe internal safeSingleton;

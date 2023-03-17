@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.0;
 
-import {UserOperation} from '@eip4337/contracts/core/BaseAccount.sol';
+import {UserOperation} from '@erc4337/core/BaseAccount.sol';
 import 'forge-std/console.sol';
 
 contract ERC4337SignatureStore {

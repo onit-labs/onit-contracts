@@ -1,15 +1,21 @@
 [submodule "lib/forge-std"]
 	path = lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+	branch = v1.4.0
 [submodule "lib/solbase"]
 	path = lib/solbase
-	url = https://github.com/sol-dao/solbase
+	url = https://github.com/Sol-DAO/solbase
 [submodule "lib/zodiac"]
 	path = lib/zodiac
 	url = https://github.com/gnosis/zodiac
 [submodule "lib/account-abstraction"]
 	path = lib/account-abstraction
 	url = https://github.com/eth-infinitism/account-abstraction
+	branch = 1b78ed2
 [submodule "lib/foundry-deployment-manager"]
 	path = lib/foundry-deployment-manager
 	url = https://github.com/jamesmccomish/foundry-deployment-manager
+[submodule "lib/safe-contracts"]
+	path = lib/safe-contracts
+	url = https://github.com/safe-global/safe-contracts
+	branch = v1.3.0
