@@ -14,7 +14,7 @@ import {ERC4337SignatureStore} from './config/ERC4337SignatureStore.t.sol';
 // ! need a way to generate test passkey sigs that match owner addresses
 // ! until then some manual effor it required to run each test
 
-contract Module4337Test is ERC4337TestConfig, ERC4337SignatureStore {
+contract ForumAccountTest is ERC4337TestConfig, ERC4337SignatureStore {
 	// Variable used for test erc4337 account
 	ForumAccount private deployed4337Account;
 	address payable private deployed4337AccountAddress;

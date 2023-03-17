@@ -14,7 +14,7 @@ import {Base64} from '@libraries/Base64.sol';
  * - Improve salt for group deployment. Should be more restrictive to prevent frontrunning, and should work cross chain
  * - Improve test code - still some repeated code that could be broken into functions
  */
-contract Module4337Test is ERC4337TestConfig, SignatureHelper {
+contract ForumGroupTest is ERC4337TestConfig, SignatureHelper {
 	ForumGroup private forumGroup;
 	GnosisSafe private safe;
 
