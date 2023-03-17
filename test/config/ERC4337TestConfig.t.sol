@@ -140,4 +140,11 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig {
 
 		return requiredGas * userOp.maxFeePerGas;
 	}
+
+	function failedOpError(
+		uint256 opIndex,
+		string memory reason
+	) internal pure returns (bytes memory) {
+		return abi.encodeWithSignature('FailedOp(uint256,string)', opIndex, reason);
+	}
 }
