@@ -57,7 +57,7 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig {
 		);
 
 		forumAccountSingleton = new ForumAccount(ellipticCurveValidator);
-		forumGroupSingleton = new ForumGroup(address(ellipticCurveValidator), entryPointAddress);
+		forumGroupSingleton = new ForumGroup(address(ellipticCurveValidator));
 
 		forumAccountFactory = new ForumAccountFactory(
 			forumAccountSingleton,

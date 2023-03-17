@@ -72,7 +72,7 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 	/// 						CONSTRUCTOR
 	/// -----------------------------------------------------------------------
 
-	constructor(address anEllipticCurveValidator, address anEntryPoint) {
+	constructor(address anEllipticCurveValidator) {
 		_ellipticCurveValidator = IEllipticCurveValidator(anEllipticCurveValidator);
 	}
 
