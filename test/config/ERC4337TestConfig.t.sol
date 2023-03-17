@@ -8,8 +8,8 @@ import {BaseAccount, UserOperation} from '@erc4337/core/BaseAccount.sol';
 // Forum 4337 contracts
 import {ForumAccount} from '../../src/erc4337-account/ForumAccount.sol';
 import {ForumAccountFactory} from '../../src/erc4337-account/ForumAccountFactory.sol';
-import {ForumGroup} from '../../src/erc4337-module/ForumGroup.sol';
-import {ForumGroupFactory} from '../../src/erc4337-module/ForumGroupFactory.sol';
+import {ForumGroup} from '../../src/erc4337-group/ForumGroup.sol';
+import {ForumGroupFactory} from '../../src/erc4337-group/ForumGroupFactory.sol';
 import {MemberManager} from '@utils/MemberManager.sol';
 
 // EllipticCurve validator used for p256 curves - compiled with v0.5.0
