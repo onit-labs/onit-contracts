@@ -2,15 +2,11 @@
 
 pragma solidity ^0.8.15;
 
-/* solhint-disable no-console */
-
 import {GnosisSafe, Enum} from '@gnosis/GnosisSafe.sol';
 
 import {ForumGroup} from './ForumGroup.sol';
 
-import 'forge-std/console.sol';
-
-/// @notice Factory to deploy forum group.
+/// @notice Factory to deploy Forum group.
 contract ForumGroupFactory {
 	/// ----------------------------------------------------------------------------------------
 	/// Errors and Events
@@ -59,7 +55,7 @@ contract ForumGroupFactory {
 		gnosisSingleton = _gnosisSingleton;
 		gnosisFallbackLibrary = _gnosisFallbackLibrary;
 
-		// Data sent to the deterministic deployment proxy to deploy a new forum group module
+		// Data sent to the deterministic deployment proxy to deploy a new forum group
 		_createForumGroupProxyData = abi.encodePacked(
 			// constructor
 			bytes10(0x3d602d80600a3d3981f3),
@@ -107,7 +103,6 @@ contract ForumGroupFactory {
 		// If not successful, revert
 		if (!successCreate || forumGroup == address(0)) revert NullDeploy();
 
-		// ! check fallback here
 		ForumGroup(payable(forumGroup)).setUp(
 			entryPoint,
 			gnosisFallbackLibrary,
