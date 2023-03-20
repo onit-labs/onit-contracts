@@ -90,7 +90,7 @@ contract MemberManager is SelfAuthorized {
 			'MM203'
 		);
 		// No duplicate members allowed.
-		require(members[member.x].x == 0 && members[member[0]].y == 0, 'MM204');
+		require(members[member.x].x == 0 && members[member.y].y == 0, 'MM204');
 		members[member.x] = members[SENTINEL.x];
 		members[SENTINEL.x] = member;
 		memberCount++;
