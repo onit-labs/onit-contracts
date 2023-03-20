@@ -47,6 +47,11 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig {
 	string internal authentacatorData =
 		'1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000';
 
+	// TODO set these to deploy based on env
+	string internal clientDataStart = '{"type":"webauthn.get","challenge":"';
+	string internal clientDataEndDevelopment = '","origin":"https://development.forumdaos.com"}';
+	string internal clientDataEndProduction = '","origin":"https://production.forumdaos.com"}';
+
 	constructor() {
 		entryPoint = new EntryPoint();
 		entryPointAddress = address(entryPoint);
@@ -57,7 +62,11 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig {
 		);
 
 		forumAccountSingleton = new ForumAccount(ellipticCurveValidator);
-		forumGroupSingleton = new ForumGroup(address(ellipticCurveValidator));
+		forumGroupSingleton = new ForumGroup(
+			address(ellipticCurveValidator)
+			//clientDataStart,
+			//clientDataEndDevelopment
+		);
 
 		forumAccountFactory = new ForumAccountFactory(
 			forumAccountSingleton,
