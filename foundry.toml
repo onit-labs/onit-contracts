@@ -10,7 +10,7 @@ gas_reports = ["*"]
 optimize = false # set to true to enable optimizer
 via_ir = false # set to true to enable IR compiler
 # optimize_runs = 20000 
-solc = '0.8.15'
+solc = '0.8.17'
 fs_permissions = [{ access = "read-write", path = "./addresses/"}, { access ="read", path="./out/"}]
 ffi = true 
 
