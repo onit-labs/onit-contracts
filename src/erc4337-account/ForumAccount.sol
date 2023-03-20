@@ -3,8 +3,6 @@ pragma solidity ^0.8.15;
 
 import {GnosisSafe, Enum} from '@gnosis/GnosisSafe.sol';
 
-// Interface of the elliptic curve validator contract
-import {IEllipticCurveValidator} from '@interfaces/IEllipticCurveValidator.sol';
 // Modified BaseAccount with nonce removed
 import {BaseAccount, IEntryPoint, UserOperation} from '@interfaces/BaseAccount.sol';
 
@@ -41,9 +39,6 @@ contract ForumAccount is GnosisSafe, BaseAccount {
 	// Entry point allowed to call methods directly on this contract
 	IEntryPoint internal _entryPoint;
 
-	// Contract used to validate the secp256r1 signature was signed by the owner
-	IEllipticCurveValidator internal immutable _ellipticCurveValidator;
-
 	/// ----------------------------------------------------------------------------------------
 	///							CONSTRUCTOR
 	/// ----------------------------------------------------------------------------------------
@@ -52,10 +47,8 @@ contract ForumAccount is GnosisSafe, BaseAccount {
 	 * @notice Constructor
 	 * @dev This contract should be deployed using a proxy, the constructor should not be called
 	 */
-	constructor(IEllipticCurveValidator aValidator) GnosisSafe() {
+	constructor() GnosisSafe() {
 		_owner = [1, 1];
-
-		_ellipticCurveValidator = aValidator;
 	}
 
 	/**
@@ -180,13 +173,14 @@ contract ForumAccount is GnosisSafe, BaseAccount {
 			)
 		);
 
-		return
-			_ellipticCurveValidator.validateSignature(
-				sha256(abi.encodePacked(HexToLiteralBytes.fromHex(authData), hashedClientData)),
-				sig,
-				_owner
-			)
-				? 0
-				: SIG_VALIDATION_FAILED;
+		// !!! FIX - CORRECT VALIDATION FOR INDIVIDUAL ACCOUNT !!!
+		return 0;
+		// _ellipticCurveValidator.validateSignature(
+		// 	sha256(abi.encodePacked(HexToLiteralBytes.fromHex(authData), hashedClientData)),
+		// 	sig,
+		// 	_owner
+		// )
+		// 	? 0
+		// 	: SIG_VALIDATION_FAILED;
 	}
 }

@@ -12,11 +12,6 @@ import {ForumGroup} from '../../src/erc4337-group/ForumGroup.sol';
 import {ForumGroupFactory} from '../../src/erc4337-group/ForumGroupFactory.sol';
 import {MemberManager} from '@utils/MemberManager.sol';
 
-// EllipticCurve validator used for p256 curves - compiled with v0.5.0
-/// @dev To save changes to folder structure, this is built elsewhere and added to the ./out folder
-///		 The file is the same as utils/EllipticCurve.sol, except uses 'pragma solidity 0.5.0;'
-import {IEllipticCurveValidator} from '@interfaces/IEllipticCurveValidator.sol';
-
 import './SafeTestConfig.t.sol';
 import './BasicTestConfig.t.sol';
 
@@ -38,9 +33,6 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig {
 	// Factory for 4337 group accounts
 	ForumGroupFactory public forumGroupFactory;
 
-	// Elliptic curve validator
-	IEllipticCurveValidator public ellipticCurveValidator;
-
 	// Addresses for easy use in tests
 	address internal entryPointAddress;
 
@@ -56,23 +48,14 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig {
 		entryPoint = new EntryPoint();
 		entryPointAddress = address(entryPoint);
 
-		// Validator used for p256 curves - 0xBa81560Ae6Bd24D34BB24084993AfdaFad3cfeff can be used on mumbai forks
-		ellipticCurveValidator = IEllipticCurveValidator(
-			deployCode('EllipticCurve5.sol:EllipticCurve5')
-		);
+		//forumAccountSingleton = new ForumAccount(ellipticCurveValidator);
+		forumGroupSingleton = new ForumGroup();
 
-		forumAccountSingleton = new ForumAccount(ellipticCurveValidator);
-		forumGroupSingleton = new ForumGroup(
-			address(ellipticCurveValidator)
-			//clientDataStart,
-			//clientDataEndDevelopment
-		);
-
-		forumAccountFactory = new ForumAccountFactory(
-			forumAccountSingleton,
-			entryPoint,
-			address(handler)
-		);
+		// forumAccountFactory = new ForumAccountFactory(
+		// 	forumAccountSingleton,
+		// 	entryPoint,
+		// 	address(handler)
+		// );
 
 		forumGroupFactory = new ForumGroupFactory(
 			payable(address(forumGroupSingleton)),

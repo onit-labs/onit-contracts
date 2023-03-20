@@ -8,9 +8,6 @@ pragma solidity ^0.8.15;
 import {Base64} from '@libraries/Base64.sol';
 import {HexToLiteralBytes} from '@libraries/HexToLiteralBytes.sol';
 
-// Interface of the elliptic curve validator contract
-import {IEllipticCurveValidator} from '@interfaces/IEllipticCurveValidator.sol';
-
 import {Exec} from '@utils/Exec.sol';
 import {MemberManager} from '@utils/MemberManager.sol';
 
@@ -40,9 +37,6 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 	///							GROUP STORAGE
 	/// ----------------------------------------------------------------------------------------
 
-	// Immutable reference to validator of the SECP-256R1 (P-256) signatures
-	IEllipticCurveValidator internal immutable _ellipticCurveValidator;
-
 	// Reference to latest entrypoint
 	address internal _entryPoint;
 
@@ -54,12 +48,8 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 	mapping(uint256 => uint256) public usedNonces;
 
 	/// -----------------------------------------------------------------------
-	/// 						CONSTRUCTOR
+	/// 						SETUP
 	/// -----------------------------------------------------------------------
-
-	constructor(address anEllipticCurveValidator) {
-		_ellipticCurveValidator = IEllipticCurveValidator(anEllipticCurveValidator);
-	}
 
 	/**
 	 * @notice Setup the module.

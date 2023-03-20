@@ -2,7 +2,6 @@
 pragma solidity ^0.8.13;
 
 import {ForumGroup} from '../../src/erc4337-group/ForumGroup.sol';
-import {IEllipticCurveValidator} from '@interfaces/IEllipticCurveValidator.sol';
 import {DeploymentSelector} from '../../lib/foundry-deployment-manager/src/DeploymentSelector.sol';
 
 /**
