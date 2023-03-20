@@ -12,12 +12,12 @@ import {HexToLiteralBytes} from '@libraries/HexToLiteralBytes.sol';
 import {IEllipticCurveValidator} from '@interfaces/IEllipticCurveValidator.sol';
 
 import {Exec} from '@utils/Exec.sol';
+import {MemberManager} from '@utils/MemberManager.sol';
 
 import {GnosisSafe, Enum} from '@gnosis/GnosisSafe.sol';
 import {IAccount} from '@erc4337/interfaces/IAccount.sol';
 import {IEntryPoint, UserOperation} from '@erc4337/interfaces/IEntryPoint.sol';
-
-import {MemberManager} from '@utils/MemberManager.sol';
+import {Secp256r1, PassKeyId} from '../../lib/aa-passkeys-wallet/src/Secp256r1.sol'; // tidy import
 
 /**
  * @notice Forum Group
@@ -143,10 +143,11 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 			// Check if the signature is not empty, check if it's valid
 			if (
 				sig[i][0] != 0 &&
-				_ellipticCurveValidator.validateSignature(
-					fullMessage,
-					[sig[i][0], sig[i][1]],
-					[members[i].x, members[i].y]
+				Secp256r1.Verify(
+					PassKeyId(members[i].x, members[i].y, ''),
+					sig[i][0],
+					sig[i][1],
+					uint(fullMessage)
 				)
 			) ++count;
 
