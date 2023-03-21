@@ -7,4 +7,7 @@
 
 ## Deploying a contract (for now)
 
-forge script script/deploy/[SCRIPT_NAME].s.sol:[SCRIPT_NAME] --rpc-url [RPCURL] --private-key [PRIVATE_KEY] --broadcast --verify --etherscan-api-key [ETHERSCAN_API_KEY]
+forge deploy [SCRIPT_NAME] [RPCURL] [CHAIN_ID] [PRIVATE_KEY] [ETHERSCAN_API_KEY] --broadcast
+
+-   omit --broadcast to test local
+-   If deployment fails, adding `--gas-limit X --gas-price Y --nonce Z` may avoid `"code: -32000, message: already known, data: None"`
