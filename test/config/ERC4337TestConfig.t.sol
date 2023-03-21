@@ -12,12 +12,14 @@ import {ForumGroup} from '../../src/erc4337-group/ForumGroup.sol';
 import {ForumGroupFactory} from '../../src/erc4337-group/ForumGroupFactory.sol';
 import {MemberManager} from '@utils/MemberManager.sol';
 
+// Lib for encoding
+import {Base64} from '@libraries/Base64.sol';
+
 import './SafeTestConfig.t.sol';
 import './BasicTestConfig.t.sol';
+import {SignatureHelper} from './SignatureHelper.t.sol';
 
-contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig {
-	// 4337 Account Types
-
+contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
 	// Entry point
 	EntryPoint public entryPoint;
 
@@ -115,6 +117,68 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig {
 				data,
 				operation
 			);
+	}
+
+	// Gathers signatures from signers and formats them into the signature field for the user operation
+	// Maybe only one sig is needed, so siger2 may be empty
+	function signAndFormatUserOp(
+		UserOperation memory userOp,
+		string memory signer1,
+		string memory signer2
+	) internal returns (UserOperation[] memory) {
+		uint256 signerCount;
+		uint256[2] memory sig1;
+		uint256[2] memory sig2;
+
+		// Get signature for the user operation
+		sig1 = signMessageForPublicKey(
+			signer1,
+			Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(userOp)))
+		);
+
+		// If signer2 is not empty, get signature for it
+		if (bytes(signer2).length > 0) {
+			sig2 = signMessageForPublicKey(
+				signer2,
+				Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(userOp)))
+			);
+			signerCount = 2;
+		} else {
+			signerCount = 1;
+		}
+
+		// Build the signatures into an array
+		uint256[2][] memory sigs = new uint256[2][](signerCount);
+		sigs[0] = sig1;
+		if (signerCount == 2) {
+			sigs[1] = sig2;
+		}
+
+		/// @dev The signatures are added to the user op with some extra information
+		// 1) The index of each signer in an array
+		//		- for these tests we know that signer1 is at index 1 and signer2 is at index 0
+		//		- this is because when accounts are added they are put to the front of the linked list
+		//		- in production we can get this information by calling getMembers and getting the index of each signer
+		// 2) The authentacator data
+
+		// Build the array of signer indexes
+		/// @dev We see that if there is only one signer, the index is 0
+		// 		- this is because if there is only one signer, they are at index 0
+		//		- if there are two signers, the first signer is at index 1 and the second is at index 0 because of how they are added to the linked list
+		uint256[] memory signerIndexes = new uint256[](signerCount);
+		if (signerCount == 1) {
+			signerIndexes[0] = 0;
+		} else {
+			signerIndexes[0] = 1;
+			signerIndexes[1] = 0;
+		}
+
+		userOp.signature = abi.encode(signerIndexes, sigs, authentacatorData);
+
+		UserOperation[] memory userOpArray = new UserOperation[](1);
+		userOpArray[0] = userOp;
+
+		return userOpArray;
 	}
 
 	// Calculate gas used by sender of userOp

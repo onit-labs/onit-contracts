@@ -2,9 +2,6 @@
 pragma solidity ^0.8.15;
 
 /* solhint-disable avoid-low-level-calls */
-/* solhint-disable no-inline-assembly */
-/* solhint-disable reason-string */
-/* solhint-disable no-console */
 
 import {Base64} from '@libraries/Base64.sol';
 import {HexToLiteralBytes} from '@libraries/HexToLiteralBytes.sol';
@@ -16,8 +13,6 @@ import {GnosisSafe, Enum} from '@gnosis/GnosisSafe.sol';
 import {IAccount} from '@erc4337/interfaces/IAccount.sol';
 import {IEntryPoint, UserOperation} from '@erc4337/interfaces/IEntryPoint.sol';
 import {Secp256r1, PassKeyId} from '../../lib/aa-passkeys-wallet/src/Secp256r1.sol'; // tidy import
-
-import 'forge-std/console.sol';
 
 /**
  * @notice Forum Group
@@ -40,8 +35,10 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 	///							GROUP STORAGE
 	/// ----------------------------------------------------------------------------------------
 
+	// Should be made immutable - also consider removing variables and passing in signature
 	string internal _clientDataStart;
 
+	// Should be made immutable - also consider removing variables and passing in signature
 	string internal _clientDataEnd;
 
 	// Reference to latest entrypoint
@@ -121,10 +118,9 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 		if (msg.sender != _entryPoint) revert NotFromEntrypoint();
 
 		// Extract the passkey generated signature and authentacator data
-		(uint256[2][] memory sig, string memory authData) = abi.decode(
-			userOp.signature,
-			(uint256[2][], string)
-		);
+		// Signer index is the index of the signer in the members array, used to retrieve the public key
+		(uint256[] memory signerIndex, uint256[2][] memory sig, string memory authData) = abi
+			.decode(userOp.signature, (uint256[], uint256[2][], string));
 
 		// Hash the client data to produce the challenge signed by the passkey offchain
 		bytes32 hashedClientData = sha256(
@@ -141,13 +137,11 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 
 		uint256 count;
 
-		// ! Update this to avoid needing to pass empty sigs
-		for (uint i; i < memberCount; ) {
-			// Check if the signature is not empty, check if it's valid
+		for (uint i; i < signerIndex.length; ) {
+			// Check if the signature is valid and increment count if so
 			if (
-				sig[i][0] != 0 &&
 				Secp256r1.Verify(
-					PassKeyId(members[i].x, members[i].y, ''),
+					PassKeyId(members[signerIndex[i]].x, members[signerIndex[i]].y, ''),
 					sig[i][0],
 					sig[i][1],
 					uint(fullMessage)
@@ -207,7 +201,7 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 	}
 
 	/// -----------------------------------------------------------------------
-	/// 						MODULE MANAGEMENT
+	/// 						GROUP MANAGEMENT
 	/// -----------------------------------------------------------------------
 
 	function setEntryPoint(address anEntryPoint) external {
