@@ -55,6 +55,11 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 	/// 						SETUP
 	/// -----------------------------------------------------------------------
 
+	// Ensures the singleton can not be setup
+	constructor() {
+		voteThreshold = 1;
+	}
+
 	/**
 	 * @notice Setup the module.
 	 * @param _anEntryPoint The entrypoint to use on the safe

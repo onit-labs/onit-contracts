@@ -29,7 +29,8 @@ contract ForumGroupFactoryDeployer is DeploymentSelector {
 			forumGroupSingleton,
 			entryPoint,
 			gnosisSingleton,
-			gnosisFallbackHandler
+			gnosisFallbackHandler,
+			vm.envBool('PRODUCTION')
 		);
 
 		(address contractAddress, bytes memory deploymentBytecode) = SelectDeployment(
