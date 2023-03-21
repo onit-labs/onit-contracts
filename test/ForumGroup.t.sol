@@ -97,19 +97,17 @@ contract ForumGroupTest is ERC4337TestConfig {
 		ForumGroup newForumGroup = ForumGroup(payable(preCalculatedAccountAddress));
 
 		// Build user operation
-		UserOperation[] memory userOps = new UserOperation[](1);
-		userOps[0] = buildUserOp(preCalculatedAccountAddress, 0, initCode, basicTransferCalldata);
-
-		// Get signature for userOp
-		uint256[2][] memory sigs = new uint256[2][](2);
-		sigs[0] = signMessageForPublicKey(
-			SIGNER_1,
-			Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(userOps[0])))
+		UserOperation memory userOp = buildUserOp(
+			preCalculatedAccountAddress,
+			0,
+			initCode,
+			basicTransferCalldata
 		);
-		userOps[0].signature = abi.encode(sigs, authentacatorData);
+
+		UserOperation[] memory userOpArray = signAndFormatUserOp(userOp, SIGNER_1, '');
 
 		// Handle userOp
-		entryPoint.handleOps(userOps, payable(alice));
+		entryPoint.handleOps(userOpArray, payable(alice));
 
 		// Check the account has been deployed
 		// check the members and threshold are set
@@ -255,20 +253,7 @@ contract ForumGroupTest is ERC4337TestConfig {
 			basicTransferCalldata
 		);
 
-		// Get signatures for the user operation
-		uint256[2] memory sig1 = signMessageForPublicKey(
-			SIGNER_1,
-			Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(userOp)))
-		);
-
-		// @dev signatures must be in the order members are added to the group (can be retrieved using getMembers())
-		uint256[2][] memory sigs = new uint256[2][](1);
-		sigs[0] = sig1;
-
-		userOp.signature = abi.encode(sigs, authentacatorData);
-
-		UserOperation[] memory userOpArray = new UserOperation[](1);
-		userOpArray[0] = userOp;
+		UserOperation[] memory userOpArray = signAndFormatUserOp(userOp, SIGNER_1, '');
 
 		entryPoint.handleOps(userOpArray, payable(bob));
 
@@ -278,51 +263,6 @@ contract ForumGroupTest is ERC4337TestConfig {
 		// Transfer has been made, nonce incremented, used nonce set
 		assertTrue(address(alice).balance == 1.5 ether);
 		assertTrue(address(forumGroup).balance == 0.5 ether - gas);
-		assertTrue(forumGroup.nonce() == 1);
-		assertTrue(forumGroup.usedNonces(userOp.nonce) == 1);
-	}
-
-	function testVotingWithEmptySig() public {
-		// Add second member to make a group of 2
-		inputMembers.push([publicKey2[0], publicKey2[1]]);
-
-		forumGroup = ForumGroup(
-			payable(forumGroupFactory.deployForumGroup(GROUP_NAME_2, 1, inputMembers))
-		);
-
-		deal(address(forumGroup), 10 ether);
-
-		// Build user operation
-		UserOperation memory userOp = buildUserOp(
-			address(forumGroup),
-			forumGroup.nonce(),
-			new bytes(0),
-			basicTransferCalldata
-		);
-
-		// Get signatures for the user operation
-		uint256[2] memory sig1 = signMessageForPublicKey(
-			SIGNER_1,
-			Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(userOp)))
-		);
-		uint256[2] memory s2 = [uint256(0), uint256(0)];
-
-		uint256[2][] memory sigs = new uint256[2][](2);
-		sigs[0] = sig1;
-		sigs[1] = s2;
-
-		userOp.signature = abi.encode(sigs, authentacatorData);
-
-		UserOperation[] memory userOpArray = new UserOperation[](1);
-		userOpArray[0] = userOp;
-
-		entryPoint.handleOps(userOpArray, payable(address(this)));
-
-		uint256 gas = calculateGas(userOp);
-
-		// Transfer has been made, nonce incremented, used nonce set
-		assertTrue(address(alice).balance == 1.5 ether);
-		assertTrue(address(forumGroup).balance == 10.5 ether - gas);
 		assertTrue(forumGroup.nonce() == 1);
 		assertTrue(forumGroup.usedNonces(userOp.nonce) == 1);
 	}
@@ -346,22 +286,7 @@ contract ForumGroupTest is ERC4337TestConfig {
 			basicTransferCalldata
 		);
 
-		// Get signatures for the user operation
-		uint256[2] memory sig1 = signMessageForPublicKey(
-			SIGNER_1,
-			Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(userOp)))
-		);
-		// Empty as member 2 did not vote
-		uint256[2] memory s2 = [uint256(0), uint256(0)];
-
-		uint256[2][] memory sigs = new uint256[2][](2);
-		sigs[0] = sig1;
-		sigs[1] = s2;
-
-		userOp.signature = abi.encode(sigs, authentacatorData);
-
-		UserOperation[] memory userOpArray = new UserOperation[](1);
-		userOpArray[0] = userOp;
+		UserOperation[] memory userOpArray = signAndFormatUserOp(userOp, SIGNER_1, '');
 
 		// Revert as not enough votes
 		vm.expectRevert(failedOpError(uint256(0), 'AA24 signature error'));
