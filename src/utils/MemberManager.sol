@@ -29,13 +29,16 @@ contract MemberManager is SelfAuthorized {
 		uint256 y;
 	}
 
-	// We use the x value of a member as the head of the linked list
 	// Initially, the head is set to 1
 	Member internal SENTINEL = Member({x: 1, y: 1});
 
+	// Number of members in group
 	uint256 internal memberCount;
+
+	// Number of required signatures for a Safe transaction.
 	uint256 internal voteThreshold;
 
+	// We use the x value of members as the key of the linked list
 	mapping(uint256 => Member) internal members;
 
 	/// ----------------------------------------------------------------------------------------

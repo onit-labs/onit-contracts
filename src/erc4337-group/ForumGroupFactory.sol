@@ -20,6 +20,9 @@ contract ForumGroupFactory {
 	/// Factory Storage
 	/// ----------------------------------------------------------------------------------------
 
+	// If we are in production
+	bool public immutable production;
+
 	// Template contract to use for new forum groups
 	address public immutable forumGroupSingleton;
 
@@ -40,6 +43,11 @@ contract ForumGroupFactory {
 	// Data sent to the deterministic deployment proxy to deploy a new group module
 	bytes private _createForumGroupProxyData;
 
+	// Client data used for validating passkey signatures on contract
+	string internal _clientDataStart = '{"type":"webauthn.get","challenge":"';
+	string internal _clientDataEndDevelopment = '","origin":"https://development.forumdaos.com"}';
+	string internal _clientDataEndProduction = '","origin":"https://production.forumdaos.com"}';
+
 	/// ----------------------------------------------------------------------------------------
 	/// Constructor
 	/// ----------------------------------------------------------------------------------------
@@ -48,12 +56,14 @@ contract ForumGroupFactory {
 		address payable _forumGroupSingleton,
 		address _entryPoint,
 		address _gnosisSingleton,
-		address _gnosisFallbackLibrary
+		address _gnosisFallbackLibrary,
+		bool _production
 	) {
 		forumGroupSingleton = _forumGroupSingleton;
 		entryPoint = _entryPoint;
 		gnosisSingleton = _gnosisSingleton;
 		gnosisFallbackLibrary = _gnosisFallbackLibrary;
+		production = _production;
 
 		// Data sent to the deterministic deployment proxy to deploy a new forum group
 		_createForumGroupProxyData = abi.encodePacked(
@@ -107,7 +117,9 @@ contract ForumGroupFactory {
 			entryPoint,
 			gnosisFallbackLibrary,
 			_voteThreshold,
-			_members
+			_members,
+			_clientDataStart,
+			production ? _clientDataEndProduction : _clientDataEndDevelopment
 		);
 
 		emit ForumGroupDeployed(forumGroup);

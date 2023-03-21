@@ -4,6 +4,7 @@ pragma solidity ^0.8.15;
 /* solhint-disable avoid-low-level-calls */
 /* solhint-disable no-inline-assembly */
 /* solhint-disable reason-string */
+/* solhint-disable no-console */
 
 import {Base64} from '@libraries/Base64.sol';
 import {HexToLiteralBytes} from '@libraries/HexToLiteralBytes.sol';
@@ -15,6 +16,8 @@ import {GnosisSafe, Enum} from '@gnosis/GnosisSafe.sol';
 import {IAccount} from '@erc4337/interfaces/IAccount.sol';
 import {IEntryPoint, UserOperation} from '@erc4337/interfaces/IEntryPoint.sol';
 import {Secp256r1, PassKeyId} from '../../lib/aa-passkeys-wallet/src/Secp256r1.sol'; // tidy import
+
+import 'forge-std/console.sol';
 
 /**
  * @notice Forum Group
@@ -36,6 +39,10 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 	/// ----------------------------------------------------------------------------------------
 	///							GROUP STORAGE
 	/// ----------------------------------------------------------------------------------------
+
+	string internal _clientDataStart;
+
+	string internal _clientDataEnd;
 
 	// Reference to latest entrypoint
 	address internal _entryPoint;
@@ -62,7 +69,9 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 		address _anEntryPoint,
 		address fallbackHandler,
 		uint256 _voteThreshold,
-		uint256[2][] memory _members
+		uint256[2][] memory _members,
+		string memory clientDataStart,
+		string memory clientDataEnd
 	) external {
 		// Can only be set up once
 		if (voteThreshold != 0) revert ModuleAlreadySetUp();
@@ -86,11 +95,15 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 		if (
 			_anEntryPoint == address(0) ||
 			_voteThreshold < 1 ||
-			_voteThreshold > 10000 ||
+			_voteThreshold > _members.length ||
 			_members.length < 1
 		) revert InvalidInitialisation();
 
 		_entryPoint = _anEntryPoint;
+
+		_clientDataStart = clientDataStart;
+
+		_clientDataEnd = clientDataEnd;
 
 		// Set up the members
 		setupMembers(_members, _voteThreshold);
@@ -116,9 +129,9 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 		// Hash the client data to produce the challenge signed by the passkey offchain
 		bytes32 hashedClientData = sha256(
 			abi.encodePacked(
-				'{"type":"webauthn.get","challenge":"',
+				_clientDataStart,
 				Base64.encode(abi.encodePacked(userOpHash)),
-				'","origin":"https://development.forumdaos.com"}'
+				_clientDataEnd
 			)
 		);
 
