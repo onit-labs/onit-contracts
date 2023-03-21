@@ -64,7 +64,7 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 	 * @notice Setup the module.
 	 * @param _anEntryPoint The entrypoint to use on the safe
 	 * @param fallbackHandler The fallback handler to use on the safe
-	 * @param _voteThreshold Vote threshold to pass (basis points of 10,000 ie. 6,000 = 60%)
+	 * @param _voteThreshold Vote threshold to pass (counted in members)
 	 * @param _members The public key pairs of the signing members of the group
 	 */
 	function setUp(
