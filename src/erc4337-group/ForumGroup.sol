@@ -2,39 +2,21 @@
 pragma solidity ^0.8.15;
 
 /* solhint-disable avoid-low-level-calls */
-/* solhint-disable no-inline-assembly */
-/* solhint-disable reason-string */
-/* solhint-disable no-console */
 
 import {Base64} from '@libraries/Base64.sol';
 import {HexToLiteralBytes} from '@libraries/HexToLiteralBytes.sol';
 
-// Interface of the elliptic curve validator contract
-import {IEllipticCurveValidator} from '@interfaces/IEllipticCurveValidator.sol';
-
-import '@utils/Exec.sol';
-
-import '@gnosis/GnosisSafe.sol';
-import '@erc4337/interfaces/IAccount.sol';
-import '@erc4337/interfaces/IEntryPoint.sol';
-
+import {Exec} from '@utils/Exec.sol';
 import {MemberManager} from '@utils/MemberManager.sol';
 
-import 'forge-std/console.sol';
-
-// !!!
-// ! correct checks on functions (ie. onlyEntryPoint)
-// - Consider domain / chain info to be included in signatures
-// - Integrate validation of sigs on elliptic contract
-// - Make more addresses immutable to save gas
-// !!!
+import {GnosisSafe, Enum} from '@gnosis/GnosisSafe.sol';
+import {IAccount} from '@erc4337/interfaces/IAccount.sol';
+import {IEntryPoint, UserOperation} from '@erc4337/interfaces/IEntryPoint.sol';
+import {Secp256r1, PassKeyId} from '../../lib/aa-passkeys-wallet/src/Secp256r1.sol'; // tidy import
 
 /**
- * @notice Forum Group Module.
- * @dev - Called directly from entrypoint so must implement validateUserOp
- * 		- Holds an immutable reference to the EntryPoint
- * 		- Is enabled as a module on a Gnosis Safe
- * @author modified from infinitism https://github.com/eth-infinitism/account-abstraction/contracts/samples/gnosis/ERC4337Module.sol
+ * @notice Forum Group
+ * @author Forum - Modified from infinitism https://github.com/eth-infinitism/account-abstraction/contracts/samples/gnosis/ERC4337Module.sol
  */
 contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 	/// ----------------------------------------------------------------------------------------
@@ -49,14 +31,15 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 
 	error InvalidNonce();
 
-	error InvalidThreshold();
-
 	/// ----------------------------------------------------------------------------------------
 	///							GROUP STORAGE
 	/// ----------------------------------------------------------------------------------------
 
-	// Immutable reference to validator of the secp256r1 signatures
-	IEllipticCurveValidator internal immutable _ellipticCurveValidator;
+	// Should be made immutable - also consider removing variables and passing in signature
+	string internal _clientDataStart;
+
+	// Should be made immutable - also consider removing variables and passing in signature
+	string internal _clientDataEnd;
 
 	// Reference to latest entrypoint
 	address internal _entryPoint;
@@ -65,43 +48,41 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 	// Equivalent to _packValidationData(true,0,0);
 	uint256 internal constant SIG_VALIDATION_FAILED = 1;
 
-	// Used nonces; 1 = used (prevents replaying the same userOp)
+	// Used nonces; 1 = used (prevents replaying the same userOp, while allowing out of order execution)
 	mapping(uint256 => uint256) public usedNonces;
 
 	/// -----------------------------------------------------------------------
-	/// 						CONSTRUCTOR
+	/// 						SETUP
 	/// -----------------------------------------------------------------------
 
-	constructor(address anEllipticCurveValidator) {
-		_ellipticCurveValidator = IEllipticCurveValidator(anEllipticCurveValidator);
+	// Ensures the singleton can not be setup
+	constructor() {
+		voteThreshold = 1;
 	}
 
 	/**
 	 * @notice Setup the module.
-	 * @dev - Called from the safe during the safe setup
-	 * 		- Enables the entrypoint & fallback for the safe and sets up this module
-	 * @param anEntryPoint The entrypoint to use on the safe
+	 * @param _anEntryPoint The entrypoint to use on the safe
 	 * @param fallbackHandler The fallback handler to use on the safe
-	 * @param _voteThreshold Vote threshold to pass (basis points of 10,000 ie. 6,000 = 60%)
-	 * @param membersX The public keys of the signing members of the group
-	 * @param membersY The public keys of the signing members of the group
+	 * @param _voteThreshold Vote threshold to pass (counted in members)
+	 * @param _members The public key pairs of the signing members of the group
 	 */
 	function setUp(
-		address anEntryPoint,
+		address _anEntryPoint,
 		address fallbackHandler,
 		uint256 _voteThreshold,
-		uint256[] memory membersX,
-		uint256[] memory membersY
+		uint256[2][] memory _members,
+		string memory clientDataStart,
+		string memory clientDataEnd
 	) external {
+		// Can only be set up once
 		if (voteThreshold != 0) revert ModuleAlreadySetUp();
-
-		_entryPoint = anEntryPoint;
 
 		// Create a placeholder owner
 		address[] memory ownerPlaceholder = new address[](1);
 		ownerPlaceholder[0] = address(0xdead);
 
-		// Setup the safe
+		// Setup the safe with placeholder owner and threshold 1
 		this.setup(
 			ownerPlaceholder,
 			1,
@@ -114,19 +95,20 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 		);
 
 		if (
-			_voteThreshold <= 0 ||
-			_voteThreshold > 10000 ||
-			membersX.length <= 0 ||
-			membersX.length != membersY.length
+			_anEntryPoint == address(0) ||
+			_voteThreshold < 1 ||
+			_voteThreshold > _members.length ||
+			_members.length < 1
 		) revert InvalidInitialisation();
 
-		uint256[2][] memory members = new uint256[2][](membersX.length);
-		for (uint256 i = 0; i < membersX.length; i++) {
-			members[i] = [membersX[i], membersY[i]];
-		}
+		_entryPoint = _anEntryPoint;
+
+		_clientDataStart = clientDataStart;
+
+		_clientDataEnd = clientDataEnd;
 
 		// Set up the members
-		setupMembers(members, _voteThreshold);
+		setupMembers(_members, _voteThreshold);
 	}
 
 	/// -----------------------------------------------------------------------
@@ -141,17 +123,16 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 		if (msg.sender != _entryPoint) revert NotFromEntrypoint();
 
 		// Extract the passkey generated signature and authentacator data
-		(uint256[2][] memory sig, string memory authData) = abi.decode(
-			userOp.signature,
-			(uint256[2][], string)
-		);
+		// Signer index is the index of the signer in the members array, used to retrieve the public key
+		(uint256[] memory signerIndex, uint256[2][] memory sig, string memory authData) = abi
+			.decode(userOp.signature, (uint256[], uint256[2][], string));
 
 		// Hash the client data to produce the challenge signed by the passkey offchain
 		bytes32 hashedClientData = sha256(
 			abi.encodePacked(
-				'{"type":"webauthn.get","challenge":"',
+				_clientDataStart,
 				Base64.encode(abi.encodePacked(userOpHash)),
-				'","origin":"https://development.forumdaos.com"}'
+				_clientDataEnd
 			)
 		);
 
@@ -161,15 +142,14 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 
 		uint256 count;
 
-		// ! Update this to avoid needing to pass empty sigs
-		for (uint i; i < memberCount; ) {
-			// Check if the signature is not empty, check if it's valid
+		for (uint i; i < signerIndex.length; ) {
+			// Check if the signature is valid and increment count if so
 			if (
-				sig[i][0] != 0 &&
-				_ellipticCurveValidator.validateSignature(
-					fullMessage,
-					[sig[i][0], sig[i][1]],
-					[members[i].x, members[i].y]
+				Secp256r1.Verify(
+					PassKeyId(members[signerIndex[i]].x, members[signerIndex[i]].y, ''),
+					sig[i][0],
+					sig[i][1],
+					uint(fullMessage)
 				)
 			) ++count;
 
@@ -226,7 +206,7 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 	}
 
 	/// -----------------------------------------------------------------------
-	/// 						MODULE MANAGEMENT
+	/// 						GROUP MANAGEMENT
 	/// -----------------------------------------------------------------------
 
 	function setEntryPoint(address anEntryPoint) external {

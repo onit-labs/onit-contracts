@@ -2,7 +2,6 @@
 pragma solidity ^0.8.13;
 
 import {ForumAccount} from '../../src/erc4337-account/ForumAccount.sol';
-import {IEllipticCurveValidator} from '@interfaces/IEllipticCurveValidator.sol';
 import {DeploymentSelector} from '../../lib/foundry-deployment-manager/src/DeploymentSelector.sol';
 
 /**
@@ -13,8 +12,6 @@ import {DeploymentSelector} from '../../lib/foundry-deployment-manager/src/Deplo
 contract ForumAccountDeployer is DeploymentSelector {
 	ForumAccount internal account;
 
-	address internal validator = 0xBa81560Ae6Bd24D34BB24084993AfdaFad3cfeff;
-
 	function run() public {
 		innerRun();
 		outputDeployment();
@@ -23,7 +20,8 @@ contract ForumAccountDeployer is DeploymentSelector {
 	function innerRun() public {
 		startBroadcast();
 
-		bytes memory initData = abi.encode(validator);
+		// No longer using external validator
+		bytes memory initData = new bytes(0);
 
 		(address contractAddress, bytes memory deploymentBytecode) = SelectDeployment(
 			'ForumAccount',

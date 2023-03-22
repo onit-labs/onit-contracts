@@ -2,7 +2,6 @@
 pragma solidity ^0.8.13;
 
 import {ForumGroup} from '../../src/erc4337-group/ForumGroup.sol';
-import {IEllipticCurveValidator} from '@interfaces/IEllipticCurveValidator.sol';
 import {DeploymentSelector} from '../../lib/foundry-deployment-manager/src/DeploymentSelector.sol';
 
 /**
@@ -13,7 +12,9 @@ import {DeploymentSelector} from '../../lib/foundry-deployment-manager/src/Deplo
 contract ForumGroupDeployer is DeploymentSelector {
 	ForumGroup internal forumGroup;
 
-	address internal validator = 0xBa81560Ae6Bd24D34BB24084993AfdaFad3cfeff;
+	string internal clientDataStart = '{"type":"webauthn.get","challenge":"';
+	string internal clientDataEndDevelopment = '","origin":"https://development.forumdaos.com"}';
+	string internal clientDataEndProduction = '","origin":"https://production.forumdaos.com"}';
 
 	function run() public {
 		innerRun();
@@ -23,7 +24,13 @@ contract ForumGroupDeployer is DeploymentSelector {
 	function innerRun() public {
 		startBroadcast();
 
-		bytes memory initData = abi.encode(validator);
+		string memory usedEnding = clientDataEndDevelopment;
+
+		// If we are in production, use the production client data ending
+		if (vm.envBool('PRODUCTION')) usedEnding = clientDataEndProduction;
+
+		// No longer using external validator
+		bytes memory initData = new bytes(0);
 
 		(address contractAddress, bytes memory deploymentBytecode) = SelectDeployment(
 			'ForumGroup',

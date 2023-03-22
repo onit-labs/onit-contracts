@@ -5,8 +5,6 @@ pragma solidity ^0.8.15;
 
 import './config/ERC4337TestConfig.t.sol';
 
-import {SignatureHelper} from './config/SignatureHelper.t.sol';
-
 import {Base64} from '@libraries/Base64.sol';
 
 /**
@@ -14,15 +12,14 @@ import {Base64} from '@libraries/Base64.sol';
  * - Improve salt for group deployment. Should be more restrictive to prevent frontrunning, and should work cross chain
  * - Improve test code - still some repeated code that could be broken into functions
  */
-contract ForumGroupTest is ERC4337TestConfig, SignatureHelper {
+contract ForumGroupTest is ERC4337TestConfig {
 	ForumGroup private forumGroup;
 	GnosisSafe private safe;
 
 	// Some public keys used as signers in tests
 	uint256[2] internal publicKey;
 	uint256[2] internal publicKey2;
-	uint256[] internal membersX;
-	uint256[] internal membersY;
+	uint256[2][] internal inputMembers;
 
 	string internal constant SIGNER_1 = '1';
 	string internal constant SIGNER_2 = '2';
@@ -42,12 +39,11 @@ contract ForumGroupTest is ERC4337TestConfig, SignatureHelper {
 		publicKey2 = createPublicKey(SIGNER_2);
 
 		// Format signers into arrays to be added to contract
-		membersX.push(publicKey[0]);
-		membersY.push(publicKey[1]);
+		inputMembers.push([publicKey[0], publicKey[1]]);
 
 		// Deploy a forum safe from the factory
 		forumGroup = ForumGroup(
-			payable(forumGroupFactory.deployForumGroup(GROUP_NAME_1, 1, membersX, membersY))
+			payable(forumGroupFactory.deployForumGroup(GROUP_NAME_1, 1, inputMembers))
 		);
 
 		// Deal the account some funds
@@ -84,7 +80,7 @@ contract ForumGroupTest is ERC4337TestConfig, SignatureHelper {
 		// Encode the calldata for the factory to create an account
 		bytes memory factoryCalldata = abi.encodeCall(
 			forumGroupFactory.deployForumGroup,
-			(GROUP_NAME_2, 1, membersX, membersY)
+			(GROUP_NAME_2, 1, inputMembers)
 		);
 
 		//Prepend the address of the factory
@@ -101,19 +97,17 @@ contract ForumGroupTest is ERC4337TestConfig, SignatureHelper {
 		ForumGroup newForumGroup = ForumGroup(payable(preCalculatedAccountAddress));
 
 		// Build user operation
-		UserOperation[] memory userOps = new UserOperation[](1);
-		userOps[0] = buildUserOp(preCalculatedAccountAddress, 0, initCode, basicTransferCalldata);
-
-		// Get signature for userOp
-		uint256[2][] memory sigs = new uint256[2][](2);
-		sigs[0] = signMessageForPublicKey(
-			SIGNER_1,
-			Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(userOps[0])))
+		UserOperation memory userOp = buildUserOp(
+			preCalculatedAccountAddress,
+			0,
+			initCode,
+			basicTransferCalldata
 		);
-		userOps[0].signature = abi.encode(sigs, authentacatorData);
+
+		UserOperation[] memory userOpArray = signAndFormatUserOp(userOp, SIGNER_1, '');
 
 		// Handle userOp
-		entryPoint.handleOps(userOps, payable(alice));
+		entryPoint.handleOps(userOpArray, payable(alice));
 
 		// Check the account has been deployed
 		// check the members and threshold are set
@@ -139,7 +133,7 @@ contract ForumGroupTest is ERC4337TestConfig, SignatureHelper {
 	function testReturnAddressIfAlreadyDeployed() public {
 		// Deploy a second forum safe with the same name
 		ForumGroup newForumGroup = ForumGroup(
-			payable(forumGroupFactory.deployForumGroup(GROUP_NAME_1, 1, membersX, membersY))
+			payable(forumGroupFactory.deployForumGroup(GROUP_NAME_1, 1, inputMembers))
 		);
 
 		// Get address should return the address of the first safe
@@ -252,131 +246,98 @@ contract ForumGroupTest is ERC4337TestConfig, SignatureHelper {
 		assertTrue(forumGroup.nonce() == 0);
 
 		// Build user operation
-		UserOperation memory tmp = buildUserOp(
+		UserOperation memory userOp = buildUserOp(
 			address(forumGroup),
 			forumGroup.nonce(),
 			new bytes(0),
 			basicTransferCalldata
 		);
 
-		// Get signatures for the user operation
-		uint256[2] memory s1 = signMessageForPublicKey(
-			SIGNER_1,
-			Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(tmp)))
-		);
+		UserOperation[] memory userOpArray = signAndFormatUserOp(userOp, SIGNER_1, '');
 
-		// @dev signatures must be in the order members are added to the group (can be retrieved using getMembers())
-		uint256[2][] memory sigs = new uint256[2][](1);
-		sigs[0] = s1;
-
-		tmp.signature = abi.encode(sigs, authentacatorData);
-
-		UserOperation[] memory tmp1 = new UserOperation[](1);
-		tmp1[0] = tmp;
-
-		entryPoint.handleOps(tmp1, payable(bob));
+		entryPoint.handleOps(userOpArray, payable(bob));
 
 		// ! correct gas cost - take it from the useroperation event
-		uint256 gas = calculateGas(tmp);
+		uint256 gas = calculateGas(userOp);
 
 		// Transfer has been made, nonce incremented, used nonce set
 		assertTrue(address(alice).balance == 1.5 ether);
 		assertTrue(address(forumGroup).balance == 0.5 ether - gas);
 		assertTrue(forumGroup.nonce() == 1);
-		assertTrue(forumGroup.usedNonces(tmp.nonce) == 1);
-	}
-
-	function testVotingWithEmptySig() public {
-		// Add second member to make a group of 2
-		membersX.push(publicKey2[0]);
-		membersY.push(publicKey2[1]);
-
-		forumGroup = ForumGroup(
-			payable(forumGroupFactory.deployForumGroup(GROUP_NAME_2, 1, membersX, membersY))
-		);
-
-		deal(address(forumGroup), 10 ether);
-
-		// Build user operation
-		UserOperation memory tmp = buildUserOp(
-			address(forumGroup),
-			forumGroup.nonce(),
-			new bytes(0),
-			basicTransferCalldata
-		);
-
-		// Get signatures for the user operation
-		uint256[2] memory s1 = signMessageForPublicKey(
-			SIGNER_1,
-			Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(tmp)))
-		);
-		uint256[2] memory s2 = [uint256(0), uint256(0)];
-
-		uint256[2][] memory sigs = new uint256[2][](2);
-		sigs[0] = s1;
-		sigs[1] = s2;
-
-		tmp.signature = abi.encode(sigs, authentacatorData);
-
-		UserOperation[] memory tmp1 = new UserOperation[](1);
-		tmp1[0] = tmp;
-
-		entryPoint.handleOps(tmp1, payable(address(this)));
-
-		uint256 gas = calculateGas(tmp);
-
-		// Transfer has been made, nonce incremented, used nonce set
-		assertTrue(address(alice).balance == 1.5 ether);
-		assertTrue(address(forumGroup).balance == 0.5 ether - gas);
-		assertTrue(forumGroup.nonce() == 1);
-		assertTrue(forumGroup.usedNonces(tmp.nonce) == 1);
+		assertTrue(forumGroup.usedNonces(userOp.nonce) == 1);
 	}
 
 	function testRevertsIfUnderThreshold() public {
 		//Add second member to make  agroup of 2
-		membersX.push(publicKey2[0]);
-		membersY.push(publicKey2[1]);
+		inputMembers.push([publicKey2[0], publicKey2[1]]);
 
 		// Deploy a forum safe from the factory with 2 signers and threshold 2
 		forumGroup = ForumGroup(
-			payable(forumGroupFactory.deployForumGroup(GROUP_NAME_2, 2, membersX, membersY))
+			payable(forumGroupFactory.deployForumGroup(GROUP_NAME_2, 2, inputMembers))
 		);
 
 		deal(address(forumGroup), 10 ether);
 
 		// Build user operation
-		UserOperation memory tmp = buildUserOp(
+		UserOperation memory userOp = buildUserOp(
 			address(forumGroup),
 			forumGroup.nonce(),
 			new bytes(0),
 			basicTransferCalldata
 		);
 
-		// Get signatures for the user operation
-		uint256[2] memory s1 = signMessageForPublicKey(
-			SIGNER_1,
-			Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(tmp)))
-		);
-		// Empty as member 2 did not vote
-		uint256[2] memory s2 = [uint256(0), uint256(0)];
-
-		uint256[2][] memory sigs = new uint256[2][](2);
-		sigs[0] = s1;
-		sigs[1] = s2;
-
-		tmp.signature = abi.encode(sigs, authentacatorData);
-
-		UserOperation[] memory tmp1 = new UserOperation[](1);
-		tmp1[0] = tmp;
+		UserOperation[] memory userOpArray = signAndFormatUserOp(userOp, SIGNER_1, '');
 
 		// Revert as not enough votes
-		vm.expectRevert('FailedOp(0, AA24 signature error)');
-		entryPoint.handleOps(tmp1, payable(address(this)));
+		vm.expectRevert(failedOpError(uint256(0), 'AA24 signature error'));
+		entryPoint.handleOps(userOpArray, payable(address(this)));
 
 		// Transfer has not been made, balances and nonce unchanged
 		assertTrue(address(alice).balance == 1 ether);
 		assertTrue(address(forumGroup).balance == 10 ether);
 		assertTrue(forumGroup.nonce() == 0);
+	}
+
+	function testAuthorisedFunctionFromEntryPoint() public {
+		uint256[2][] memory members = forumGroup.getMembers();
+
+		// Check member before the other is added
+		assertTrue(members.length == 1);
+		assertTrue(members[0][0] == publicKey[0]);
+		assertTrue(members[0][1] == publicKey[1]);
+
+		// Build add member calldata
+		bytes memory addMemberCalldata = abi.encodeCall(
+			forumGroup.addMemberWithThreshold,
+			(MemberManager.Member(publicKey2[0], publicKey2[1]), 1)
+		);
+
+		// Build a basic transaction to execute in some tests
+		basicTransferCalldata = buildExecutionPayload(
+			address(forumGroup),
+			0,
+			addMemberCalldata,
+			Enum.Operation.Call
+		);
+
+		// Build user operation
+		UserOperation memory userOp = buildUserOp(
+			address(forumGroup),
+			forumGroup.nonce(),
+			new bytes(0),
+			basicTransferCalldata
+		);
+
+		UserOperation[] memory userOpArray = signAndFormatUserOp(userOp, SIGNER_1, '');
+
+		entryPoint.handleOps(userOpArray, payable(bob));
+
+		members = forumGroup.getMembers();
+
+		// Check new member added
+		assertTrue(members.length == 2);
+		assertTrue(members[0][0] == publicKey2[0]);
+		assertTrue(members[0][1] == publicKey2[1]);
 	}
 
 	receive() external payable {}

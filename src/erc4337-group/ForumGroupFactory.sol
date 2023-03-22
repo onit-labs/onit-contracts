@@ -2,15 +2,11 @@
 
 pragma solidity ^0.8.15;
 
-/* solhint-disable no-console */
-
 import {GnosisSafe, Enum} from '@gnosis/GnosisSafe.sol';
 
 import {ForumGroup} from './ForumGroup.sol';
 
-import 'forge-std/console.sol';
-
-/// @notice Factory to deploy forum group.
+/// @notice Factory to deploy Forum group.
 contract ForumGroupFactory {
 	/// ----------------------------------------------------------------------------------------
 	/// Errors and Events
@@ -23,6 +19,9 @@ contract ForumGroupFactory {
 	/// ----------------------------------------------------------------------------------------
 	/// Factory Storage
 	/// ----------------------------------------------------------------------------------------
+
+	// If we are in production
+	bool public immutable production;
 
 	// Template contract to use for new forum groups
 	address public immutable forumGroupSingleton;
@@ -44,6 +43,11 @@ contract ForumGroupFactory {
 	// Data sent to the deterministic deployment proxy to deploy a new group module
 	bytes private _createForumGroupProxyData;
 
+	// Client data used for validating passkey signatures on contract
+	string internal _clientDataStart = '{"type":"webauthn.get","challenge":"';
+	string internal _clientDataEndDevelopment = '","origin":"https://development.forumdaos.com"}';
+	string internal _clientDataEndProduction = '","origin":"https://production.forumdaos.com"}';
+
 	/// ----------------------------------------------------------------------------------------
 	/// Constructor
 	/// ----------------------------------------------------------------------------------------
@@ -52,14 +56,16 @@ contract ForumGroupFactory {
 		address payable _forumGroupSingleton,
 		address _entryPoint,
 		address _gnosisSingleton,
-		address _gnosisFallbackLibrary
+		address _gnosisFallbackLibrary,
+		bool _production
 	) {
 		forumGroupSingleton = _forumGroupSingleton;
 		entryPoint = _entryPoint;
 		gnosisSingleton = _gnosisSingleton;
 		gnosisFallbackLibrary = _gnosisFallbackLibrary;
+		production = _production;
 
-		// Data sent to the deterministic deployment proxy to deploy a new forum group module
+		// Data sent to the deterministic deployment proxy to deploy a new forum group
 		_createForumGroupProxyData = abi.encodePacked(
 			// constructor
 			bytes10(0x3d602d80600a3d3981f3),
@@ -77,16 +83,14 @@ contract ForumGroupFactory {
 	/**
 	 * @notice Deploys a new Forum group which manages a safe account
 	 * @param _name Name of the forum group
-	 * @param _ownersX Array of initial owners on safe
-	 * @param _ownersY Array of initial owners on safe
+	 * @param _members Array of key pairs for initial members on the group
 	 * @return forumGroup The deployed forum group
 	 * @dev Returns an existing account address so that entryPoint.getSenderAddress() works even after account creation
 	 */
 	function deployForumGroup(
 		string calldata _name,
 		uint256 _voteThreshold,
-		uint256[] calldata _ownersX,
-		uint256[] calldata _ownersY
+		uint256[2][] calldata _members
 	) external payable virtual returns (address forumGroup) {
 		// ! Improve this salt - should be safely unique, and easily reusuable across chain
 		// ! Should also prevent any frontrunning to deploy to this address by anyone else
@@ -109,13 +113,13 @@ contract ForumGroupFactory {
 		// If not successful, revert
 		if (!successCreate || forumGroup == address(0)) revert NullDeploy();
 
-		// ! check fallback here
 		ForumGroup(payable(forumGroup)).setUp(
 			entryPoint,
 			gnosisFallbackLibrary,
 			_voteThreshold,
-			_ownersX,
-			_ownersY
+			_members,
+			_clientDataStart,
+			production ? _clientDataEndProduction : _clientDataEndDevelopment
 		);
 
 		emit ForumGroupDeployed(forumGroup);
