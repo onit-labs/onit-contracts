@@ -7,21 +7,24 @@ import {Base64} from '@libraries/Base64.sol';
 import {HexToLiteralBytes} from '@libraries/HexToLiteralBytes.sol';
 
 import {Exec} from '@utils/Exec.sol';
-import {MemberManager} from '@utils/MemberManager.sol';
 
 import {Safe, Enum} from '@safe/Safe.sol';
 import {IAccount} from '@erc4337/interfaces/IAccount.sol';
 import {IEntryPoint, UserOperation} from '@erc4337/interfaces/IEntryPoint.sol';
 import {Secp256r1, PassKeyId} from '../../lib/aa-passkeys-wallet/src/Secp256r1.sol'; // tidy import
 
+import {ForumGroupGovernance} from './ForumGroupGovernance.sol';
+
 /**
  * @notice Forum Group
  * @author Forum - Modified from infinitism https://github.com/eth-infinitism/account-abstraction/contracts/samples/gnosis/ERC4337Module.sol
  */
-contract ForumGroup is IAccount, Safe, MemberManager {
+contract ForumGroup is IAccount, Safe, ForumGroupGovernance {
 	/// ----------------------------------------------------------------------------------------
 	///							EVENTS & ERRORS
 	/// ----------------------------------------------------------------------------------------
+
+	event ChangedVoteThreshold(uint256 voteThreshold);
 
 	error ModuleAlreadySetUp();
 
@@ -29,11 +32,22 @@ contract ForumGroup is IAccount, Safe, MemberManager {
 
 	error InvalidInitialisation();
 
-	error InvalidNonce();
+	error InvalidThreshold();
 
 	/// ----------------------------------------------------------------------------------------
 	///							GROUP STORAGE
 	/// ----------------------------------------------------------------------------------------
+
+	/**
+	 * @notice Member struct
+	 * @param x Public key of member
+	 * @param y Public key of next member
+	 * @dev x & y are the public key of the members P-256 passkey
+	 */
+	struct Member {
+		uint256 x;
+		uint256 y;
+	}
 
 	// Should be made immutable - also consider removing variables and passing in signature
 	string internal _clientDataStart;
@@ -44,12 +58,23 @@ contract ForumGroup is IAccount, Safe, MemberManager {
 	// Reference to latest entrypoint
 	address internal _entryPoint;
 
+	// Number of required signatures for a Safe transaction.
+	uint256 internal _voteThreshold;
+
 	// Return value in case of signature failure, with no time-range.
 	// Equivalent to _packValidationData(true,0,0);
-	uint256 internal constant SIG_VALIDATION_FAILED = 1;
+	uint256 internal constant _SIG_VALIDATION_FAILED = 1;
+
+	// We calcualte the address formed from the public key of each member
+	// This address is not necessarily deployed yet
+	// ! consider if minting to these addresses is a good idea
+	mapping(address => Member) internal _members;
 
 	// Used nonces; 1 = used (prevents replaying the same userOp, while allowing out of order execution)
 	mapping(uint256 => uint256) public usedNonces;
+
+	// Storing all members to index the mapping
+	address[] internal _membersArray;
 
 	/// -----------------------------------------------------------------------
 	/// 						SETUP
@@ -57,26 +82,26 @@ contract ForumGroup is IAccount, Safe, MemberManager {
 
 	// Ensures the singleton can not be setup
 	constructor() {
-		voteThreshold = 1;
+		_voteThreshold = 1;
 	}
 
 	/**
 	 * @notice Setup the module.
 	 * @param _anEntryPoint The entrypoint to use on the safe
 	 * @param fallbackHandler The fallback handler to use on the safe
-	 * @param _voteThreshold Vote threshold to pass (counted in members)
-	 * @param _members The public key pairs of the signing members of the group
+	 * @param voteThreshold Vote threshold to pass (counted in members)
+	 * @param members The public key pairs of the signing members of the group
 	 */
 	function setUp(
 		address _anEntryPoint,
 		address fallbackHandler,
-		uint256 _voteThreshold,
-		uint256[2][] memory _members,
+		uint256 voteThreshold,
+		uint256[2][] memory members,
 		string memory clientDataStart,
 		string memory clientDataEnd
 	) external {
 		// Can only be set up once
-		if (voteThreshold != 0) revert ModuleAlreadySetUp();
+		if (_voteThreshold != 0) revert ModuleAlreadySetUp();
 
 		// Create a placeholder owner
 		address[] memory ownerPlaceholder = new address[](1);
@@ -96,9 +121,9 @@ contract ForumGroup is IAccount, Safe, MemberManager {
 
 		if (
 			_anEntryPoint == address(0) ||
-			_voteThreshold < 1 ||
-			_voteThreshold > _members.length ||
-			_members.length < 1
+			voteThreshold < 1 ||
+			voteThreshold > members.length ||
+			members.length < 1
 		) revert InvalidInitialisation();
 
 		_entryPoint = _anEntryPoint;
@@ -107,8 +132,21 @@ contract ForumGroup is IAccount, Safe, MemberManager {
 
 		_clientDataEnd = clientDataEnd;
 
+		_voteThreshold = voteThreshold;
+
 		// Set up the members
-		setupMembers(_members, _voteThreshold);
+		for (uint256 i; i < members.length; ++i) {
+			// create address for each pk
+			address memberAddress = addressFromPublicKey(members[i][0], members[i][1]);
+
+			// ! consider the below, there are many things being tracked here
+			// Add key pair to the members mapping
+			_members[memberAddress] = Member(members[i][0], members[i][1]);
+			// Add address to the members array
+			_membersArray.push(memberAddress);
+			// Mint membership token
+			_mint(memberAddress, TOKEN, 1, '');
+		}
 	}
 
 	/// -----------------------------------------------------------------------
@@ -146,7 +184,7 @@ contract ForumGroup is IAccount, Safe, MemberManager {
 			// Check if the signature is valid and increment count if so
 			if (
 				Secp256r1.Verify(
-					PassKeyId(members[signerIndex[i]].x, members[signerIndex[i]].y, ''),
+					PassKeyId(_members[signerIndex[i]].x, _members[signerIndex[i]].y, ''),
 					sig[i][0],
 					sig[i][1],
 					uint(fullMessage)
@@ -156,8 +194,8 @@ contract ForumGroup is IAccount, Safe, MemberManager {
 			++i;
 		}
 
-		if (count < voteThreshold) {
-			validationData = SIG_VALIDATION_FAILED;
+		if (count < _voteThreshold) {
+			validationData = _SIG_VALIDATION_FAILED;
 		}
 
 		// usedNonces mapping keeps the option to execute nonces out of order
@@ -266,6 +304,17 @@ contract ForumGroup is IAccount, Safe, MemberManager {
 	// 	}
 	// }
 
+	// ! consider visibility and access control
+	/// @notice Changes the voteThreshold of the Safe to `voteThreshold`.
+	/// @param voteThreshold New voteThreshold.
+	function changeVoteThreshold(uint256 voteThreshold) public authorized {
+		// Validate that voteThreshold is smaller than number of members & is at least 1
+		if (voteThreshold < 1 || voteThreshold > totalSupply[TOKEN]) revert InvalidThreshold();
+
+		_voteThreshold = voteThreshold;
+		emit ChangedVoteThreshold(_voteThreshold);
+	}
+
 	function setEntryPoint(address anEntryPoint) external {
 		if (msg.sender != _entryPoint) revert NotFromEntrypoint();
 
@@ -280,5 +329,9 @@ contract ForumGroup is IAccount, Safe, MemberManager {
 
 	function entryPoint() public view virtual returns (address) {
 		return _entryPoint;
+	}
+
+	function addressFromPublicKey(Member memory pk) public pure returns (address) {
+		return address(bytes20(keccak256(abi.encodePacked(pk.x, pk.y)) << 96));
 	}
 }

@@ -6,7 +6,7 @@ import {EnumerableSet} from '@openzeppelin/contracts/utils/structs/EnumerableSet
 /// @notice Minimalist and gas efficient ERC1155 based DAO implementation with governance.
 /// @author Modified from KaliDAO (https://github.com/kalidao/kali-contracts/blob/main/contracts/KaliDAOtoken.sol)
 
-abstract contract ForumGovernance {
+abstract contract ForumGroupGovernance {
 	using EnumerableSet for EnumerableSet.AddressSet;
 
 	/// ----------------------------------------------------------------------------------------
@@ -71,8 +71,6 @@ abstract contract ForumGovernance {
 	///							ERC1155 STORAGE
 	/// ----------------------------------------------------------------------------------------
 
-	uint256 public totalSupply;
-
 	mapping(address => mapping(uint256 => uint256)) public balanceOf;
 
 	mapping(address => mapping(address => bool)) public isApprovedForAll;
@@ -99,6 +97,8 @@ abstract contract ForumGovernance {
 	// DAO token representing voting share of treasury
 	uint256 internal constant TOKEN = 0;
 
+	mapping(uint256 => uint256) public totalSupply;
+
 	// All delegators for a member -> default case is an empty array
 	mapping(address => EnumerableSet.AddressSet) internal memberDelegators;
 	// The current delegate of a member -> default is no delegation, ie address(0)
@@ -124,7 +124,7 @@ abstract contract ForumGovernance {
 	///							METADATA LOGIC
 	/// ----------------------------------------------------------------------------------------
 
-	function uri(uint256 id) public view virtual returns (string memory);
+	//function uri(uint256 id) public view virtual returns (string memory);
 
 	/// ----------------------------------------------------------------------------------------
 	///							ERC1155 LOGIC
@@ -284,11 +284,7 @@ abstract contract ForumGovernance {
 		// balances can't exceed the max uint256 value
 		unchecked {
 			balanceOf[to][id] += amount;
-		}
-
-		// If token is being updated, update total supply
-		if (id == TOKEN) {
-			totalSupply += amount;
+			totalSupply[id] += amount;
 		}
 
 		emit TransferSingle(msg.sender, address(0), to, id, amount);
@@ -318,17 +314,13 @@ abstract contract ForumGovernance {
 		require(idsLength == amounts.length, 'LENGTH_MISMATCH');
 
 		for (uint256 i = 0; i < idsLength; ) {
-			balanceOf[to][ids[i]] += amounts[i];
-
-			// If token is being updated, update total supply
-			if (ids[i] == TOKEN) {
-				totalSupply += amounts[i];
-			}
-
 			// An array can't have a total length
-			// larger than the max uint256 value.
+			// larger than / the sum of balances can't
+			// exceed the max uint256 value
 			unchecked {
-				i++;
+				balanceOf[to][ids[i]] += amounts[i];
+				totalSupply[ids[i]] += amounts[i];
+				++i;
 			}
 		}
 
@@ -360,15 +352,12 @@ abstract contract ForumGovernance {
 			if (memberDelegatee[from] != address(0) || memberDelegators[from].length() > 0)
 				revert InvalidDelegate();
 
-			// If token is being updated, update total supply
-			if (ids[i] == TOKEN) {
-				totalSupply -= amounts[i];
-			}
+			totalSupply[ids[i]] -= amounts[i];
 
 			// An array can't have a total length
 			// larger than the max uint256 value.
 			unchecked {
-				i++;
+				++i;
 			}
 		}
 
@@ -382,10 +371,7 @@ abstract contract ForumGovernance {
 		if (memberDelegatee[from] != address(0) || EnumerableSet.length(memberDelegators[from]) > 0)
 			revert InvalidDelegate();
 
-		// If token is being updated, update total supply
-		if (id == TOKEN) {
-			totalSupply -= amount;
-		}
+		totalSupply[id] -= amount;
 
 		emit TransferSingle(msg.sender, from, address(0), id, amount);
 	}
