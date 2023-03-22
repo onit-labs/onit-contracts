@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.15;
 
-import {GnosisSafe, Enum} from '@gnosis/GnosisSafe.sol';
+import {Safe, Enum} from '@safe/Safe.sol';
 
 import {ForumGroup} from './ForumGroup.sol';
 

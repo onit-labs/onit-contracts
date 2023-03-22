@@ -14,7 +14,7 @@ import {Base64} from '@libraries/Base64.sol';
  */
 contract ForumGroupTest is ERC4337TestConfig {
 	ForumGroup private forumGroup;
-	GnosisSafe private safe;
+	Safe private safe;
 
 	// Some public keys used as signers in tests
 	uint256[2] internal publicKey;

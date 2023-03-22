@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity >=0.7.0 <0.9.0;
 
-import '@gnosis/common/SelfAuthorized.sol';
+import '@safe/common/SelfAuthorized.sol';
 
 /// @title MemberManager - Manages a set of members and a voteThreshold to perform actions.
 /// @author Forum (Modified from Safe OwnerManager by Stefan George - <stefan@gnosis.pm> & Richard Meissner - <richard@gnosis.pm>)

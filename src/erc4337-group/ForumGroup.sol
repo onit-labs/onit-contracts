@@ -9,7 +9,7 @@ import {HexToLiteralBytes} from '@libraries/HexToLiteralBytes.sol';
 import {Exec} from '@utils/Exec.sol';
 import {MemberManager} from '@utils/MemberManager.sol';
 
-import {GnosisSafe, Enum} from '@gnosis/GnosisSafe.sol';
+import {Safe, Enum} from '@safe/Safe.sol';
 import {IAccount} from '@erc4337/interfaces/IAccount.sol';
 import {IEntryPoint, UserOperation} from '@erc4337/interfaces/IEntryPoint.sol';
 import {Secp256r1, PassKeyId} from '../../lib/aa-passkeys-wallet/src/Secp256r1.sol'; // tidy import
@@ -18,7 +18,7 @@ import {Secp256r1, PassKeyId} from '../../lib/aa-passkeys-wallet/src/Secp256r1.s
  * @notice Forum Group
  * @author Forum - Modified from infinitism https://github.com/eth-infinitism/account-abstraction/contracts/samples/gnosis/ERC4337Module.sol
  */
-contract ForumGroup is IAccount, GnosisSafe, MemberManager {
+contract ForumGroup is IAccount, Safe, MemberManager {
 	/// ----------------------------------------------------------------------------------------
 	///							EVENTS & ERRORS
 	/// ----------------------------------------------------------------------------------------
@@ -208,6 +208,63 @@ contract ForumGroup is IAccount, GnosisSafe, MemberManager {
 	/// -----------------------------------------------------------------------
 	/// 						GROUP MANAGEMENT
 	/// -----------------------------------------------------------------------
+
+	// /**
+	//  * @notice Manage admin of group
+	//  */
+	// function manageAdmin(
+	// 	IForumSafeModuleTypes.ProposalType proposalType,
+	// 	address[] memory accounts,
+	// 	uint256[] memory amounts,
+	// 	bytes[] memory payloads
+	// ) external payable {
+	// 	// ! count votes and limit to entrypoint or passed vote
+
+	// 	require(msg.sender == address(_entryPoint), 'Only entrypoint can execute');
+
+	// 	// Consider these checks which used to happen in propose function
+	// 	if (accounts.length != amounts.length || amounts.length != payloads.length)
+	// 		revert NoArrayParity();
+
+	// 	if (
+	// 		proposalType == ProposalType.MEMBER_THRESHOLD ||
+	// 		proposalType == ProposalType.TOKEN_THRESHOLD
+	// 	)
+	// 		if (amounts[0] == 0 || amounts[0] > 100) revert VoteThresholdBounds();
+
+	// 	// ! correct count based on new struct
+	// 	if (proposalType == ProposalType.TYPE)
+	// 		if (amounts[0] > 13 || amounts[1] > 2 || amounts.length != 2) revert TypeBounds();
+
+	// 	unchecked {
+	// 		// Add / remove members + update gnosis threshold
+
+	// 		if (proposalType == ProposalType.MEMBER_THRESHOLD)
+	// 			memberVoteThreshold = uint32(amounts[0]);
+
+	// 		if (proposalType == ProposalType.TOKEN_THRESHOLD)
+	// 			tokenVoteThreshold = uint32(amounts[0]);
+
+	// 		if (proposalType == ProposalType.TYPE)
+	// 			proposalVoteTypes[ProposalType(amounts[0])] = VoteType(amounts[1]);
+
+	// 		if (proposalType == ProposalType.PAUSE) _flipPause();
+
+	// 		if (proposalType == ProposalType.EXTENSION)
+	// 			for (uint256 i; i < accounts.length; ) {
+	// 				if (amounts[i] != 0) extensions[accounts[i]] = !extensions[accounts[i]];
+
+	// 				if (payloads[i].length > 3) {
+	// 					IForumGroupExtension(accounts[i]).setExtension(payloads[i]);
+	// 				}
+	// 				++i;
+	// 			}
+
+	// 		if (proposalType == ProposalType.DOCS) docs = string(payloads[0]);
+
+	// 		// ! consider a nonce or similar to prevent replies (if sigs are used)
+	// 	}
+	// }
 
 	function setEntryPoint(address anEntryPoint) external {
 		if (msg.sender != _entryPoint) revert NotFromEntrypoint();

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.15;
 
-import {GnosisSafe, Enum} from '@gnosis/GnosisSafe.sol';
+import {Safe, Enum} from '@safe/Safe.sol';
 
 // Modified BaseAccount with nonce removed
 import {BaseAccount, IEntryPoint, UserOperation} from '@interfaces/BaseAccount.sol';
@@ -26,7 +26,7 @@ import {HexToLiteralBytes} from '@libraries/HexToLiteralBytes.sol';
  * - Add guardians and account recovery
  */
 
-contract ForumAccount is GnosisSafe, BaseAccount {
+contract ForumAccount is Safe, BaseAccount {
 	/// ----------------------------------------------------------------------------------------
 	///							ACCOUNT STORAGE
 	/// ----------------------------------------------------------------------------------------
@@ -47,7 +47,7 @@ contract ForumAccount is GnosisSafe, BaseAccount {
 	 * @notice Constructor
 	 * @dev This contract should be deployed using a proxy, the constructor should not be called
 	 */
-	constructor() GnosisSafe() {
+	constructor() Safe() {
 		_owner = [1, 1];
 	}
 
@@ -140,7 +140,7 @@ contract ForumAccount is GnosisSafe, BaseAccount {
 	 * @param userOp the op to validate.
 	 */
 	function _validateAndUpdateNonce(UserOperation calldata userOp) internal override {
-		require(GnosisSafe.nonce++ == userOp.nonce, 'account: invalid nonce');
+		require(Safe.nonce++ == userOp.nonce, 'account: invalid nonce');
 	}
 
 	/**

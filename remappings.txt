@@ -4,9 +4,6 @@ forge-std/=lib/forge-std/src/
 @erc4337=lib/account-abstraction/contracts
 @safe=lib/safe-contracts/contracts/
 
-eth-gas-reporter/=node_modules/eth-gas-reporter/
-@gnosis/=node_modules/@gnosis.pm/safe-contracts/contracts/
-@zodiac/=node_modules/@gnosis.pm/zodiac/contracts/
 @openzeppelin/=node_modules/@openzeppelin/
 
 @utils/=src/utils/
