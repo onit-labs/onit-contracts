@@ -2,6 +2,7 @@
 pragma solidity ^0.8.15;
 
 import {GnosisSafe, Enum} from '@gnosis/GnosisSafe.sol';
+import {Secp256r1, PassKeyId} from '@aa-passkeys-wallet/Secp256r1.sol';
 
 // Modified BaseAccount with nonce removed
 import {BaseAccount, IEntryPoint, UserOperation} from '@interfaces/BaseAccount.sol';
@@ -23,6 +24,7 @@ import {HexToLiteralBytes} from '@libraries/HexToLiteralBytes.sol';
  * - Use as a module until more finalised version is completed (for easier upgradability)
  * - Consider a function to upgrade owner
  * - Add restriction to check entryPoint is valid before setting
+ * - Further access control on functions
  * - Add guardians and account recovery
  */
 
@@ -173,14 +175,16 @@ contract ForumAccount is GnosisSafe, BaseAccount {
 			)
 		);
 
-		// !!! FIX - CORRECT VALIDATION FOR INDIVIDUAL ACCOUNT !!!
-		return 0;
-		// _ellipticCurveValidator.validateSignature(
-		// 	sha256(abi.encodePacked(HexToLiteralBytes.fromHex(authData), hashedClientData)),
-		// 	sig,
-		// 	_owner
-		// )
-		// 	? 0
-		// 	: SIG_VALIDATION_FAILED;
+		return
+			Secp256r1.Verify(
+				PassKeyId(_owner[0], _owner[1], ''),
+				sig[0],
+				sig[1],
+				uint256(
+					sha256(abi.encodePacked(HexToLiteralBytes.fromHex(authData), hashedClientData))
+				)
+			)
+				? 0
+				: SIG_VALIDATION_FAILED;
 	}
 }

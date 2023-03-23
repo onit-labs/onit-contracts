@@ -12,7 +12,7 @@ import {MemberManager} from '@utils/MemberManager.sol';
 import {GnosisSafe, Enum} from '@gnosis/GnosisSafe.sol';
 import {IAccount} from '@erc4337/interfaces/IAccount.sol';
 import {IEntryPoint, UserOperation} from '@erc4337/interfaces/IEntryPoint.sol';
-import {Secp256r1, PassKeyId} from '../../lib/aa-passkeys-wallet/src/Secp256r1.sol'; // tidy import
+import {Secp256r1, PassKeyId} from '@aa-passkeys-wallet/Secp256r1.sol';
 
 /**
  * @notice Forum Group
