@@ -2,9 +2,9 @@ import { DefenderRelayProvider, DefenderRelaySigner } from 'defender-relay-clien
 import { Contract } from '@ethersproject/contracts'
 
 export async function relayInputGenerator(event, abi) {
-	// Parse webhook payload
 	if (!event.request || !event.request.body) throw new Error(`Missing payload`)
 
+	// Get data from event payload
 	const { mumbai_entry_point_address, polygon_entry_point_address } = event.secrets
 	const body = event.request.body
 	const whitelist = event.whitelist || null
@@ -13,6 +13,7 @@ export async function relayInputGenerator(event, abi) {
 
 	// Initialize Relayer provider and signer, and forwarder contract
 	const credentials = { ...event }
+
 	const provider = new DefenderRelayProvider(credentials)
 
 	const signer = new DefenderRelaySigner(credentials, provider, {
@@ -26,7 +27,7 @@ export async function relayInputGenerator(event, abi) {
 		signer
 	)
 
-	return { targetContract, body, whitelist }
+	return { signer, targetContract, body, whitelist }
 }
 
 export {}
