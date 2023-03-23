@@ -7,11 +7,11 @@ import {ForumAccountFactory} from '../../src/erc4337-account/ForumAccountFactory
 import {DeploymentSelector} from '../../lib/foundry-deployment-manager/src/DeploymentSelector.sol';
 
 /**
- * @dev This contract is used to deploy the ERC4337Factory contract
+ * @dev This contract is used to deploy the ForumAccountFactory contract
  * For now this must be run after the ForumAccountDeployer
  * Improvements to the deployment manager will allow this to be run in any order
  */
-contract ERC4337FactoryDeployer is DeploymentSelector {
+contract ForumAccountFactoryDeployer is DeploymentSelector {
 	address internal forumAccountSingleton;
 	address internal entryPoint = 0x0576a174D229E3cFA37253523E645A78A0C91B57;
 	address internal gnosisFallbackHandler = 0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4;
