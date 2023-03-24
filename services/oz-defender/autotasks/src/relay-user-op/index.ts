@@ -1,7 +1,8 @@
 import EntryPoint from '../../../../../out/EntryPoint.sol/EntryPoint.json'
+import { BigNumber } from '@ethersproject/bignumber'
 import { relayInputGenerator } from '../relayInputGenerator'
 
-async function relay(entryPoint, body, whitelist) {
+async function relay(signer, entryPoint, body, whitelist) {
 	const { userOp, gas } = body
 
 	// Decide if we want to relay this request based on a whitelist
@@ -11,16 +12,27 @@ async function relay(entryPoint, body, whitelist) {
 	// Send meta-tx through relayer to the entryPoint contract
 	const gasLimit = (parseInt(gas) + 50000).toString()
 
-	return await entryPoint.handleOps([userOp], '0x0000000000000000000000000000000000000000', {
+	if (userOp.initCode != '0x') {
+		console.log('sending deposit to', userOp.sender)
+
+		await entryPoint.depositTo(userOp.sender, {
+			value: BigNumber.from('100000000000000000') // 0.1 matic should be enough to get started
+		})
+	}
+
+	return await entryPoint.handleOps([userOp], await signer.getAddress(), {
 		gasLimit
 	})
 }
 
 async function handler(event) {
 	// Generate relay input params
-	const { targetContract, body, whitelist } = await relayInputGenerator(event, EntryPoint.abi)
+	const { signer, targetContract, body, whitelist } = await relayInputGenerator(
+		event,
+		EntryPoint.abi
+	)
 	// Relay transaction
-	const tx = await relay(targetContract, body, whitelist)
+	const tx = await relay(signer, targetContract, body, whitelist)
 
 	console.log(`Sent meta-tx: ${tx.hash}`)
 	return { txHash: tx.hash }

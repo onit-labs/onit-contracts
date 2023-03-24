@@ -11,7 +11,7 @@ import {Exec} from '@utils/Exec.sol';
 import {Safe, Enum} from '@safe/Safe.sol';
 import {IAccount} from '@erc4337/interfaces/IAccount.sol';
 import {IEntryPoint, UserOperation} from '@erc4337/interfaces/IEntryPoint.sol';
-import {Secp256r1, PassKeyId} from '../../lib/aa-passkeys-wallet/src/Secp256r1.sol'; // tidy import
+import {Secp256r1, PassKeyId} from '@aa-passkeys-wallet/Secp256r1.sol';
 
 import {ForumGroupGovernanceBasic} from './ForumGroupGovernanceBasic.sol';
 

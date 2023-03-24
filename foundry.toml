@@ -9,13 +9,10 @@ cache_path  = 'forge-cache'
 gas_reports = ["*"]
 optimize = false # set to true to enable optimizer
 via_ir = false # set to true to enable IR compiler
-# optimize_runs = 20000 
 solc = '0.8.17'
 fs_permissions = [{ access = "read-write", path = "./addresses/"}, { access ="read", path="./out/"}]
 ffi = true 
 
-# ! Profile not overriding default profile
-# Need to see why (potentially https://github.com/foundry-rs/foundry/issues/3120)
 [profile.prod]
 optimize = true
 via_ir = true
