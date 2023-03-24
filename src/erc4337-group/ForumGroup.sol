@@ -13,13 +13,13 @@ import {IAccount} from '@erc4337/interfaces/IAccount.sol';
 import {IEntryPoint, UserOperation} from '@erc4337/interfaces/IEntryPoint.sol';
 import {Secp256r1, PassKeyId} from '../../lib/aa-passkeys-wallet/src/Secp256r1.sol'; // tidy import
 
-import {ForumGroupGovernance} from './ForumGroupGovernance.sol';
+import {ForumGroupGovernanceBasic} from './ForumGroupGovernanceBasic.sol';
 
 /**
  * @notice Forum Group
  * @author Forum - Modified from infinitism https://github.com/eth-infinitism/account-abstraction/contracts/samples/gnosis/ERC4337Module.sol
  */
-contract ForumGroup is IAccount, Safe, ForumGroupGovernance {
+contract ForumGroup is IAccount, Safe, ForumGroupGovernanceBasic {
 	/// ----------------------------------------------------------------------------------------
 	///							EVENTS & ERRORS
 	/// ----------------------------------------------------------------------------------------
@@ -33,6 +33,10 @@ contract ForumGroup is IAccount, Safe, ForumGroupGovernance {
 	error InvalidInitialisation();
 
 	error InvalidThreshold();
+
+	error MemberExists();
+
+	error CannotRemoveMember();
 
 	/// ----------------------------------------------------------------------------------------
 	///							GROUP STORAGE
@@ -65,16 +69,18 @@ contract ForumGroup is IAccount, Safe, ForumGroupGovernance {
 	// Equivalent to _packValidationData(true,0,0);
 	uint256 internal constant _SIG_VALIDATION_FAILED = 1;
 
-	// We calcualte the address formed from the public key of each member
-	// This address is not necessarily deployed yet
-	// ! consider if minting to these addresses is a good idea
-	mapping(address => Member) internal _members;
+	// ! consider making the key here an address & calcualting the address from the public key
+	// This would require using the getAddress fn from the factory, or simplifying the factory
+	// By removing salt from the account deployment, we could get a consistent address based only off the public key
+	// The downside is that each passkey can only deply one account
+	// The pro is that we can use the address as the key for the mapping, and use a real 1155 token
+	mapping(bytes32 => Member) internal _members;
 
 	// Used nonces; 1 = used (prevents replaying the same userOp, while allowing out of order execution)
 	mapping(uint256 => uint256) public usedNonces;
 
 	// Storing all members to index the mapping
-	address[] internal _membersArray;
+	bytes32[] internal _membersHashArray;
 
 	/// -----------------------------------------------------------------------
 	/// 						SETUP
@@ -136,21 +142,21 @@ contract ForumGroup is IAccount, Safe, ForumGroupGovernance {
 
 		// Set up the members
 		for (uint256 i; i < members.length; ++i) {
-			// create address for each pk
-			address memberAddress = addressFromPublicKey(members[i][0], members[i][1]);
+			// Create a hash used to identify the member
+			bytes32 memberHash = publicKeyHash(Member(members[i][0], members[i][1]));
 
 			// ! consider the below, there are many things being tracked here
 			// Add key pair to the members mapping
-			_members[memberAddress] = Member(members[i][0], members[i][1]);
-			// Add address to the members array
-			_membersArray.push(memberAddress);
+			_members[memberHash] = Member(members[i][0], members[i][1]);
+			// Add hash to the members array
+			_membersHashArray.push(memberHash);
 			// Mint membership token
-			_mint(memberAddress, TOKEN, 1, '');
+			_mint(memberHash, MEMBERSHIP, 1, '');
 		}
 	}
 
 	/// -----------------------------------------------------------------------
-	/// 						EXECUTION
+	/// 						VALIDATION
 	/// -----------------------------------------------------------------------
 
 	function validateUserOp(
@@ -184,7 +190,11 @@ contract ForumGroup is IAccount, Safe, ForumGroupGovernance {
 			// Check if the signature is valid and increment count if so
 			if (
 				Secp256r1.Verify(
-					PassKeyId(_members[signerIndex[i]].x, _members[signerIndex[i]].y, ''),
+					PassKeyId(
+						_members[_membersHashArray[signerIndex[i]]].x,
+						_members[_membersHashArray[signerIndex[i]]].y,
+						''
+					),
 					sig[i][0],
 					sig[i][1],
 					uint(fullMessage)
@@ -213,6 +223,10 @@ contract ForumGroup is IAccount, Safe, ForumGroupGovernance {
 			//ignore failure (its EntryPoint's job to verify, not account.)
 		}
 	}
+
+	/// -----------------------------------------------------------------------
+	/// 						EXECUTION
+	/// -----------------------------------------------------------------------
 
 	/**
 	 * Execute a call but also revert if the execution fails.
@@ -315,6 +329,63 @@ contract ForumGroup is IAccount, Safe, ForumGroupGovernance {
 		emit ChangedVoteThreshold(_voteThreshold);
 	}
 
+	/// @notice Adds a member to the Safe.
+	/// @param member Member to add.
+	/// @param voteThreshold_ New voteThreshold.
+	function addMemberWithThreshold(
+		Member memory member,
+		uint256 voteThreshold_
+	) public authorized {
+		bytes32 memberHash = keccak256(abi.encodePacked(member.x, member.y));
+		if (_members[memberHash].x != 0) revert MemberExists();
+
+		// Validate that voteThreshold is at least 1 & is smaller than (the new) number of members
+		if (voteThreshold_ < 1 || voteThreshold_ > totalSupply[MEMBERSHIP] + 1)
+			revert InvalidThreshold();
+
+		_mint(memberHash, MEMBERSHIP, 1, '');
+		_members[memberHash] = member;
+		_membersHashArray.push(memberHash);
+
+		// Update voteThreshold
+		_voteThreshold = voteThreshold_;
+
+		// ! consider a nonce or similar to prevent replies (if sigs are used)
+		//emit AddedMember(x, y);
+	}
+
+	// ! improve handling of member array
+	/// @notice Removes a member from the Safe & updates threshold.
+	/// @param memberHash Hash of the member's public key.
+	/// @param voteThreshold_ New voteThreshold.
+	function removeMemberWithThreshold(
+		bytes32 memberHash,
+		uint256 voteThreshold_
+	) public authorized {
+		if (_members[memberHash].x == 0) revert CannotRemoveMember();
+
+		// Validate that voteThreshold is at least 1 & is smaller than (the new) number of members
+		// This also ensures the last member is not removed
+		if (voteThreshold_ < 1 || voteThreshold_ > totalSupply[MEMBERSHIP] - 1)
+			revert InvalidThreshold();
+
+		_burn(memberHash, MEMBERSHIP, 1);
+		delete _members[memberHash];
+		for (uint256 i = 0; i < _membersHashArray.length; i++) {
+			if (_membersHashArray[i] == memberHash) {
+				_membersHashArray[i] = _membersHashArray[_membersHashArray.length - 1];
+				_membersHashArray.pop();
+				break;
+			}
+		}
+
+		// Update voteThreshold
+		_voteThreshold = voteThreshold_;
+
+		// ! consider a nonce or similar to prevent replies (if sigs are used)
+		//emit RemovedMember(x, y);
+	}
+
 	function setEntryPoint(address anEntryPoint) external {
 		if (msg.sender != _entryPoint) revert NotFromEntrypoint();
 
@@ -331,7 +402,27 @@ contract ForumGroup is IAccount, Safe, ForumGroupGovernance {
 		return _entryPoint;
 	}
 
-	function addressFromPublicKey(Member memory pk) public pure returns (address) {
-		return address(bytes20(keccak256(abi.encodePacked(pk.x, pk.y)) << 96));
+	function getVoteThreshold() public view returns (uint256) {
+		return _voteThreshold;
+	}
+
+	function getMembers() public view returns (uint256[2][] memory members) {
+		uint256 len = _membersHashArray.length;
+
+		members = new uint256[2][](len);
+
+		for (uint256 i; i < len; ) {
+			Member memory _mem = _members[_membersHashArray[i]];
+			members[i] = [_mem.x, _mem.y];
+
+			// Length of member array can't exceed max uint256
+			unchecked {
+				++i;
+			}
+		}
+	}
+
+	function publicKeyHash(Member memory pk) public pure returns (bytes32) {
+		return keccak256(abi.encodePacked(pk.x, pk.y));
 	}
 }

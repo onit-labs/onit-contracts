@@ -24,6 +24,7 @@ import {HexToLiteralBytes} from '@libraries/HexToLiteralBytes.sol';
  * - Consider a function to upgrade owner
  * - Add restriction to check entryPoint is valid before setting
  * - Add guardians and account recovery
+ * - Test NFT receiver
  */
 
 contract ForumAccount is Safe, BaseAccount {
