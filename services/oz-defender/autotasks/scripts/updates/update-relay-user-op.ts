@@ -4,7 +4,10 @@ require('dotenv').config({ path: '.env' })
 
 async function uploadCode(autotaskId, apiKey, apiSecret) {
 	const client = new AutotaskClient({ apiKey, apiSecret })
-	await client.updateCodeFromFolder(autotaskId, './dist/relay-user-op')
+	await client.updateCodeFromFolder(
+		autotaskId,
+		'./services/oz-defender/autotasks/dist/relay-user-op'
+	)
 }
 
 async function main() {

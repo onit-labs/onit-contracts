@@ -3,7 +3,7 @@ pragma solidity ^0.8.15;
 
 /* solhint-disable avoid-low-level-calls */
 
-import {GnosisSafe, Enum} from '@gnosis/GnosisSafe.sol';
+import {Safe, Enum} from '@safe/Safe.sol';
 
 import {ForumAccount, IEntryPoint} from './ForumAccount.sol';
 

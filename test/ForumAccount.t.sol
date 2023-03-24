@@ -51,8 +51,8 @@ contract ForumAccountTest is ERC4337TestConfig, ERC4337SignatureStore {
 
 		// Deploy an account to be used in tests later
 		deployed4337AccountAddress = forumAccountFactory.createAccount(
-			accountSalt(SALT_1, signers[TestSigner.SignerB]),
-			signers[TestSigner.SignerB]
+			accountSalt(SALT_1, signers[TestSigner.SignerA]),
+			signers[TestSigner.SignerA]
 		);
 		deployed4337Account = ForumAccount(deployed4337AccountAddress);
 

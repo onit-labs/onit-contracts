@@ -3,6 +3,7 @@ forge-std/=lib/forge-std/src/
 @solbase=lib/solbase/src/
 @erc4337=lib/account-abstraction/contracts
 @safe=lib/safe-contracts/contracts/
+@aa-passkeys-wallet/=lib/aa-passkeys-wallet/src/
 
 eth-gas-reporter/=node_modules/eth-gas-reporter/
 @gnosis/=node_modules/@gnosis.pm/safe-contracts/contracts/
