@@ -30,11 +30,8 @@ abstract contract ForumGroupGovernanceBasic {
 	///							TOKEN STORAGE
 	/// ----------------------------------------------------------------------------------------
 
-	// Membership token for voting members
-	uint256 internal constant MEMBERSHIP = 0;
-
 	// Token representing voting share of treasury
-	uint256 internal constant TOKEN = 1;
+	uint256 internal constant TOKEN = 0;
 
 	mapping(bytes32 => mapping(uint256 => uint256)) public balanceOf;
 

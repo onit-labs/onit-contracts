@@ -29,11 +29,8 @@ contract ForumGroupTest is ERC4337TestConfig {
 
 	bytes internal basicTransferCalldata;
 
-	// Membership token for voting members
-	uint256 internal constant MEMBERSHIP = 0;
-
 	// Token representing voting share of treasury
-	uint256 internal constant TOKEN = 1;
+	uint256 internal constant TOKEN = 0;
 
 	/// -----------------------------------------------------------------------
 	/// Setup
@@ -78,7 +75,7 @@ contract ForumGroupTest is ERC4337TestConfig {
 		assertTrue(forumGroup.entryPoint() == address(entryPoint));
 
 		// Check the member has been minted a membership token
-		assertTrue(forumGroup.balanceOf(publicKeyHash(publicKey), MEMBERSHIP) == 1);
+		assertTrue(forumGroup.isMember(publicKeyHash(publicKey)) == 1);
 
 		// The safe has been initialized with a threshold of 1
 		// This threshold is not used when executing via group
@@ -127,7 +124,7 @@ contract ForumGroupTest is ERC4337TestConfig {
 		assertTrue(newForumGroup.entryPoint() == address(entryPoint));
 
 		// Check the member has been minted a membership token
-		assertTrue(forumGroup.balanceOf(publicKeyHash(publicKey), MEMBERSHIP) == 1);
+		assertTrue(forumGroup.isMember(publicKeyHash(publicKey)) == 1);
 
 		// The safe has been initialized with a threshold of 1
 		// This threshold is not used when executing via group
@@ -202,13 +199,14 @@ contract ForumGroupTest is ERC4337TestConfig {
 		assertTrue(forumGroup.getVoteThreshold() == 2);
 
 		// Check the member has been minted a membership token
-		assertTrue(forumGroup.balanceOf(publicKeyHash(publicKey2), MEMBERSHIP) == 1);
+		assertTrue(forumGroup.isMember(publicKeyHash(publicKey2)) == 1);
 
 		assertTrue(forumGroup.getMembers().length == 2);
 	}
 
 	function testCannotAddMemberWithThresholdIncorrectly() public {
-		assertTrue(forumGroup.getMembers().length == 1);
+		uint256[2][] memory members = forumGroup.getMembers();
+		assertTrue(members.length == 1);
 
 		vm.startPrank(address(forumGroup));
 
@@ -227,8 +225,8 @@ contract ForumGroupTest is ERC4337TestConfig {
 		vm.expectRevert(ForumGroup.MemberExists.selector);
 		forumGroup.addMemberWithThreshold(ForumGroup.Member({x: publicKey[0], y: publicKey[1]}), 3);
 
-		uint256[2][] memory members = forumGroup.getMembers();
-		assertTrue(forumGroup.getMembers().length == 1);
+		members = forumGroup.getMembers();
+		assertTrue(members.length == 1);
 	}
 
 	function testRemoveMemberWithThreshold() public {
@@ -246,25 +244,19 @@ contract ForumGroupTest is ERC4337TestConfig {
 		assertTrue(forumGroup.getVoteThreshold() == 2);
 
 		vm.prank(address(forumGroup));
-		forumGroup.removeMemberWithThreshold(
-			keccak256(abi.encodePacked(publicKey2[0], publicKey2[1])),
-			1
-		);
+		forumGroup.removeMemberWithThreshold(publicKeyHash(publicKey2), 1);
 
 		members = forumGroup.getMembers();
 		assertTrue(members.length == 1);
 		assertTrue(forumGroup.getVoteThreshold() == 1);
-		assertTrue(forumGroup.balanceOf(publicKeyHash(publicKey2), MEMBERSHIP) == 0);
+		assertTrue(forumGroup.isMember(publicKeyHash(publicKey2)) == 0);
 	}
 
 	function testCannotRemoveMemberWithThresholdIncorrectly() public {
 		vm.startPrank(address(forumGroup));
 
 		vm.expectRevert(ForumGroup.CannotRemoveMember.selector);
-		forumGroup.removeMemberWithThreshold(
-			keccak256(abi.encodePacked(publicKey2[0], publicKey2[1])),
-			1
-		);
+		forumGroup.removeMemberWithThreshold(publicKeyHash(publicKey2), 1);
 
 		// Add a member so we can change threshold from 1-> 2 later
 		forumGroup.addMemberWithThreshold(
@@ -273,110 +265,62 @@ contract ForumGroupTest is ERC4337TestConfig {
 		);
 
 		vm.expectRevert(ForumGroup.InvalidThreshold.selector);
-		forumGroup.removeMemberWithThreshold(
-			keccak256(abi.encodePacked(publicKey2[0], publicKey2[1])),
-			0
-		);
+		forumGroup.removeMemberWithThreshold(publicKeyHash(publicKey2), 0);
 
 		vm.expectRevert(ForumGroup.InvalidThreshold.selector);
-		forumGroup.removeMemberWithThreshold(
-			keccak256(abi.encodePacked(publicKey2[0], publicKey2[1])),
-			3
-		);
+		forumGroup.removeMemberWithThreshold(publicKeyHash(publicKey2), 3);
 
 		// Remove member so we can check the restriction on removing the final memebr next
-		forumGroup.removeMemberWithThreshold(
-			keccak256(abi.encodePacked(publicKey2[0], publicKey2[1])),
-			1
-		);
+		forumGroup.removeMemberWithThreshold(publicKeyHash(publicKey2), 1);
 
 		vm.expectRevert(ForumGroup.InvalidThreshold.selector);
-		forumGroup.removeMemberWithThreshold(
-			keccak256(abi.encodePacked(publicKey[0], publicKey[1])),
-			1
-		);
+		forumGroup.removeMemberWithThreshold(publicKeyHash(publicKey), 1);
 	}
 
-	// function testRemoveMember() public {
-	// 	// Add a member so we can change threshold from 1-> 2 later
-	// 	vm.prank(address(forumGroup));
-	// 	forumGroup.addMemberWithThreshold(
-	// 		MemberManager.Member({x: publicKey2[0], y: publicKey2[1]}),
-	// 		2
-	// 	);
+	function testUpdateEntryPoint() public {
+		assertTrue(forumGroup.entryPoint() == address(entryPoint));
 
-	// 	// Get initial members
-	// 	uint256[2][] memory members = forumGroup.getMembers();
+		// Reverts if not called by entrypoint
+		vm.expectRevert(ForumGroup.NotFromEntrypoint.selector);
+		forumGroup.setEntryPoint(address(this));
 
-	// 	assertTrue(members.length == 2);
-	// 	assertTrue(forumGroup.getVoteThreshold() == 2);
+		vm.prank(address(entryPoint));
+		forumGroup.setEntryPoint(address(this));
 
-	// 	MemberManager.Member memory prev = MemberManager.Member({
-	// 		x: publicKey2[0],
-	// 		y: publicKey2[1]
-	// 	});
+		assertTrue(forumGroup.entryPoint() == address(this));
+	}
 
-	// 	MemberManager.Member memory removee = MemberManager.Member({
-	// 		x: publicKey[0],
-	// 		y: publicKey[1]
-	// 	});
+	/// -----------------------------------------------------------------------
+	/// EXECUTION TESTS
+	/// -----------------------------------------------------------------------
 
-	// 	vm.prank(address(forumGroup));
-	// 	forumGroup.removeMember(prev, removee, 1);
+	function testExecutionViaEntryPoint() public {
+		// check balance before
+		assertTrue(address(alice).balance == 1 ether);
+		assertTrue(address(forumGroup).balance == 1 ether);
+		assertTrue(forumGroup.nonce() == 0);
 
-	// 	members = forumGroup.getMembers();
+		// Build user operation
+		UserOperation memory userOp = buildUserOp(
+			address(forumGroup),
+			forumGroup.nonce(),
+			new bytes(0),
+			basicTransferCalldata
+		);
 
-	// 	// Length is 1, pk2 remains, pk is removed, threshold is updated
-	// 	assertTrue(members.length == 1);
-	// 	assertTrue(members[0][0] == publicKey2[0]);
-	// 	assertTrue(members[0][1] == publicKey2[1]);
-	// 	assertTrue(forumGroup.getVoteThreshold() == 1);
-	// }
+		UserOperation[] memory userOpArray = signAndFormatUserOp(userOp, SIGNER_1, '');
 
-	// function testUpdateEntryPoint() public {
-	// 	assertTrue(forumGroup.entryPoint() == address(entryPoint));
+		entryPoint.handleOps(userOpArray, payable(bob));
 
-	// 	// Reverts if not called by entrypoint
-	// 	vm.expectRevert(ForumGroup.NotFromEntrypoint.selector);
-	// 	forumGroup.setEntryPoint(address(this));
+		// ! correct gas cost - take it from the useroperation event
+		uint256 gas = calculateGas(userOp);
 
-	// 	vm.prank(address(entryPoint));
-	// 	forumGroup.setEntryPoint(address(this));
-
-	// 	assertTrue(forumGroup.entryPoint() == address(this));
-	// }
-
-	// /// -----------------------------------------------------------------------
-	// /// EXECUTION TESTS
-	// /// -----------------------------------------------------------------------
-
-	// function testExecutionViaEntryPoint() public {
-	// 	// check balance before
-	// 	assertTrue(address(alice).balance == 1 ether);
-	// 	assertTrue(address(forumGroup).balance == 1 ether);
-	// 	assertTrue(forumGroup.nonce() == 0);
-
-	// 	// Build user operation
-	// 	UserOperation memory userOp = buildUserOp(
-	// 		address(forumGroup),
-	// 		forumGroup.nonce(),
-	// 		new bytes(0),
-	// 		basicTransferCalldata
-	// 	);
-
-	// 	UserOperation[] memory userOpArray = signAndFormatUserOp(userOp, SIGNER_1, '');
-
-	// 	entryPoint.handleOps(userOpArray, payable(bob));
-
-	// 	// ! correct gas cost - take it from the useroperation event
-	// 	uint256 gas = calculateGas(userOp);
-
-	// 	// Transfer has been made, nonce incremented, used nonce set
-	// 	assertTrue(address(alice).balance == 1.5 ether);
-	// 	assertTrue(address(forumGroup).balance == 0.5 ether - gas);
-	// 	assertTrue(forumGroup.nonce() == 1);
-	// 	assertTrue(forumGroup.usedNonces(userOp.nonce) == 1);
-	// }
+		// Transfer has been made, nonce incremented, used nonce set
+		assertTrue(address(alice).balance == 1.5 ether);
+		assertTrue(address(forumGroup).balance == 0.5 ether - gas);
+		assertTrue(forumGroup.nonce() == 1);
+		assertTrue(forumGroup.usedNonces(userOp.nonce) == 1);
+	}
 
 	// function testRevertsIfUnderThreshold() public {
 	// 	//Add second member to make  agroup of 2

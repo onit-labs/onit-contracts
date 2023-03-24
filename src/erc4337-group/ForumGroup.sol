@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.15;
+pragma solidity ^0.8.17;
 
 /* solhint-disable avoid-low-level-calls */
 
@@ -16,8 +16,9 @@ import {Secp256r1, PassKeyId} from '@aa-passkeys-wallet/Secp256r1.sol';
 import {ForumGroupGovernanceBasic} from './ForumGroupGovernanceBasic.sol';
 
 /**
- * @notice Forum Group
- * @author Forum - Modified from infinitism https://github.com/eth-infinitism/account-abstraction/contracts/samples/gnosis/ERC4337Module.sol
+ * @title Forum Group
+ * @notice A group 4337 wallet based on eth-infinitism IAccount, built on safe
+ * @author Forum (https://github.com/forumdaos/contracts)
  */
 contract ForumGroup is IAccount, Safe, ForumGroupGovernanceBasic {
 	/// ----------------------------------------------------------------------------------------
@@ -141,17 +142,20 @@ contract ForumGroup is IAccount, Safe, ForumGroupGovernanceBasic {
 		_voteThreshold = voteThreshold;
 
 		// Set up the members
-		for (uint256 i; i < members.length; ++i) {
+		uint256 len = members.length;
+
+		for (uint256 i; i < len; ) {
 			// Create a hash used to identify the member
 			bytes32 memberHash = publicKeyHash(Member(members[i][0], members[i][1]));
 
-			// ! consider the below, there are many things being tracked here
 			// Add key pair to the members mapping
 			_members[memberHash] = Member(members[i][0], members[i][1]);
 			// Add hash to the members array
 			_membersHashArray.push(memberHash);
-			// Mint membership token
-			_mint(memberHash, MEMBERSHIP, 1, '');
+
+			unchecked {
+				++i;
+			}
 		}
 	}
 
@@ -340,10 +344,9 @@ contract ForumGroup is IAccount, Safe, ForumGroupGovernanceBasic {
 		if (_members[memberHash].x != 0) revert MemberExists();
 
 		// Validate that voteThreshold is at least 1 & is smaller than (the new) number of members
-		if (voteThreshold_ < 1 || voteThreshold_ > totalSupply[MEMBERSHIP] + 1)
+		if (voteThreshold_ < 1 || voteThreshold_ > _membersHashArray.length + 1)
 			revert InvalidThreshold();
 
-		_mint(memberHash, MEMBERSHIP, 1, '');
 		_members[memberHash] = member;
 		_membersHashArray.push(memberHash);
 
@@ -366,10 +369,9 @@ contract ForumGroup is IAccount, Safe, ForumGroupGovernanceBasic {
 
 		// Validate that voteThreshold is at least 1 & is smaller than (the new) number of members
 		// This also ensures the last member is not removed
-		if (voteThreshold_ < 1 || voteThreshold_ > totalSupply[MEMBERSHIP] - 1)
+		if (voteThreshold_ < 1 || voteThreshold_ > _membersHashArray.length - 1)
 			revert InvalidThreshold();
 
-		_burn(memberHash, MEMBERSHIP, 1);
 		delete _members[memberHash];
 		for (uint256 i = 0; i < _membersHashArray.length; i++) {
 			if (_membersHashArray[i] == memberHash) {
@@ -420,6 +422,15 @@ contract ForumGroup is IAccount, Safe, ForumGroupGovernanceBasic {
 				++i;
 			}
 		}
+	}
+
+	/**
+	 * @notice Checks if a member is part of the group
+	 * @param memberHash Hash of the member's public key: keccak256(abi.encodePacked(member.x, member.y))
+	 * @return 1 if member is part of the group, 0 otherwise
+	 */
+	function isMember(bytes32 memberHash) public view returns (uint256) {
+		return _members[memberHash].x != 0 ? 1 : 0;
 	}
 
 	function publicKeyHash(Member memory pk) public pure returns (bytes32) {
