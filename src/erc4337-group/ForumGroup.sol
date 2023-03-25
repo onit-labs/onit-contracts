@@ -7,6 +7,7 @@ import {Base64} from '@libraries/Base64.sol';
 import {HexToLiteralBytes} from '@libraries/HexToLiteralBytes.sol';
 
 import {Exec} from '@utils/Exec.sol';
+import {MemberManager} from '@utils/MemberManager.sol';
 
 import {Safe, Enum} from '@safe/Safe.sol';
 import {IAccount} from '@erc4337/interfaces/IAccount.sol';
@@ -20,12 +21,14 @@ import {ForumGroupGovernanceBasic} from './ForumGroupGovernanceBasic.sol';
  * @notice A group 4337 wallet based on eth-infinitism IAccount, built on safe
  * @author Forum (https://github.com/forumdaos/contracts)
  */
-contract ForumGroup is IAccount, Safe, ForumGroupGovernanceBasic {
+contract ForumGroup is IAccount, Safe, MemberManager, ForumGroupGovernanceBasic {
 	/// ----------------------------------------------------------------------------------------
 	///							EVENTS & ERRORS
 	/// ----------------------------------------------------------------------------------------
 
-	event ChangedVoteThreshold(uint256 voteThreshold);
+	/// ----------------------------------------------------------------------------------------
+	///							EVENTS & ERRORS
+	/// ----------------------------------------------------------------------------------------
 
 	error ModuleAlreadySetUp();
 
@@ -33,26 +36,9 @@ contract ForumGroup is IAccount, Safe, ForumGroupGovernanceBasic {
 
 	error InvalidInitialisation();
 
-	error InvalidThreshold();
-
-	error MemberExists();
-
-	error CannotRemoveMember();
-
 	/// ----------------------------------------------------------------------------------------
 	///							GROUP STORAGE
 	/// ----------------------------------------------------------------------------------------
-
-	/**
-	 * @notice Member struct
-	 * @param x Public key of member
-	 * @param y Public key of next member
-	 * @dev x & y are the public key of the members P-256 passkey
-	 */
-	struct Member {
-		uint256 x;
-		uint256 y;
-	}
 
 	// Should be made immutable - also consider removing variables and passing in signature
 	string internal _clientDataStart;
@@ -63,25 +49,12 @@ contract ForumGroup is IAccount, Safe, ForumGroupGovernanceBasic {
 	// Reference to latest entrypoint
 	address internal _entryPoint;
 
-	// Number of required signatures for a Safe transaction.
-	uint256 internal _voteThreshold;
-
 	// Return value in case of signature failure, with no time-range.
 	// Equivalent to _packValidationData(true,0,0);
 	uint256 internal constant _SIG_VALIDATION_FAILED = 1;
 
-	// ! consider making the key here an address & calcualting the address from the public key
-	// This would require using the getAddress fn from the factory, or simplifying the factory
-	// By removing salt from the account deployment, we could get a consistent address based only off the public key
-	// The downside is that each passkey can only deply one account
-	// The pro is that we can use the address as the key for the mapping, and use a real 1155 token
-	mapping(bytes32 => Member) internal _members;
-
 	// Used nonces; 1 = used (prevents replaying the same userOp, while allowing out of order execution)
 	mapping(uint256 => uint256) public usedNonces;
-
-	// Storing all members to index the mapping
-	bytes32[] internal _membersHashArray;
 
 	/// -----------------------------------------------------------------------
 	/// 						SETUP
@@ -322,72 +295,6 @@ contract ForumGroup is IAccount, Safe, ForumGroupGovernanceBasic {
 	// 	}
 	// }
 
-	// ! consider visibility and access control
-	/// @notice Changes the voteThreshold of the Safe to `voteThreshold`.
-	/// @param voteThreshold New voteThreshold.
-	function changeVoteThreshold(uint256 voteThreshold) public authorized {
-		// Validate that voteThreshold is smaller than number of members & is at least 1
-		if (voteThreshold < 1 || voteThreshold > totalSupply[TOKEN]) revert InvalidThreshold();
-
-		_voteThreshold = voteThreshold;
-		emit ChangedVoteThreshold(_voteThreshold);
-	}
-
-	/// @notice Adds a member to the Safe.
-	/// @param member Member to add.
-	/// @param voteThreshold_ New voteThreshold.
-	function addMemberWithThreshold(
-		Member memory member,
-		uint256 voteThreshold_
-	) public authorized {
-		bytes32 memberHash = keccak256(abi.encodePacked(member.x, member.y));
-		if (_members[memberHash].x != 0) revert MemberExists();
-
-		// Validate that voteThreshold is at least 1 & is smaller than (the new) number of members
-		if (voteThreshold_ < 1 || voteThreshold_ > _membersHashArray.length + 1)
-			revert InvalidThreshold();
-
-		_members[memberHash] = member;
-		_membersHashArray.push(memberHash);
-
-		// Update voteThreshold
-		_voteThreshold = voteThreshold_;
-
-		// ! consider a nonce or similar to prevent replies (if sigs are used)
-		//emit AddedMember(x, y);
-	}
-
-	// ! improve handling of member array
-	/// @notice Removes a member from the Safe & updates threshold.
-	/// @param memberHash Hash of the member's public key.
-	/// @param voteThreshold_ New voteThreshold.
-	function removeMemberWithThreshold(
-		bytes32 memberHash,
-		uint256 voteThreshold_
-	) public authorized {
-		if (_members[memberHash].x == 0) revert CannotRemoveMember();
-
-		// Validate that voteThreshold is at least 1 & is smaller than (the new) number of members
-		// This also ensures the last member is not removed
-		if (voteThreshold_ < 1 || voteThreshold_ > _membersHashArray.length - 1)
-			revert InvalidThreshold();
-
-		delete _members[memberHash];
-		for (uint256 i = 0; i < _membersHashArray.length; i++) {
-			if (_membersHashArray[i] == memberHash) {
-				_membersHashArray[i] = _membersHashArray[_membersHashArray.length - 1];
-				_membersHashArray.pop();
-				break;
-			}
-		}
-
-		// Update voteThreshold
-		_voteThreshold = voteThreshold_;
-
-		// ! consider a nonce or similar to prevent replies (if sigs are used)
-		//emit RemovedMember(x, y);
-	}
-
 	function setEntryPoint(address anEntryPoint) external {
 		if (msg.sender != _entryPoint) revert NotFromEntrypoint();
 
@@ -402,35 +309,6 @@ contract ForumGroup is IAccount, Safe, ForumGroupGovernanceBasic {
 
 	function entryPoint() public view virtual returns (address) {
 		return _entryPoint;
-	}
-
-	function getVoteThreshold() public view returns (uint256) {
-		return _voteThreshold;
-	}
-
-	function getMembers() public view returns (uint256[2][] memory members) {
-		uint256 len = _membersHashArray.length;
-
-		members = new uint256[2][](len);
-
-		for (uint256 i; i < len; ) {
-			Member memory _mem = _members[_membersHashArray[i]];
-			members[i] = [_mem.x, _mem.y];
-
-			// Length of member array can't exceed max uint256
-			unchecked {
-				++i;
-			}
-		}
-	}
-
-	/**
-	 * @notice Checks if a member is part of the group
-	 * @param memberHash Hash of the member's public key: keccak256(abi.encodePacked(member.x, member.y))
-	 * @return 1 if member is part of the group, 0 otherwise
-	 */
-	function isMember(bytes32 memberHash) public view returns (uint256) {
-		return _members[memberHash].x != 0 ? 1 : 0;
 	}
 
 	function publicKeyHash(Member memory pk) public pure returns (bytes32) {
