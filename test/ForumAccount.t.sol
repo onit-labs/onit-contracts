@@ -50,8 +50,7 @@ contract ForumAccountTest is ERC4337TestConfig, ERC4337SignatureStore {
 		);
 
 		// Deploy an account to be used in tests later
-		deployed4337AccountAddress = forumAccountFactory.createAccount(
-			accountSalt(SALT_1, signers[TestSigner.SignerA]),
+		deployed4337AccountAddress = forumAccountFactory.createForumAccount(
 			signers[TestSigner.SignerA]
 		);
 		deployed4337Account = ForumAccount(deployed4337AccountAddress);
@@ -92,7 +91,7 @@ contract ForumAccountTest is ERC4337TestConfig, ERC4337SignatureStore {
 	function testFactoryDeployFromEntryPoint() public {
 		// Encode the calldata for the factory to create an account
 		// bytes memory factoryCalldata = abi.encodeWithSignature(
-		// 	'createAccount(bytes32,uint256[2])',
+		// 	'createForumAccount(bytes32,uint256[2])',
 		// 	SALT_2,
 		// 	signers[TestSigner.SignerB]
 		// );
@@ -146,10 +145,7 @@ contract ForumAccountTest is ERC4337TestConfig, ERC4337SignatureStore {
 		);
 
 		// Deploy an account to be used in tests
-		tmpMumbai = forumAccountFactory.createAccount(
-			accountSalt(SALT_1, signers[TestSigner.SignerB]),
-			signers[TestSigner.SignerB]
-		);
+		tmpMumbai = forumAccountFactory.createForumAccount(signers[TestSigner.SignerB]);
 
 		// Fork Fuji and create an account from a fcatory
 		vm.createSelectFork(vm.envString('FUJI_RPC_URL'));
@@ -161,10 +157,7 @@ contract ForumAccountTest is ERC4337TestConfig, ERC4337SignatureStore {
 		);
 
 		// Deploy an account to be used in tests
-		tmpFuji = forumAccountFactory.createAccount(
-			accountSalt(SALT_1, signers[TestSigner.SignerB]),
-			signers[TestSigner.SignerB]
-		);
+		tmpFuji = forumAccountFactory.createForumAccount(signers[TestSigner.SignerB]);
 
 		assertEq(tmpMumbai, tmpFuji, 'address not the same');
 	}

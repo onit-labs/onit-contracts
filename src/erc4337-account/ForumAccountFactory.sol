@@ -70,17 +70,14 @@ contract ForumAccountFactory {
 
 	/**
 	 * @notice Deploys a new ERC4337 account built on a Gnosis safe
-	 * @param salt Salt for deterministic address generation
 	 * @param owner Public key for secp256r1 signer
 	 * @return account The deployed account
 	 * @dev Returns an existing account address so that entryPoint.getSenderAddress() works even after account creation
-	 * @dev Salt should be keccak256(abi.encode(otherSalt, owner)) where otherSalt is some uint
 	 */
-	function createAccount(
-		bytes32 salt,
+	function createForumAccount(
 		uint[2] calldata owner
 	) external payable virtual returns (address payable account) {
-		bytes32 accountSalt = keccak256(abi.encode(salt, owner));
+		bytes32 accountSalt = keccak256(abi.encodePacked(owner));
 
 		address addr = getAddress(accountSalt);
 		uint codeSize = addr.code.length;
@@ -88,7 +85,7 @@ contract ForumAccountFactory {
 			return payable(addr);
 		}
 
-		// Deploy the account determinstically based on the salt (a combination of owner and otherSalt)
+		// Deploy the account determinstically based on the salt
 		(bool successCreate, bytes memory responseCreate) = DETERMINISTIC_DEPLOYMENT_PROXY.call{
 			value: 0
 		}(abi.encodePacked(accountSalt, createProxyData));
@@ -115,7 +112,7 @@ contract ForumAccountFactory {
 
 	/**
 	 * @notice Get the address of an account that would be returned by createAccount()
-	 * @dev Salt should be keccak256(abi.encode(otherSalt, owner)) where otherSalt is some bytes32
+	 * @dev Salt should be keccak256(abi.encodePacked(owner)) where owner is the [x, y] public key for secp256r1 signer
 	 */
 	function getAddress(bytes32 salt) public view returns (address clone) {
 		return

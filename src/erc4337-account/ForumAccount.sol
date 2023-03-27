@@ -10,6 +10,8 @@ import {BaseAccount, IEntryPoint, UserOperation} from '@interfaces/BaseAccount.s
 import {Base64} from '@libraries/Base64.sol';
 import {HexToLiteralBytes} from '@libraries/HexToLiteralBytes.sol';
 
+import {Exec} from '@utils/Exec.sol';
+
 /**
  * @notice ERC4337 Managed Gnosis Safe Account Implementation
  * @author Forum (https://forumdaos.com)
@@ -19,7 +21,6 @@ import {HexToLiteralBytes} from '@libraries/HexToLiteralBytes.sol';
 /**
  * TODO
  * - Handle variable ClientDataJson
- * - Consider security of adding a generated address as owner on safe
  * - Integrate domain seperator in validation of signatures
  * - Use as a module until more finalised version is completed (for easier upgradability)
  * - Consider a function to upgrade owner
@@ -37,7 +38,7 @@ contract ForumAccount is Safe, BaseAccount {
 	error Unauthorized();
 
 	// Public key for secp256r1 signer
-	uint[2] internal _owner;
+	uint256[2] internal _owner;
 
 	// Entry point allowed to call methods directly on this contract
 	IEntryPoint internal _entryPoint;
@@ -51,7 +52,7 @@ contract ForumAccount is Safe, BaseAccount {
 	 * @dev This contract should be deployed using a proxy, the constructor should not be called
 	 */
 	constructor() Safe() {
-		_owner = [1, 1];
+		threshold = 1;
 	}
 
 	/**
@@ -60,7 +61,7 @@ contract ForumAccount is Safe, BaseAccount {
 	 * @dev This method should only be called once, and setup() will revert if needed
 	 */
 	function initialize(bytes calldata initData) public virtual {
-		(IEntryPoint anEntryPoint, uint[2] memory anOwner, address gnosisFallbackLibrary) = abi
+		(IEntryPoint anEntryPoint, uint256[2] memory anOwner, address gnosisFallbackLibrary) = abi
 			.decode(initData, (IEntryPoint, uint[2], address));
 
 		_entryPoint = anEntryPoint;
@@ -69,9 +70,10 @@ contract ForumAccount is Safe, BaseAccount {
 
 		// Owner must be passed to safe setup as an array of addresses
 		address[] memory arrayOwner = new address[](1);
-		// Take the last 20 bytes of the hashed public key as the address
-		arrayOwner[0] = address(bytes20(keccak256(abi.encodePacked(anOwner[0], anOwner[1])) << 96));
+		// Take this address as the owner
+		arrayOwner[0] = address(this);
 
+		// Setup the Gnosis Safe - will revert if already initialized
 		this.setup(
 			arrayOwner,
 			1,
@@ -85,37 +87,36 @@ contract ForumAccount is Safe, BaseAccount {
 	}
 
 	/// ----------------------------------------------------------------------------------------
-	///							ERC-712 STYLE LOGIC
-	/// ----------------------------------------------------------------------------------------
-
-	function DOMAIN_SEPARATOR() public view virtual returns (bytes32) {
-		return
-			keccak256(
-				abi.encode(
-					// keccak256('ERC712Domain(string version,uint256 chainId,address verifyingContract)')
-					0x8990460956f759a70e263603272cebd0a6ac6dc523b7334ddce05daee4d94d83,
-					//keccak256('0.1.0'),
-					0x20c949dc33efc49625bfe13e8da716e725117224147d54a7f00c902f6bf68693,
-					block.chainid,
-					address(this)
-				)
-			);
-	}
-
-	/// ----------------------------------------------------------------------------------------
 	///							ACCOUNT LOGIC
 	/// ----------------------------------------------------------------------------------------
 
-	function execute(
+	/**
+	 * Execute a call but also revert if the execution fails.
+	 * The default behavior of the Safe is to not revert if the call fails,
+	 * which is challenging for integrating with ERC4337 because then the
+	 * EntryPoint wouldn't know to emit the UserOperationRevertReason event,
+	 * which the frontend/client uses to capture the reason for the failure.
+	 */
+	function executeAndRevert(
 		address to,
 		uint256 value,
 		bytes memory data,
 		Enum.Operation operation
-	) external payable virtual {
+	) external payable {
 		_requireFromEntryPoint();
 
-		// Execute transaction without further confirmations.
-		execute(to, value, data, operation, gasleft());
+		bool success = execute(to, value, data, operation, type(uint256).max);
+
+		bytes memory returnData = Exec.getReturnData(type(uint256).max);
+		// Revert with the actual reason string
+		// Adopted from: https://github.com/Uniswap/v3-periphery/blob/464a8a49611272f7349c970e0fadb7ec1d3c1086/contracts/base/Multicall.sol#L16-L23
+		if (!success) {
+			if (returnData.length < 68) revert();
+			assembly {
+				returnData := add(returnData, 0x04)
+			}
+			revert(abi.decode(returnData, (string)));
+		}
 	}
 
 	function setEntryPoint(IEntryPoint anEntryPoint) external virtual {
@@ -128,7 +129,7 @@ contract ForumAccount is Safe, BaseAccount {
 		return _entryPoint;
 	}
 
-	function owner() public view virtual returns (uint[2] memory) {
+	function owner() public view virtual returns (uint256[2] memory) {
 		return _owner;
 	}
 
@@ -162,17 +163,19 @@ contract ForumAccount is Safe, BaseAccount {
 		bytes32 userOpHash
 	) internal virtual override returns (uint256 sigTimeRange) {
 		// Extract the passkey generated signature and authentacator data
-		(uint256[2] memory sig, string memory authData) = abi.decode(
-			userOp.signature,
-			(uint256[2], string)
-		);
+		(
+			uint256[2] memory sig,
+			string memory clientDataStart,
+			string memory clientDataEnd,
+			string memory authData
+		) = abi.decode(userOp.signature, (uint256[2], string, string, string));
 
 		// Hash the client data to produce the challenge signed by the passkey offchain
 		bytes32 hashedClientData = sha256(
 			abi.encodePacked(
-				'{"type":"webauthn.get","challenge":"',
+				clientDataStart,
 				Base64.encode(abi.encodePacked(userOpHash)),
-				'","origin":"https://development.forumdaos.com"}'
+				clientDataEnd
 			)
 		);
 
