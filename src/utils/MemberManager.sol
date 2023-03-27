@@ -41,18 +41,38 @@ abstract contract MemberManager is SelfAuthorized {
 		uint256 y;
 	}
 
+	// Used to calcualte the address of the individual ERC-4337 accounts
+	// which members will have when deployed
+	bytes32 immutable _accountCreationProxyData;
+
 	// Number of required signatures for a Safe transaction.
 	uint256 internal _voteThreshold;
 
 	// Storing all members to index the mapping
-	bytes32[] internal _membersHashArray;
+	address[] internal _membersAddressArray;
 
-	// ! consider making the key here an address & calcualting the address from the public key
-	// This would require using the getAddress fn from the factory, or simplifying the factory
-	// By removing salt from the account deployment, we could get a consistent address based only off the public key
-	// The downside is that each passkey can only deply one account
-	// The pro is that we can use the address as the key for the mapping, and use a real 1155 token
-	mapping(bytes32 => Member) internal _members;
+	// Address is calculated from the public key of the member
+	// The address may not yet be deployed
+	mapping(address => Member) internal _members;
+
+	/// ----------------------------------------------------------------------------------------
+	///							CONSTRUCTOR
+	/// ----------------------------------------------------------------------------------------
+
+	/// @notice Constructor sets the accountCreationProxyData
+	/// @param singletonAccount_ Singleton from individual account factory
+	constructor(address singletonAccount_) {
+		_accountCreationProxyData = keccak256(
+			abi.encodePacked(
+				// constructor
+				bytes10(0x3d602d80600a3d3981f3),
+				// proxy code
+				bytes10(0x363d3d373d3d3d363d73),
+				singletonAccount_,
+				bytes15(0x5af43d82803e903d91602b57fd5bf3)
+			)
+		);
+	}
 
 	/// ----------------------------------------------------------------------------------------
 	///							MEMBER WRITE FUNCTIONS
@@ -63,7 +83,7 @@ abstract contract MemberManager is SelfAuthorized {
 	/// @param voteThreshold New voteThreshold.
 	function changeVoteThreshold(uint256 voteThreshold) public authorized {
 		// Validate that voteThreshold is not bigger than number of members & is at least 1
-		if (voteThreshold < 1 || voteThreshold > _membersHashArray.length)
+		if (voteThreshold < 1 || voteThreshold > _membersAddressArray.length)
 			revert InvalidThreshold();
 
 		_voteThreshold = voteThreshold;
@@ -77,15 +97,15 @@ abstract contract MemberManager is SelfAuthorized {
 		Member memory member,
 		uint256 voteThreshold_
 	) public authorized {
-		bytes32 memberHash = keccak256(abi.encodePacked(member.x, member.y));
-		if (_members[memberHash].x != 0) revert MemberExists();
+		address memberAddress = publicKeyAddress(member);
+		if (_members[memberAddress].x != 0) revert MemberExists();
 
 		// Validate that voteThreshold is at least 1 & is not bigger than (the new) number of members
-		if (voteThreshold_ < 1 || voteThreshold_ > _membersHashArray.length + 1)
+		if (voteThreshold_ < 1 || voteThreshold_ > _membersAddressArray.length + 1)
 			revert InvalidThreshold();
 
-		_members[memberHash] = member;
-		_membersHashArray.push(memberHash);
+		_members[memberAddress] = member;
+		_membersAddressArray.push(memberAddress);
 
 		// Update voteThreshold
 		_voteThreshold = voteThreshold_;
@@ -96,26 +116,26 @@ abstract contract MemberManager is SelfAuthorized {
 
 	// ! improve handling of member array
 	/// @notice Removes a member from the Safe & updates threshold.
-	/// @param memberHash Hash of the member's public key.
+	/// @param memberAddress Hash of the member's public key.
 	/// @param voteThreshold_ New voteThreshold.
 	function removeMemberWithThreshold(
-		bytes32 memberHash,
+		address memberAddress,
 		uint256 voteThreshold_
 	) public authorized {
-		if (_members[memberHash].x == 0) revert CannotRemoveMember();
+		if (_members[memberAddress].x == 0) revert CannotRemoveMember();
 
 		// Validate that voteThreshold is at least 1 & is not bigger than (the new) number of members
 		// This also ensures the last member is not removed
-		if (voteThreshold_ < 1 || voteThreshold_ > _membersHashArray.length - 1)
+		if (voteThreshold_ < 1 || voteThreshold_ > _membersAddressArray.length - 1)
 			revert InvalidThreshold();
 
-		emit RemovedMember(_members[memberHash]);
+		emit RemovedMember(_members[memberAddress]);
 
-		delete _members[memberHash];
-		for (uint256 i = 0; i < _membersHashArray.length; i++) {
-			if (_membersHashArray[i] == memberHash) {
-				_membersHashArray[i] = _membersHashArray[_membersHashArray.length - 1];
-				_membersHashArray.pop();
+		delete _members[memberAddress];
+		for (uint256 i = 0; i < _membersAddressArray.length; i++) {
+			if (_membersAddressArray[i] == memberAddress) {
+				_membersAddressArray[i] = _membersAddressArray[_membersAddressArray.length - 1];
+				_membersAddressArray.pop();
 				break;
 			}
 		}
@@ -135,12 +155,12 @@ abstract contract MemberManager is SelfAuthorized {
 	}
 
 	function getMembers() public view returns (uint256[2][] memory members) {
-		uint256 len = _membersHashArray.length;
+		uint256 len = _membersAddressArray.length;
 
 		members = new uint256[2][](len);
 
 		for (uint256 i; i < len; ) {
-			Member memory _mem = _members[_membersHashArray[i]];
+			Member memory _mem = _members[_membersAddressArray[i]];
 			members[i] = [_mem.x, _mem.y];
 
 			// Length of member array can't exceed max uint256
@@ -152,10 +172,29 @@ abstract contract MemberManager is SelfAuthorized {
 
 	/**
 	 * @notice Checks if a member is part of the group
-	 * @param memberHash Hash of the member's public key: keccak256(abi.encodePacked(member.x, member.y))
+	 * @param memberAddress Address from publicKeyAddress based on public key
 	 * @return 1 if member is part of the group, 0 otherwise
 	 */
-	function isMember(bytes32 memberHash) public view returns (uint256) {
-		return _members[memberHash].x != 0 ? 1 : 0;
+	function isMember(address memberAddress) public view returns (uint256) {
+		return _members[memberAddress].x != 0 ? 1 : 0;
+	}
+
+	/**
+	 * @dev Returns the address which a public key will deploy to based of the individual account factory
+	 */
+	function publicKeyAddress(Member memory pk) public view returns (address) {
+		return
+			address(
+				bytes20(
+					keccak256(
+						abi.encodePacked(
+							bytes1(0xff),
+							0x4e59b44847b379578588920cA78FbF26c0B4956C,
+							abi.encodePacked(pk.x, pk.y),
+							_accountCreationProxyData
+						)
+					) << 96
+				)
+			);
 	}
 }

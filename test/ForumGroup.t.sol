@@ -77,7 +77,7 @@ contract ForumGroupTest is ERC4337TestConfig {
 		assertTrue(forumGroup.entryPoint() == address(entryPoint));
 
 		// Check the member has been minted a membership token
-		assertTrue(forumGroup.isMember(publicKeyHash(publicKey)) == 1);
+		assertTrue(forumGroup.isMember(publicKeyAddress(publicKey)) == 1);
 
 		// The safe has been initialized with a threshold of 1
 		// This threshold is not used when executing via group
@@ -126,7 +126,7 @@ contract ForumGroupTest is ERC4337TestConfig {
 		assertTrue(newForumGroup.entryPoint() == address(entryPoint));
 
 		// Check the member has been minted a membership token
-		assertTrue(forumGroup.isMember(publicKeyHash(publicKey)) == 1);
+		assertTrue(forumGroup.isMember(publicKeyAddress(publicKey)) == 1);
 
 		// The safe has been initialized with a threshold of 1
 		// This threshold is not used when executing via group
@@ -201,7 +201,7 @@ contract ForumGroupTest is ERC4337TestConfig {
 		assertTrue(forumGroup.getVoteThreshold() == 2);
 
 		// Check the member has been minted a membership token
-		assertTrue(forumGroup.isMember(publicKeyHash(publicKey2)) == 1);
+		assertTrue(forumGroup.isMember(publicKeyAddress(publicKey2)) == 1);
 
 		assertTrue(forumGroup.getMembers().length == 2);
 	}
@@ -249,19 +249,19 @@ contract ForumGroupTest is ERC4337TestConfig {
 		assertTrue(forumGroup.getVoteThreshold() == 2);
 
 		vm.prank(address(forumGroup));
-		forumGroup.removeMemberWithThreshold(publicKeyHash(publicKey2), 1);
+		forumGroup.removeMemberWithThreshold(publicKeyAddress(publicKey2), 1);
 
 		members = forumGroup.getMembers();
 		assertTrue(members.length == 1);
 		assertTrue(forumGroup.getVoteThreshold() == 1);
-		assertTrue(forumGroup.isMember(publicKeyHash(publicKey2)) == 0);
+		assertTrue(forumGroup.isMember(publicKeyAddress(publicKey2)) == 0);
 	}
 
 	function testCannotRemoveMemberWithThresholdIncorrectly() public {
 		vm.startPrank(address(forumGroup));
 
 		vm.expectRevert(MemberManager.CannotRemoveMember.selector);
-		forumGroup.removeMemberWithThreshold(publicKeyHash(publicKey2), 1);
+		forumGroup.removeMemberWithThreshold(publicKeyAddress(publicKey2), 1);
 
 		// Add a member so we can change threshold from 1-> 2 later
 		forumGroup.addMemberWithThreshold(
@@ -270,16 +270,16 @@ contract ForumGroupTest is ERC4337TestConfig {
 		);
 
 		vm.expectRevert(MemberManager.InvalidThreshold.selector);
-		forumGroup.removeMemberWithThreshold(publicKeyHash(publicKey2), 0);
+		forumGroup.removeMemberWithThreshold(publicKeyAddress(publicKey2), 0);
 
 		vm.expectRevert(MemberManager.InvalidThreshold.selector);
-		forumGroup.removeMemberWithThreshold(publicKeyHash(publicKey2), 3);
+		forumGroup.removeMemberWithThreshold(publicKeyAddress(publicKey2), 3);
 
 		// Remove member so we can check the restriction on removing the final memebr next
-		forumGroup.removeMemberWithThreshold(publicKeyHash(publicKey2), 1);
+		forumGroup.removeMemberWithThreshold(publicKeyAddress(publicKey2), 1);
 
 		vm.expectRevert(MemberManager.InvalidThreshold.selector);
-		forumGroup.removeMemberWithThreshold(publicKeyHash(publicKey), 1);
+		forumGroup.removeMemberWithThreshold(publicKeyAddress(publicKey), 1);
 	}
 
 	function testUpdateEntryPoint() public {
@@ -403,8 +403,33 @@ contract ForumGroupTest is ERC4337TestConfig {
 	/// -----------------------------------------------------------------------
 	/// HELPERS
 	/// -----------------------------------------------------------------------
-	function publicKeyHash(uint256[2] memory publicKey_) public pure returns (bytes32) {
-		return keccak256(abi.encodePacked(publicKey_[0], publicKey_[1]));
+
+	/**
+	 * @dev Returns the address which a public key will deploy to based of the individual account factory
+	 */
+	function publicKeyAddress(uint256[2] memory publicKey_) public view returns (address) {
+		return
+			address(
+				bytes20(
+					keccak256(
+						abi.encodePacked(
+							bytes1(0xff),
+							0x4e59b44847b379578588920cA78FbF26c0B4956C,
+							abi.encodePacked(publicKey_[0], publicKey_[1]),
+							keccak256(
+								abi.encodePacked(
+									// constructor
+									bytes10(0x3d602d80600a3d3981f3),
+									// proxy code
+									bytes10(0x363d3d373d3d3d363d73),
+									address(forumAccountSingleton),
+									bytes15(0x5af43d82803e903d91602b57fd5bf3)
+								)
+							)
+						)
+					) << 96
+				)
+			);
 	}
 
 	receive() external payable {}

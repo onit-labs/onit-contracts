@@ -43,11 +43,6 @@ contract ForumGroupFactory {
 	// Data sent to the deterministic deployment proxy to deploy a new group module
 	bytes private _createForumGroupProxyData;
 
-	// Client data used for validating passkey signatures on contract
-	string internal _clientDataStart = '{"type":"webauthn.get","challenge":"';
-	string internal _clientDataEndDevelopment = '","origin":"https://development.forumdaos.com"}';
-	string internal _clientDataEndProduction = '","origin":"https://production.forumdaos.com"}';
-
 	/// ----------------------------------------------------------------------------------------
 	/// Constructor
 	/// ----------------------------------------------------------------------------------------
@@ -94,7 +89,7 @@ contract ForumGroupFactory {
 	) external payable virtual returns (address forumGroup) {
 		// ! Improve this salt - should be safely unique, and easily reusuable across chain
 		// ! Should also prevent any frontrunning to deploy to this address by anyone else
-		bytes32 accountSalt = keccak256(abi.encode(_name));
+		bytes32 accountSalt = keccak256(abi.encodePacked(_name));
 
 		address addr = getAddress(accountSalt);
 		uint codeSize = addr.code.length;
@@ -117,9 +112,7 @@ contract ForumGroupFactory {
 			entryPoint,
 			gnosisFallbackLibrary,
 			_voteThreshold,
-			_members,
-			_clientDataStart,
-			production ? _clientDataEndProduction : _clientDataEndDevelopment
+			_members
 		);
 
 		emit ForumGroupDeployed(forumGroup);

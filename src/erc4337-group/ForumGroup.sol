@@ -26,10 +26,6 @@ contract ForumGroup is IAccount, Safe, MemberManager, ForumGroupGovernanceBasic 
 	///							EVENTS & ERRORS
 	/// ----------------------------------------------------------------------------------------
 
-	/// ----------------------------------------------------------------------------------------
-	///							EVENTS & ERRORS
-	/// ----------------------------------------------------------------------------------------
-
 	error ModuleAlreadySetUp();
 
 	error NotFromEntrypoint();
@@ -39,12 +35,6 @@ contract ForumGroup is IAccount, Safe, MemberManager, ForumGroupGovernanceBasic 
 	/// ----------------------------------------------------------------------------------------
 	///							GROUP STORAGE
 	/// ----------------------------------------------------------------------------------------
-
-	// Should be made immutable - also consider removing variables and passing in signature
-	string internal _clientDataStart;
-
-	// Should be made immutable - also consider removing variables and passing in signature
-	string internal _clientDataEnd;
 
 	// Reference to latest entrypoint
 	address internal _entryPoint;
@@ -60,9 +50,9 @@ contract ForumGroup is IAccount, Safe, MemberManager, ForumGroupGovernanceBasic 
 	/// 						SETUP
 	/// -----------------------------------------------------------------------
 
-	// Ensures the singleton can not be setup
-	constructor() {
-		_voteThreshold = 1;
+	constructor(address singletonAccount_) MemberManager(singletonAccount_) {
+		// Set the threshold on the safe, prevents calling setUp so good for singleton
+		threshold = 1;
 	}
 
 	/**
@@ -76,9 +66,7 @@ contract ForumGroup is IAccount, Safe, MemberManager, ForumGroupGovernanceBasic 
 		address _anEntryPoint,
 		address fallbackHandler,
 		uint256 voteThreshold,
-		uint256[2][] memory members,
-		string memory clientDataStart,
-		string memory clientDataEnd
+		uint256[2][] memory members
 	) external {
 		// Can only be set up once
 		if (_voteThreshold != 0) revert ModuleAlreadySetUp();
@@ -108,10 +96,6 @@ contract ForumGroup is IAccount, Safe, MemberManager, ForumGroupGovernanceBasic 
 
 		_entryPoint = _anEntryPoint;
 
-		_clientDataStart = clientDataStart;
-
-		_clientDataEnd = clientDataEnd;
-
 		_voteThreshold = voteThreshold;
 
 		// Set up the members
@@ -119,12 +103,12 @@ contract ForumGroup is IAccount, Safe, MemberManager, ForumGroupGovernanceBasic 
 
 		for (uint256 i; i < len; ) {
 			// Create a hash used to identify the member
-			bytes32 memberHash = publicKeyHash(Member(members[i][0], members[i][1]));
+			address membersAddress = publicKeyAddress(Member(members[i][0], members[i][1]));
 
 			// Add key pair to the members mapping
-			_members[memberHash] = Member(members[i][0], members[i][1]);
+			_members[membersAddress] = Member(members[i][0], members[i][1]);
 			// Add hash to the members array
-			_membersHashArray.push(memberHash);
+			_membersAddressArray.push(membersAddress);
 
 			unchecked {
 				++i;
@@ -145,15 +129,20 @@ contract ForumGroup is IAccount, Safe, MemberManager, ForumGroupGovernanceBasic 
 
 		// Extract the passkey generated signature and authentacator data
 		// Signer index is the index of the signer in the members array, used to retrieve the public key
-		(uint256[] memory signerIndex, uint256[2][] memory sig, string memory authData) = abi
-			.decode(userOp.signature, (uint256[], uint256[2][], string));
+		(
+			uint256[] memory signerIndex,
+			uint256[2][] memory sig,
+			string memory clientDataStart,
+			string memory clientDataEnd,
+			string memory authData
+		) = abi.decode(userOp.signature, (uint256[], uint256[2][], string, string, string));
 
 		// Hash the client data to produce the challenge signed by the passkey offchain
 		bytes32 hashedClientData = sha256(
 			abi.encodePacked(
-				_clientDataStart,
+				clientDataStart,
 				Base64.encode(abi.encodePacked(userOpHash)),
-				_clientDataEnd
+				clientDataEnd
 			)
 		);
 
@@ -168,8 +157,8 @@ contract ForumGroup is IAccount, Safe, MemberManager, ForumGroupGovernanceBasic 
 			if (
 				Secp256r1.Verify(
 					PassKeyId(
-						_members[_membersHashArray[signerIndex[i]]].x,
-						_members[_membersHashArray[signerIndex[i]]].y,
+						_members[_membersAddressArray[signerIndex[i]]].x,
+						_members[_membersAddressArray[signerIndex[i]]].y,
 						''
 					),
 					sig[i][0],
@@ -238,62 +227,9 @@ contract ForumGroup is IAccount, Safe, MemberManager, ForumGroupGovernanceBasic 
 	/// 						GROUP MANAGEMENT
 	/// -----------------------------------------------------------------------
 
-	// /**
-	//  * @notice Manage admin of group
-	//  */
-	// function manageAdmin(
-	// 	IForumSafeModuleTypes.ProposalType proposalType,
-	// 	address[] memory accounts,
-	// 	uint256[] memory amounts,
-	// 	bytes[] memory payloads
-	// ) external payable {
-	// 	// ! count votes and limit to entrypoint or passed vote
+	// TODO Create group admin function
 
-	// 	require(msg.sender == address(_entryPoint), 'Only entrypoint can execute');
-
-	// 	// Consider these checks which used to happen in propose function
-	// 	if (accounts.length != amounts.length || amounts.length != payloads.length)
-	// 		revert NoArrayParity();
-
-	// 	if (
-	// 		proposalType == ProposalType.MEMBER_THRESHOLD ||
-	// 		proposalType == ProposalType.TOKEN_THRESHOLD
-	// 	)
-	// 		if (amounts[0] == 0 || amounts[0] > 100) revert VoteThresholdBounds();
-
-	// 	// ! correct count based on new struct
-	// 	if (proposalType == ProposalType.TYPE)
-	// 		if (amounts[0] > 13 || amounts[1] > 2 || amounts.length != 2) revert TypeBounds();
-
-	// 	unchecked {
-	// 		// Add / remove members + update gnosis threshold
-
-	// 		if (proposalType == ProposalType.MEMBER_THRESHOLD)
-	// 			memberVoteThreshold = uint32(amounts[0]);
-
-	// 		if (proposalType == ProposalType.TOKEN_THRESHOLD)
-	// 			tokenVoteThreshold = uint32(amounts[0]);
-
-	// 		if (proposalType == ProposalType.TYPE)
-	// 			proposalVoteTypes[ProposalType(amounts[0])] = VoteType(amounts[1]);
-
-	// 		if (proposalType == ProposalType.PAUSE) _flipPause();
-
-	// 		if (proposalType == ProposalType.EXTENSION)
-	// 			for (uint256 i; i < accounts.length; ) {
-	// 				if (amounts[i] != 0) extensions[accounts[i]] = !extensions[accounts[i]];
-
-	// 				if (payloads[i].length > 3) {
-	// 					IForumGroupExtension(accounts[i]).setExtension(payloads[i]);
-	// 				}
-	// 				++i;
-	// 			}
-
-	// 		if (proposalType == ProposalType.DOCS) docs = string(payloads[0]);
-
-	// 		// ! consider a nonce or similar to prevent replies (if sigs are used)
-	// 	}
-	// }
+	// TODO Create extension calling function
 
 	function setEntryPoint(address anEntryPoint) external {
 		if (msg.sender != _entryPoint) revert NotFromEntrypoint();
@@ -309,9 +245,5 @@ contract ForumGroup is IAccount, Safe, MemberManager, ForumGroupGovernanceBasic 
 
 	function entryPoint() public view virtual returns (address) {
 		return _entryPoint;
-	}
-
-	function publicKeyHash(Member memory pk) public pure returns (bytes32) {
-		return keccak256(abi.encodePacked(pk.x, pk.y));
 	}
 }

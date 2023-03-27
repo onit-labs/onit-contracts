@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.15;
 
-import {EnumerableSet} from '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
-
 /// @notice Minimalist and gas efficient ERC1155 based DAO implementation with governance.
-/// @author Modified from KaliDAO (https://github.com/kalidao/kali-contracts/blob/main/contracts/KaliDAOtoken.sol)
+/// @author Modified from Solbase ERC1155.sol
+
+// TODO
+// - Add uri to get image for nfts
+// - Consider adding token delegation
+// - Add erc1155 handling to individual accounts
+// - Add erc2612  style domain separator
+// - Set name & symbol
 
 abstract contract ForumGroupGovernance {
-	using EnumerableSet for EnumerableSet.AddressSet;
-
 	/// ----------------------------------------------------------------------------------------
 	///							EVENTS
 	/// ----------------------------------------------------------------------------------------
@@ -31,29 +34,13 @@ abstract contract ForumGroupGovernance {
 
 	event ApprovalForAll(address indexed owner, address indexed operator, bool indexed approved);
 
-	event URI(string value, uint256 indexed id);
-
 	event PauseFlipped(bool indexed paused);
-
-	event Delegation(
-		address indexed delegator,
-		address indexed currentDelegatee,
-		address indexed delegatee
-	);
 
 	/// ----------------------------------------------------------------------------------------
 	///							ERRORS
 	/// ----------------------------------------------------------------------------------------
 
 	error Paused();
-
-	error SignatureExpired();
-
-	error InvalidDelegate();
-
-	error Uint32max();
-
-	error Uint96max();
 
 	error InvalidNonce();
 
@@ -76,33 +63,15 @@ abstract contract ForumGroupGovernance {
 	mapping(address => mapping(address => bool)) public isApprovedForAll;
 
 	/// ----------------------------------------------------------------------------------------
-	///							EIP-712 STORAGE
-	/// ----------------------------------------------------------------------------------------
-
-	bytes32 internal INITIAL_DOMAIN_SEPARATOR;
-
-	uint256 internal INITIAL_CHAIN_ID;
-
-	mapping(address => uint256) public nonces;
-
-	/// ----------------------------------------------------------------------------------------
 	///							GROUP STORAGE
 	/// ----------------------------------------------------------------------------------------
 
 	bool public paused;
 
-	bytes32 public constant DELEGATION_TYPEHASH =
-		keccak256('Delegation(address delegatee,uint256 nonce,uint256 deadline)');
-
 	// DAO token representing voting share of treasury
 	uint256 internal constant TOKEN = 0;
 
 	mapping(uint256 => uint256) public totalSupply;
-
-	// All delegators for a member -> default case is an empty array
-	mapping(address => EnumerableSet.AddressSet) internal memberDelegators;
-	// The current delegate of a member -> default is no delegation, ie address(0)
-	mapping(address => address) public memberDelegatee;
 
 	/// ----------------------------------------------------------------------------------------
 	///							CONSTRUCTOR
@@ -114,17 +83,7 @@ abstract contract ForumGroupGovernance {
 		symbol = symbol_;
 
 		paused = true;
-
-		INITIAL_CHAIN_ID = block.chainid;
-
-		INITIAL_DOMAIN_SEPARATOR = _computeDomainSeparator();
 	}
-
-	/// ----------------------------------------------------------------------------------------
-	///							METADATA LOGIC
-	/// ----------------------------------------------------------------------------------------
-
-	//function uri(uint256 id) public view virtual returns (string memory);
 
 	/// ----------------------------------------------------------------------------------------
 	///							ERC1155 LOGIC
@@ -147,10 +106,6 @@ abstract contract ForumGroupGovernance {
 
 		balanceOf[from][id] -= amount;
 		balanceOf[to][id] += amount;
-
-		// Cannot transfer membership while delegating / being delegated to
-		if (memberDelegatee[from] != address(0) || memberDelegators[from].length() > 0)
-			revert InvalidDelegate();
 
 		emit TransferSingle(msg.sender, from, to, id, amount);
 
@@ -183,14 +138,10 @@ abstract contract ForumGroupGovernance {
 			balanceOf[from][id] -= amount;
 			balanceOf[to][id] += amount;
 
-			// Cannot transfer membership while delegating / being delegated to
-			if (memberDelegatee[from] != address(0) || memberDelegators[from].length() > 0)
-				revert InvalidDelegate();
-
 			// An array can't have a total length
 			// larger than the max uint256 value.
 			unchecked {
-				i++;
+				++i;
 			}
 		}
 
@@ -230,32 +181,6 @@ abstract contract ForumGroupGovernance {
 	}
 
 	/// ----------------------------------------------------------------------------------------
-	///							EIP-2612 LOGIC
-	/// ----------------------------------------------------------------------------------------
-
-	function DOMAIN_SEPARATOR() public view virtual returns (bytes32) {
-		return
-			block.chainid == INITIAL_CHAIN_ID
-				? INITIAL_DOMAIN_SEPARATOR
-				: _computeDomainSeparator();
-	}
-
-	function _computeDomainSeparator() internal view virtual returns (bytes32) {
-		return
-			keccak256(
-				abi.encode(
-					keccak256(
-						'EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)'
-					),
-					keccak256(bytes(name)),
-					keccak256('1.1.0'),
-					block.chainid,
-					address(this)
-				)
-			);
-	}
-
-	/// ----------------------------------------------------------------------------------------
 	///							GROUP LOGIC
 	/// ----------------------------------------------------------------------------------------
 
@@ -271,8 +196,7 @@ abstract contract ForumGroupGovernance {
 	function supportsInterface(bytes4 interfaceId) public pure virtual returns (bool) {
 		return
 			interfaceId == 0x01ffc9a7 || // ERC165 Interface ID for ERC165
-			interfaceId == 0xd9b67a26 || // ERC165 Interface ID for ERC1155
-			interfaceId == 0x0e89341c; // ERC165 Interface ID for ERC1155MetadataURI
+			interfaceId == 0xd9b67a26; // ERC165 Interface ID for ERC1155
 	}
 
 	/// ----------------------------------------------------------------------------------------
@@ -348,10 +272,6 @@ abstract contract ForumGroupGovernance {
 		for (uint256 i = 0; i < idsLength; ) {
 			balanceOf[from][ids[i]] -= amounts[i];
 
-			// Member can not leave while delegating / being delegated to
-			if (memberDelegatee[from] != address(0) || memberDelegators[from].length() > 0)
-				revert InvalidDelegate();
-
 			totalSupply[ids[i]] -= amounts[i];
 
 			// An array can't have a total length
@@ -367,10 +287,6 @@ abstract contract ForumGroupGovernance {
 	function _burn(address from, uint256 id, uint256 amount) internal {
 		balanceOf[from][id] -= amount;
 
-		// Member can not leave while delegating / being delegated to
-		if (memberDelegatee[from] != address(0) || EnumerableSet.length(memberDelegators[from]) > 0)
-			revert InvalidDelegate();
-
 		totalSupply[id] -= amount;
 
 		emit TransferSingle(msg.sender, from, address(0), id, amount);
@@ -384,22 +300,6 @@ abstract contract ForumGroupGovernance {
 		paused = !paused;
 
 		emit PauseFlipped(paused);
-	}
-
-	/// ----------------------------------------------------------------------------------------
-	///						SAFECAST  LOGIC
-	/// ----------------------------------------------------------------------------------------
-
-	function _safeCastTo32(uint256 x) internal pure virtual returns (uint32) {
-		if (x > type(uint32).max) revert Uint32max();
-
-		return uint32(x);
-	}
-
-	function _safeCastTo96(uint256 x) internal pure virtual returns (uint96) {
-		if (x > type(uint96).max) revert Uint96max();
-
-		return uint96(x);
 	}
 }
 

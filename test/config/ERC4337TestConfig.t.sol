@@ -46,7 +46,7 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
 		entryPointAddress = address(entryPoint);
 
 		forumAccountSingleton = new ForumAccount();
-		forumGroupSingleton = new ForumGroup();
+		forumGroupSingleton = new ForumGroup(address(forumAccountSingleton));
 
 		forumAccountFactory = new ForumAccountFactory(
 			forumAccountSingleton,
