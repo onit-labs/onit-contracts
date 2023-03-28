@@ -96,7 +96,7 @@ contract ForumGroupTest is ERC4337TestConfig {
 
 		// Calculate address in advance to use as sender
 		address preCalculatedAccountAddress = forumGroupFactory.getAddress(
-			keccak256(abi.encode(GROUP_NAME_2))
+			keccak256(abi.encodePacked(GROUP_NAME_2))
 		);
 
 		// Deal funds to account
@@ -140,7 +140,8 @@ contract ForumGroupTest is ERC4337TestConfig {
 	function testGetAddress() public {
 		// Get address should predict correct deployed address
 		assertTrue(
-			forumGroupFactory.getAddress(keccak256(abi.encode(GROUP_NAME_1))) == address(forumGroup)
+			forumGroupFactory.getAddress(keccak256(abi.encodePacked(GROUP_NAME_1))) ==
+				address(forumGroup)
 		);
 	}
 
