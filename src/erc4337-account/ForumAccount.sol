@@ -11,26 +11,26 @@ import {Base64} from '@libraries/Base64.sol';
 import {HexToLiteralBytes} from '@libraries/HexToLiteralBytes.sol';
 
 import {Exec} from '@utils/Exec.sol';
+import {NftReceiver} from '@utils/NFTreceiver.sol';
 
 /**
  * @notice ERC4337 Managed Gnosis Safe Account Implementation
  * @author Forum (https://forumdaos.com)
  * @dev Uses infinitism style base 4337 interface, with gnosis safe account
+ * @custom:warning This contract is in development and should not be used in production.
  */
 
 /**
  * TODO
- * - Handle variable ClientDataJson
  * - Integrate domain seperator in validation of signatures
  * - Use as a module until more finalised version is completed (for easier upgradability)
  * - Consider a function to upgrade owner
  * - Add restriction to check entryPoint is valid before setting
  * - Further access control on functions
  * - Add guardians and account recovery
- * - Test NFT receiver
  */
 
-contract ForumAccount is Safe, BaseAccount {
+contract ForumAccount is Safe, BaseAccount, NftReceiver {
 	/// ----------------------------------------------------------------------------------------
 	///							ACCOUNT STORAGE
 	/// ----------------------------------------------------------------------------------------

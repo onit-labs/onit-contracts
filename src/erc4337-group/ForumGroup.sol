@@ -8,20 +8,31 @@ import {HexToLiteralBytes} from '@libraries/HexToLiteralBytes.sol';
 
 import {Exec} from '@utils/Exec.sol';
 import {MemberManager} from '@utils/MemberManager.sol';
+import {NftReceiver} from '@utils/NftReceiver.sol';
 
 import {Safe, Enum} from '@safe/Safe.sol';
 import {IAccount} from '@erc4337/interfaces/IAccount.sol';
-import {IEntryPoint, UserOperation} from '@erc4337/interfaces/IEntryPoint.sol';
+import {UserOperation} from '@erc4337/interfaces/IEntryPoint.sol';
 import {Secp256r1, PassKeyId} from '@aa-passkeys-wallet/Secp256r1.sol';
 
-import {ForumGroupGovernanceBasic} from './ForumGroupGovernanceBasic.sol';
+import {ForumGroupGovernance} from './ForumGroupGovernance.sol';
 
 /**
  * @title Forum Group
  * @notice A group 4337 wallet based on eth-infinitism IAccount, built on safe
  * @author Forum (https://github.com/forumdaos/contracts)
+ * @custom:warning This contract is in development and should not be used in production.
  */
-contract ForumGroup is IAccount, Safe, MemberManager, ForumGroupGovernanceBasic {
+
+/**
+ * TODO
+ * - Add moduleAdmin function to handle adding members, changing threshold etc
+ * - Add extension function to call extensions without needing full validation
+ * - Test ERC1155 token tracking and transfer
+ * - Add check to prevent setting wrong entrypoint
+ */
+
+contract ForumGroup is IAccount, Safe, MemberManager, ForumGroupGovernance, NftReceiver {
 	/// ----------------------------------------------------------------------------------------
 	///							EVENTS & ERRORS
 	/// ----------------------------------------------------------------------------------------
