@@ -84,6 +84,13 @@ contract ForumGroupTest is ERC4337TestConfig {
 		assertTrue(forumGroup.getThreshold() == 1);
 	}
 
+	function testPublicKeyAddressMatches() public {
+		assertEq(
+			forumGroup.publicKeyAddress(MemberManager.Member(publicKey[0], publicKey[1])),
+			forumAccountFactory.getAddress(keccak256(abi.encodePacked(publicKey)))
+		);
+	}
+
 	function testDeployViaEntryPoint() public {
 		// Encode the calldata for the factory to create an account
 		bytes memory factoryCalldata = abi.encodeCall(

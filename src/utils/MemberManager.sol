@@ -181,6 +181,7 @@ abstract contract MemberManager is SelfAuthorized {
 
 	/**
 	 * @dev Returns the address which a public key will deploy to based of the individual account factory
+	 * ! Find a more efficient way to calculate the address
 	 */
 	function publicKeyAddress(Member memory pk) public view returns (address) {
 		return
@@ -190,7 +191,7 @@ abstract contract MemberManager is SelfAuthorized {
 						abi.encodePacked(
 							bytes1(0xff),
 							0x4e59b44847b379578588920cA78FbF26c0B4956C,
-							abi.encodePacked(pk.x, pk.y),
+							keccak256(abi.encodePacked(pk.x, pk.y)),
 							_accountCreationProxyData
 						)
 					) << 96
