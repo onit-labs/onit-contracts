@@ -10,11 +10,8 @@ import {DeploymentSelector} from '../../lib/foundry-deployment-manager/src/Deplo
  * Improvements to the deployment manager will allow this to be run in any order
  */
 contract ForumGroupDeployer is DeploymentSelector {
+	address internal forumAccountSingleton;
 	ForumGroup internal forumGroup;
-
-	string internal clientDataStart = '{"type":"webauthn.get","challenge":"';
-	string internal clientDataEndDevelopment = '","origin":"https://development.forumdaos.com"}';
-	string internal clientDataEndProduction = '","origin":"https://production.forumdaos.com"}';
 
 	function run() public {
 		innerRun();
@@ -24,13 +21,10 @@ contract ForumGroupDeployer is DeploymentSelector {
 	function innerRun() public {
 		startBroadcast();
 
-		string memory usedEnding = clientDataEndDevelopment;
-
-		// If we are in production, use the production client data ending
-		if (vm.envBool('PRODUCTION')) usedEnding = clientDataEndProduction;
+		forumAccountSingleton = fork.get('ForumAccount');
 
 		// No longer using external validator
-		bytes memory initData = new bytes(0);
+		bytes memory initData = abi.encode(forumAccountSingleton);
 
 		(address contractAddress, bytes memory deploymentBytecode) = SelectDeployment(
 			'ForumGroup',

@@ -68,16 +68,16 @@ contract ForumGroup is IAccount, Safe, MemberManager, ForumGroupGovernance, NftR
 
 	/**
 	 * @notice Setup the module.
-	 * @param _anEntryPoint The entrypoint to use on the safe
+	 * @param entryPoint_ The entrypoint to use on the safe
 	 * @param fallbackHandler The fallback handler to use on the safe
-	 * @param voteThreshold Vote threshold to pass (counted in members)
-	 * @param members The public key pairs of the signing members of the group
+	 * @param voteThreshold_ Vote threshold to pass (counted in members)
+	 * @param members_ The public key pairs of the signing members of the group
 	 */
 	function setUp(
-		address _anEntryPoint,
+		address entryPoint_,
 		address fallbackHandler,
-		uint256 voteThreshold,
-		uint256[2][] memory members
+		uint256 voteThreshold_,
+		uint256[2][] memory members_
 	) external {
 		// Can only be set up once
 		if (_voteThreshold != 0) revert ModuleAlreadySetUp();
@@ -98,26 +98,22 @@ contract ForumGroup is IAccount, Safe, MemberManager, ForumGroupGovernance, NftR
 			payable(address(0))
 		);
 
-		if (
-			_anEntryPoint == address(0) ||
-			voteThreshold < 1 ||
-			voteThreshold > members.length ||
-			members.length < 1
-		) revert InvalidInitialisation();
+		uint256 len = members_.length;
 
-		_entryPoint = _anEntryPoint;
+		if (entryPoint_ == address(0) || voteThreshold_ < 1 || voteThreshold_ > len || len < 1)
+			revert InvalidInitialisation();
 
-		_voteThreshold = voteThreshold;
+		_entryPoint = entryPoint_;
+
+		_voteThreshold = voteThreshold_;
 
 		// Set up the members
-		uint256 len = members.length;
-
 		for (uint256 i; i < len; ) {
 			// Create a hash used to identify the member
-			address membersAddress = publicKeyAddress(Member(members[i][0], members[i][1]));
+			address membersAddress = publicKeyAddress(Member(members_[i][0], members_[i][1]));
 
 			// Add key pair to the members mapping
-			_members[membersAddress] = Member(members[i][0], members[i][1]);
+			_members[membersAddress] = Member(members_[i][0], members_[i][1]);
 			// Add hash to the members array
 			_membersAddressArray.push(membersAddress);
 
@@ -242,12 +238,12 @@ contract ForumGroup is IAccount, Safe, MemberManager, ForumGroupGovernance, NftR
 
 	// TODO Create extension calling function
 
-	function setEntryPoint(address anEntryPoint) external {
+	function setEntryPoint(address entryPoint_) external {
 		if (msg.sender != _entryPoint) revert NotFromEntrypoint();
 
 		// ! consider checks that entrypoint is valid here !
 		// ! potential to brick account !
-		_entryPoint = anEntryPoint;
+		_entryPoint = entryPoint_;
 	}
 
 	/// -----------------------------------------------------------------------

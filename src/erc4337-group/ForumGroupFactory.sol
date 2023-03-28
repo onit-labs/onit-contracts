@@ -20,9 +20,6 @@ contract ForumGroupFactory {
 	/// Factory Storage
 	/// ----------------------------------------------------------------------------------------
 
-	// If we are in production
-	bool public immutable production;
-
 	// Template contract to use for new forum groups
 	address public immutable forumGroupSingleton;
 
@@ -51,14 +48,12 @@ contract ForumGroupFactory {
 		address payable _forumGroupSingleton,
 		address _entryPoint,
 		address _gnosisSingleton,
-		address _gnosisFallbackLibrary,
-		bool _production
+		address _gnosisFallbackLibrary
 	) {
 		forumGroupSingleton = _forumGroupSingleton;
 		entryPoint = _entryPoint;
 		gnosisSingleton = _gnosisSingleton;
 		gnosisFallbackLibrary = _gnosisFallbackLibrary;
-		production = _production;
 
 		// Data sent to the deterministic deployment proxy to deploy a new forum group
 		_createForumGroupProxyData = abi.encodePacked(

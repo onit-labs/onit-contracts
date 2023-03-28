@@ -58,8 +58,7 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
 			payable(address(forumGroupSingleton)),
 			entryPointAddress,
 			address(safeSingleton),
-			address(handler),
-			false // indicates development
+			address(handler)
 		);
 	}
 

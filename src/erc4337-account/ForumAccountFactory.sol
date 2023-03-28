@@ -38,6 +38,8 @@ contract ForumAccountFactory {
 
 	bytes private createProxyData;
 
+	bytes32 private immutable createProxyDataHash;
+
 	/// ----------------------------------------------------------------------------------------
 	/// Constructor
 	/// ----------------------------------------------------------------------------------------
@@ -52,8 +54,8 @@ contract ForumAccountFactory {
 		entryPoint = _entryPoint;
 
 		gnosisFallbackLibrary = _gnosisFallbackLibrary;
-
 		// Data sent to the deterministic deployment proxy to deploy a new ERC4337 account
+
 		createProxyData = abi.encodePacked(
 			// constructor
 			bytes10(0x3d602d80600a3d3981f3),
@@ -62,6 +64,9 @@ contract ForumAccountFactory {
 			forumAccountSingleton,
 			bytes15(0x5af43d82803e903d91602b57fd5bf3)
 		);
+
+		// Hashed so we can save this as immutable to save gas calcualting address
+		createProxyDataHash = keccak256(createProxyData);
 	}
 
 	/// ----------------------------------------------------------------------------------------
@@ -75,7 +80,7 @@ contract ForumAccountFactory {
 	 * @dev Returns an existing account address so that entryPoint.getSenderAddress() works even after account creation
 	 */
 	function createForumAccount(
-		uint[2] calldata owner
+		uint256[2] calldata owner
 	) external payable virtual returns (address payable account) {
 		bytes32 accountSalt = keccak256(abi.encodePacked(owner));
 
@@ -123,7 +128,7 @@ contract ForumAccountFactory {
 							bytes1(0xff),
 							DETERMINISTIC_DEPLOYMENT_PROXY,
 							salt,
-							keccak256(createProxyData)
+							createProxyDataHash
 						)
 					) << 96
 				)
