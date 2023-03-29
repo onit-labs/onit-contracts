@@ -15,6 +15,9 @@ import {ERC4337SignatureStore} from './config/ERC4337SignatureStore.t.sol';
 // ! until then some manual effor it required to run each test
 
 contract ForumAccountTest is ERC4337TestConfig, ERC4337SignatureStore {
+	uint256[2] internal publicKey;
+	string internal constant SIGNER_1 = '1';
+
 	// Variable used for test erc4337 account
 	ForumAccount private deployed4337Account;
 	address payable private deployed4337AccountAddress;
@@ -23,13 +26,15 @@ contract ForumAccountTest is ERC4337TestConfig, ERC4337SignatureStore {
 	bytes32 private constant SALT_1 = keccak256('salt1');
 	bytes32 private constant SALT_2 = keccak256('salt2');
 
-	bytes internal basicTransferPayload;
+	bytes internal basicTransferCalldata;
 
 	/// -----------------------------------------------------------------------
 	/// Setup
 	/// -----------------------------------------------------------------------
 
 	function setUp() public {
+		publicKey = createPublicKey(SIGNER_1);
+
 		// Check 4337 singelton is set in factory (base implementation for Forum 4337 accounts)
 		assertEq(
 			address(forumAccountFactory.forumAccountSingleton()),
@@ -37,11 +42,7 @@ contract ForumAccountTest is ERC4337TestConfig, ERC4337SignatureStore {
 			'forumAccountSingleton not set'
 		);
 		// Check 4337 entryPoint is set in factory
-		assertEq(
-			address(forumAccountFactory.entryPoint()),
-			address(entryPoint),
-			'entryPoint not set'
-		);
+		assertEq(forumAccountFactory.entryPoint(), entryPointAddress, 'entryPoint not set');
 		// Check 4337 gnosis fallback handler is set in factory
 		assertEq(
 			address(forumAccountFactory.gnosisFallbackLibrary()),
@@ -55,13 +56,13 @@ contract ForumAccountTest is ERC4337TestConfig, ERC4337SignatureStore {
 		);
 		deployed4337Account = ForumAccount(deployed4337AccountAddress);
 
-		// Deal funds to account
-		deal(deployed4337AccountAddress, 1 ether);
+		// // Deal funds to account
+		// deal(deployed4337AccountAddress, 1 ether);
 
-		// Payload used in some tests
-		basicTransferPayload = buildExecutionPayload(
+		// Build a basic transaction to execute in some tests
+		basicTransferCalldata = buildExecutionPayload(
 			alice,
-			0.5 ether,
+			uint256(0.5 ether),
 			new bytes(0),
 			Enum.Operation.Call
 		);
@@ -76,11 +77,7 @@ contract ForumAccountTest is ERC4337TestConfig, ERC4337SignatureStore {
 		assertEq(deployed4337Account.owner()[0], signers[TestSigner.SignerA][0], 'owner not set');
 		assertEq(deployed4337Account.owner()[1], signers[TestSigner.SignerA][1], 'owner not set');
 		assertEq(deployed4337Account.getThreshold(), 1, 'threshold not set');
-		assertEq(
-			deployed4337Account.getOwners()[0],
-			calculateOwnerAddress(signers[TestSigner.SignerA]),
-			'owner not set on safe'
-		);
+		assertEq(deployed4337Account.getOwners()[0], address(0xdead), 'owner not set on safe');
 		assertEq(
 			address(deployed4337Account.entryPoint()),
 			address(entryPoint),
@@ -89,19 +86,18 @@ contract ForumAccountTest is ERC4337TestConfig, ERC4337SignatureStore {
 	}
 
 	function testFactoryDeployFromEntryPoint() public {
-		// Encode the calldata for the factory to create an account
-		// bytes memory factoryCalldata = abi.encodeWithSignature(
-		// 	'createForumAccount(bytes32,uint256[2])',
-		// 	SALT_2,
-		// 	signers[TestSigner.SignerB]
-		// );
+		//Encode the calldata for the factory to create an account
+		bytes memory factoryCalldata = abi.encodeWithSignature(
+			'createForumAccount(uint256[2])',
+			publicKey
+		);
 
-		// Prepend the address of the factory
-		// bytes memory initCode = abi.encodePacked(forumAccountFactory, factoryCalldata);
+		//Prepend the address of the factory
+		bytes memory initCode = abi.encodePacked(address(forumAccountFactory), factoryCalldata);
 
 		// Calculate address in advance to use as sender
 		address preCalculatedAccountAddress = (forumAccountFactory).getAddress(
-			accountSalt(SALT_2, signers[TestSigner.SignerB])
+			accountSalt(publicKey)
 		);
 		// Deal funds to account
 		deal(preCalculatedAccountAddress, 1 ether);
@@ -109,24 +105,23 @@ contract ForumAccountTest is ERC4337TestConfig, ERC4337SignatureStore {
 		ForumAccount testNew4337Account = ForumAccount(payable(preCalculatedAccountAddress));
 
 		// Retrieve the userOp from signature store (in future generate this and sign it here)
-		UserOperation[] memory userOps = new UserOperation[](1);
-		userOps[0] = userOpDeployFactoryFromEntryPoint;
+
+		UserOperation[] memory userOps = signAndFormatUserOpIndividual(
+			buildUserOp(preCalculatedAccountAddress, 0, initCode, basicTransferCalldata),
+			SIGNER_1
+		);
 
 		// Handle userOp
 		entryPoint.handleOps(userOps, payable(alice));
 
 		// Check that the account is deployed and data is set on account, and safe
-		assertEq(testNew4337Account.owner()[0], signers[TestSigner.SignerB][0], 'owner not set');
-		assertEq(testNew4337Account.owner()[1], signers[TestSigner.SignerB][1], 'owner not set');
+		assertEq(testNew4337Account.owner()[0], publicKey[0], 'owner not set');
+		assertEq(testNew4337Account.owner()[1], publicKey[1], 'owner not set');
 		assertEq(testNew4337Account.getThreshold(), 1, 'threshold not set');
-		assertEq(
-			testNew4337Account.getOwners()[0],
-			calculateOwnerAddress(signers[TestSigner.SignerB]),
-			'owner not set on safe'
-		);
+		assertEq(testNew4337Account.getOwners()[0], address(0xdead), 'owner not set on safe');
 		assertEq(
 			address(testNew4337Account.entryPoint()),
-			address(entryPoint),
+			entryPointAddress,
 			'entry point not set'
 		);
 	}
@@ -140,24 +135,24 @@ contract ForumAccountTest is ERC4337TestConfig, ERC4337SignatureStore {
 
 		forumAccountFactory = new ForumAccountFactory(
 			forumAccountSingleton,
-			entryPoint,
+			entryPointAddress,
 			address(handler)
 		);
 
 		// Deploy an account to be used in tests
-		tmpMumbai = forumAccountFactory.createForumAccount(signers[TestSigner.SignerB]);
+		tmpMumbai = forumAccountFactory.createForumAccount(publicKey);
 
 		// Fork Fuji and create an account from a fcatory
 		vm.createSelectFork(vm.envString('FUJI_RPC_URL'));
 
 		forumAccountFactory = new ForumAccountFactory(
 			forumAccountSingleton,
-			entryPoint,
+			entryPointAddress,
 			address(handler)
 		);
 
 		// Deploy an account to be used in tests
-		tmpFuji = forumAccountFactory.createForumAccount(signers[TestSigner.SignerB]);
+		tmpFuji = forumAccountFactory.createForumAccount(publicKey);
 
 		assertEq(tmpMumbai, tmpFuji, 'address not the same');
 	}
@@ -171,7 +166,7 @@ contract ForumAccountTest is ERC4337TestConfig, ERC4337SignatureStore {
 		// Check old entry point is set
 		assertEq(
 			address(deployed4337Account.entryPoint()),
-			address(entryPoint),
+			entryPointAddress,
 			'entry point not set'
 		);
 
@@ -204,7 +199,7 @@ contract ForumAccountTest is ERC4337TestConfig, ERC4337SignatureStore {
 		// 	deployed4337AccountAddress,
 		// 	deployed4337Account.nonce(),
 		// 	new bytes(0),
-		// 	basicTransferPayload
+		// 	basicTransferCalldata
 		// );
 		UserOperation[] memory userOps = new UserOperation[](1);
 		userOps[0] = userOpTransfer;
@@ -274,13 +269,13 @@ contract ForumAccountTest is ERC4337TestConfig, ERC4337SignatureStore {
 		// 	deployed4337AccountAddress,
 		// 	deployed4337Account.nonce(),
 		// 	new bytes(0),
-		// 	basicTransferPayload
+		// 	basicTransferCalldata
 		// );
 		UserOperation memory userOp = UserOperation({
 			sender: deployed4337AccountAddress,
 			nonce: 1,
 			initCode: new bytes(0),
-			callData: basicTransferPayload,
+			callData: basicTransferCalldata,
 			callGasLimit: 100000,
 			verificationGasLimit: 10000000,
 			preVerificationGas: 21000000,
@@ -306,17 +301,14 @@ contract ForumAccountTest is ERC4337TestConfig, ERC4337SignatureStore {
 			sender: deployed4337AccountAddress,
 			nonce: deployed4337Account.nonce(),
 			initCode: new bytes(0),
-			callData: basicTransferPayload,
+			callData: basicTransferCalldata,
 			callGasLimit: 100000,
 			verificationGasLimit: 10000000,
 			preVerificationGas: 21000000,
 			maxFeePerGas: 2,
 			maxPriorityFeePerGas: 1e9,
 			paymasterAndData: new bytes(0),
-			signature: abi.encodePacked(
-				signers[TestSigner.SignerB][0],
-				signers[TestSigner.SignerB][1]
-			)
+			signature: abi.encodePacked(publicKey[0], publicKey[1])
 		});
 
 		vm.expectRevert();
@@ -335,7 +327,7 @@ contract ForumAccountTest is ERC4337TestConfig, ERC4337SignatureStore {
 		return address(bytes20(keccak256(abi.encodePacked(owner[0], owner[1])) << 96));
 	}
 
-	function accountSalt(bytes32 salt, uint[2] memory owner) internal pure returns (bytes32) {
-		return keccak256(abi.encode(salt, owner));
+	function accountSalt(uint[2] memory owner) internal pure returns (bytes32) {
+		return keccak256(abi.encodePacked(owner));
 	}
 }

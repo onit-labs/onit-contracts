@@ -50,7 +50,7 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
 
 		forumAccountFactory = new ForumAccountFactory(
 			forumAccountSingleton,
-			entryPoint,
+			entryPointAddress,
 			address(handler)
 		);
 
@@ -116,6 +116,27 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
 				data,
 				operation
 			);
+	}
+
+	// !!!!! combine with the above
+	function signAndFormatUserOpIndividual(
+		UserOperation memory userOp,
+		string memory signer1
+	) internal returns (UserOperation[] memory) {
+		userOp.signature = abi.encode(
+			signMessageForPublicKey(
+				signer1,
+				Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(userOp)))
+			),
+			'{"type":"webauthn.get","challenge":"',
+			'","origin":"https://development.forumdaos.com"}',
+			authentacatorData
+		);
+
+		UserOperation[] memory userOpArray = new UserOperation[](1);
+		userOpArray[0] = userOp;
+
+		return userOpArray;
 	}
 
 	// Gathers signatures from signers and formats them into the signature field for the user operation

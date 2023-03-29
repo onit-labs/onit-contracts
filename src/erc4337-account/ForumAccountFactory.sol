@@ -26,7 +26,7 @@ contract ForumAccountFactory {
 	ForumAccount public immutable forumAccountSingleton;
 
 	// Entry point used for ERC4337 accounts
-	IEntryPoint public immutable entryPoint;
+	address public immutable entryPoint;
 
 	// Fallback handler for Gnosis Safe
 	address public immutable gnosisFallbackLibrary;
@@ -36,9 +36,9 @@ contract ForumAccountFactory {
 	address public constant DETERMINISTIC_DEPLOYMENT_PROXY =
 		0x4e59b44847b379578588920cA78FbF26c0B4956C;
 
-	bytes private createProxyData;
+	bytes private _createProxyData;
 
-	bytes32 private immutable createProxyDataHash;
+	bytes32 private immutable _createProxyDataHash;
 
 	/// ----------------------------------------------------------------------------------------
 	/// Constructor
@@ -46,7 +46,7 @@ contract ForumAccountFactory {
 
 	constructor(
 		ForumAccount _forumAccountSingleton,
-		IEntryPoint _entryPoint,
+		address _entryPoint,
 		address _gnosisFallbackLibrary
 	) {
 		forumAccountSingleton = _forumAccountSingleton;
@@ -54,9 +54,9 @@ contract ForumAccountFactory {
 		entryPoint = _entryPoint;
 
 		gnosisFallbackLibrary = _gnosisFallbackLibrary;
-		// Data sent to the deterministic deployment proxy to deploy a new ERC4337 account
 
-		createProxyData = abi.encodePacked(
+		// Data sent to the deterministic deployment proxy to deploy a new ERC4337 account
+		_createProxyData = abi.encodePacked(
 			// constructor
 			bytes10(0x3d602d80600a3d3981f3),
 			// proxy code
@@ -66,7 +66,7 @@ contract ForumAccountFactory {
 		);
 
 		// Hashed so we can save this as immutable to save gas calcualting address
-		createProxyDataHash = keccak256(createProxyData);
+		_createProxyDataHash = keccak256(_createProxyData);
 	}
 
 	/// ----------------------------------------------------------------------------------------
@@ -93,22 +93,16 @@ contract ForumAccountFactory {
 		// Deploy the account determinstically based on the salt
 		(bool successCreate, bytes memory responseCreate) = DETERMINISTIC_DEPLOYMENT_PROXY.call{
 			value: 0
-		}(abi.encodePacked(accountSalt, createProxyData));
+		}(abi.encodePacked(accountSalt, _createProxyData));
 
 		// If successful, convert response to address to be returned
 		account = payable(address(uint160(bytes20(responseCreate))));
 
 		if (!successCreate || account == address(0)) revert NullDeploy();
 
-		// Initialize the account and Safe
-		(bool successInit, ) = account.call(
-			abi.encodeCall(
-				forumAccountSingleton.initialize,
-				abi.encode(entryPoint, owner, gnosisFallbackLibrary)
-			)
+		ForumAccount(payable(account)).initialize(
+			abi.encode(entryPoint, owner, gnosisFallbackLibrary)
 		);
-
-		if (!successInit) revert AccountInitFailed();
 	}
 
 	/// ----------------------------------------------------------------------------------------
@@ -128,7 +122,7 @@ contract ForumAccountFactory {
 							bytes1(0xff),
 							DETERMINISTIC_DEPLOYMENT_PROXY,
 							salt,
-							createProxyDataHash
+							_createProxyDataHash
 						)
 					) << 96
 				)

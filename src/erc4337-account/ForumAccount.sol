@@ -51,7 +51,7 @@ contract ForumAccount is Safe, BaseAccount, NftReceiver {
 	 * @notice Constructor
 	 * @dev This contract should be deployed using a proxy, the constructor should not be called
 	 */
-	constructor() Safe() {
+	constructor() {
 		threshold = 1;
 	}
 
@@ -61,21 +61,21 @@ contract ForumAccount is Safe, BaseAccount, NftReceiver {
 	 * @dev This method should only be called once, and setup() will revert if needed
 	 */
 	function initialize(bytes calldata initData) public virtual {
-		(IEntryPoint anEntryPoint, uint256[2] memory anOwner, address gnosisFallbackLibrary) = abi
-			.decode(initData, (IEntryPoint, uint[2], address));
+		(address anEntryPoint, uint256[2] memory anOwner, address gnosisFallbackLibrary) = abi
+			.decode(initData, (address, uint256[2], address));
 
-		_entryPoint = anEntryPoint;
+		_entryPoint = IEntryPoint(anEntryPoint);
 
 		_owner = anOwner;
 
 		// Owner must be passed to safe setup as an array of addresses
-		address[] memory arrayOwner = new address[](1);
-		// Take this address as the owner
-		arrayOwner[0] = address(this);
+		address[] memory ownerPlaceholder = new address[](1);
+		// Set dead address as owner, actions are controlled via this contract & entrypoint
+		ownerPlaceholder[0] = address(0xdead);
 
 		// Setup the Gnosis Safe - will revert if already initialized
 		this.setup(
-			arrayOwner,
+			ownerPlaceholder,
 			1,
 			address(0),
 			new bytes(0),
