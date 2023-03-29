@@ -32,5 +32,5 @@ Forum groups will be extendedable with additional functionality, such as Fundrai
 | :-------------------- | :----------------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------- |
 | Forum Group           | [0x2269493cbA1e0b55F5077F69eA29D2eEd0df825C](https://mumbai.polygonscan.com/address/0x2269493cbA1e0b55F5077F69eA29D2eEd0df825C#code) | ERC4337 enabled safe with P-256 passkey signers |
 | Forum Group Factory   | [0x62f919c1513Ad9130dfD828B11ae9d63bA708405](https://mumbai.polygonscan.com/address/0x62f919c1513Ad9130dfD828B11ae9d63bA708405#code) | Factory for Forum Groups                        |
-| Forum Account         | [0x2269493cbA1e0b55F5077F69eA29D2eEd0df825C](https://mumbai.polygonscan.com/address/0x2269493cbA1e0b55F5077F69eA29D2eEd0df825C#code) | ERC4337 enabled safe with P-256 passkey signers |
+| Forum Account         | [0x3A1DeB6060Ab65A20f5165b5cED47204BdA3e85E](https://mumbai.polygonscan.com/address/0x3A1DeB6060Ab65A20f5165b5cED47204BdA3e85E#code) | ERC4337 enabled safe with P-256 passkey signers |
 | Forum Account Factory | [0xdD512d312910873256F08312e6a59522102d6B6a](https://mumbai.polygonscan.com/address/0xdD512d312910873256F08312e6a59522102d6B6a#code) | Factory for Forum Groups                        |
