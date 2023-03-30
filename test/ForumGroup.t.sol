@@ -140,6 +140,42 @@ contract ForumGroupTest is ERC4337TestConfig {
 		assertTrue(forumGroup.getThreshold() == 1);
 	}
 
+	function testCorrectAddressCrossChain() public {
+		address tmpMumbai;
+		address tmpFuji;
+
+		uint256[2][] memory inputMembers = new uint256[2][](1);
+		inputMembers[0] = publicKey;
+
+		// Fork Mumbai and create an account from a fcatory
+		vm.createSelectFork(vm.envString('MUMBAI_RPC_URL'));
+
+		forumGroupFactory = new ForumGroupFactory(
+			payable(address(forumGroupSingleton)),
+			entryPointAddress,
+			address(safeSingleton),
+			address(handler)
+		);
+
+		// Deploy an account to be used in tests
+		tmpMumbai = forumGroupFactory.deployForumGroup('test', 1, inputMembers);
+
+		// Fork Fuji and create an account from a fcatory
+		vm.createSelectFork(vm.envString('FUJI_RPC_URL'));
+
+		forumGroupFactory = new ForumGroupFactory(
+			payable(address(forumGroupSingleton)),
+			entryPointAddress,
+			address(safeSingleton),
+			address(handler)
+		);
+
+		// Deploy an account to be used in tests
+		tmpFuji = forumGroupFactory.deployForumGroup('test', 1, inputMembers);
+
+		assertEq(tmpMumbai, tmpFuji, 'address not the same');
+	}
+
 	/// -----------------------------------------------------------------------
 	/// FUNCTION TESTS
 	/// -----------------------------------------------------------------------
