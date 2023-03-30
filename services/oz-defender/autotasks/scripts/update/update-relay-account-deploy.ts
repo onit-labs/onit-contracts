@@ -15,7 +15,6 @@ async function main() {
 		TEAM_API: apiKey,
 		TEAM_SECRET: apiSecret,
 		MUMBAI_DEPLOY_ACCOUNT_RELAY_AUTOTASK_ID: mumbaiAutotaskId
-		//AVAX_OPENSEA_RELAY_AUTOTASK_ID: avaxAutotaskId
 	} = process.env
 
 	if (!mumbaiAutotaskId) throw new Error(`Missing autotask id`)

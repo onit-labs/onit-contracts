@@ -39,7 +39,7 @@
 	"scripts": {
 		"test": "forge test FOUNDRY_PROFILE=test -vvvv  ",
 		"gas": "yarn test --gas-report  ",
-		"relay": "yarn ts-node services/oz-defender/autotasks/scripts/calls/relay-user-op.ts",
+		"relay": "yarn ts-node services/oz-defender/autotasks/scripts/test/relay-user-op.ts",
 		"deploy": "func () forge script script/deploy/$1.s.sol:$1 --rpc-url $2 --chain $3 --private-key $4 --verify --etherscan-api-key $5 --broadcast ; func"
 	}
 }

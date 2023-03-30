@@ -12,15 +12,15 @@ This folder contains the code which will be executed in our [autotasks](https://
 
 ## Scripts
 
-### Calls
+### Test
 
-These scripts can be used to test calls of the autotaks. Create a test payload in `autotasks/test` and run from project root with:
+These scripts can be used to test calls of the autotaks. Create a test payload in `test/data` and run from project root with:
 
 ```
 yarn relay
 ```
 
-### Updates
+### Update
 
 Used to push updates from the autotasks folder to defender.
 
@@ -28,5 +28,5 @@ To build the code which will be updloaded to Defender run the following from pro
 
 ```
 yarn webpack --env=TASK_NAME=relay-user-op
-yarn ts-node services/oz-defender/autotasks/scripts/updates/update-relay-user-op.ts
+yarn ts-node services/oz-defender/autotasks/scripts/update/update-relay-user-op.ts
 ```

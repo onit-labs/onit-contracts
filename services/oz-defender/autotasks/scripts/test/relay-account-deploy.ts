@@ -11,11 +11,7 @@ if (require.main === module) {
 		MUMBAI_DEPLOY_ACCOUNT_RELAY_SECRET: apiSecret
 	} = process.env
 
-	const testPayloads = JSON.parse(
-		require('fs')
-			.readFileSync('services/oz-defender/autotasks/test/deploy-account-request.json')
-			.toString()
-	)
+	const testPayloads = require('./data/deploy-account-request.json')
 
 	// 0 for individual, 1 for group
 	const body = testPayloads[1]
@@ -26,8 +22,8 @@ if (require.main === module) {
 		apiSecret,
 		request: { body: body },
 		secrets: {
-			groupAccountFactoryAddress: '0x299A19b63502b63335D1ec20c9088E16Eb122071',
-			individualAccountFactoryAddress: '0x3A004B31aF5B8337681DA2DD8c2C9073b5C4100d'
+			Group_Account_Factory_Address: '0x299A19b63502b63335D1ec20c9088E16Eb122071',
+			Individual_Account_Factory_Address: '0x3A004B31aF5B8337681DA2DD8c2C9073b5C4100d'
 		}
 	})
 		.then(() => process.exit(0))
