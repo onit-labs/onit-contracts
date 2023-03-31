@@ -459,7 +459,7 @@ contract ForumGroupTest is ERC4337TestConfig {
 						abi.encodePacked(
 							bytes1(0xff),
 							0x4e59b44847b379578588920cA78FbF26c0B4956C,
-							abi.encodePacked(publicKey_[0], publicKey_[1]),
+							keccak256(abi.encodePacked(publicKey_[0], publicKey_[1])),
 							keccak256(
 								abi.encodePacked(
 									// constructor

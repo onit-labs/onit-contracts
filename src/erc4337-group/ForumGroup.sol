@@ -141,8 +141,8 @@ contract ForumGroup is IAccount, Safe, MemberManager, ForumGroupGovernance, NftR
 			uint256[2][] memory sig,
 			string memory clientDataStart,
 			string memory clientDataEnd,
-			string memory authData
-		) = abi.decode(userOp.signature, (uint256[], uint256[2][], string, string, string));
+			string[] memory authData
+		) = abi.decode(userOp.signature, (uint256[], uint256[2][], string, string, string[]));
 
 		// Hash the client data to produce the challenge signed by the passkey offchain
 		bytes32 hashedClientData = sha256(
@@ -153,13 +153,15 @@ contract ForumGroup is IAccount, Safe, MemberManager, ForumGroupGovernance, NftR
 			)
 		);
 
-		bytes32 fullMessage = sha256(
-			abi.encodePacked(HexToLiteralBytes.fromHex(authData), hashedClientData)
-		);
+		bytes32 fullMessage;
 
 		uint256 count;
 
 		for (uint i; i < signerIndex.length; ) {
+			fullMessage = sha256(
+				abi.encodePacked(HexToLiteralBytes.fromHex(authData[i]), hashedClientData)
+			);
+
 			// Check if the signature is valid and increment count if so
 			if (
 				Secp256r1.Verify(

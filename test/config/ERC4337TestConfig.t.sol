@@ -193,12 +193,21 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
 			signerIndexes[1] = 0;
 		}
 
+		// Set the same auth data for tests
+		string[] memory authentacatorDataArray = new string[](signerCount);
+		if (signerCount == 1) {
+			authentacatorDataArray[0] = authentacatorData;
+		} else {
+			authentacatorDataArray[0] = authentacatorData;
+			authentacatorDataArray[1] = authentacatorData;
+		}
+
 		userOp.signature = abi.encode(
 			signerIndexes,
 			sigs,
 			'{"type":"webauthn.get","challenge":"',
 			'","origin":"https://development.forumdaos.com"}',
-			authentacatorData
+			authentacatorDataArray
 		);
 
 		UserOperation[] memory userOpArray = new UserOperation[](1);
