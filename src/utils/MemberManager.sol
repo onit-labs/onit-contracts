@@ -1,18 +1,30 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity >=0.7.0 <0.9.0;
 
-import '@gnosis/common/SelfAuthorized.sol';
+import '@safe/common/SelfAuthorized.sol';
 
 /// @title MemberManager - Manages a set of members and a voteThreshold to perform actions.
 /// @author Forum (Modified from Safe OwnerManager by Stefan George - <stefan@gnosis.pm> & Richard Meissner - <richard@gnosis.pm>)
-contract MemberManager is SelfAuthorized {
+abstract contract MemberManager is SelfAuthorized {
 	/// ----------------------------------------------------------------------------------------
 	///							EVENTS
 	/// ----------------------------------------------------------------------------------------
 
 	event AddedMember(Member member);
+
 	event RemovedMember(Member member);
+
 	event ChangedVoteThreshold(uint256 voteThreshold);
+
+	/// ----------------------------------------------------------------------------------------
+	///							ERRORS
+	/// ----------------------------------------------------------------------------------------
+
+	error MemberExists();
+
+	error CannotRemoveMember();
+
+	error InvalidThreshold();
 
 	/// ----------------------------------------------------------------------------------------
 	///							MEMBER MANAGER STORAGE
@@ -29,157 +41,109 @@ contract MemberManager is SelfAuthorized {
 		uint256 y;
 	}
 
-	// Initially, the head is set to 1
-	Member internal SENTINEL = Member({x: 1, y: 1});
-
-	// Number of members in group
-	uint256 internal memberCount;
+	// Used to calcualte the address of the individual ERC-4337 accounts
+	// which members will have when deployed
+	bytes32 immutable _accountCreationProxyData;
 
 	// Number of required signatures for a Safe transaction.
-	uint256 internal voteThreshold;
+	uint256 internal _voteThreshold;
 
-	// We use the x value of members as the key of the linked list
-	mapping(uint256 => Member) internal members;
+	// Storing all members to index the mapping
+	address[] internal _membersAddressArray;
+
+	// Address is calculated from the public key of the member
+	// The address may not yet be deployed
+	mapping(address => Member) internal _members;
 
 	/// ----------------------------------------------------------------------------------------
-	///							WRITE FUNCTIONS
+	///							CONSTRUCTOR
 	/// ----------------------------------------------------------------------------------------
 
-	/// @dev Setup function sets initial storage of contract.
-	/// @param _members List of Safe members.
-	/// @param _voteThreshold Number of required confirmations for a Safe transaction.
-	function setupMembers(uint256[2][] memory _members, uint256 _voteThreshold) internal {
-		// Threshold can only be 0 at initialization.
-		// Check ensures that setup function can only be called once.
-		require(voteThreshold == 0, 'MM200');
-		// Validate that voteThreshold is smaller than number of added members.
-		require(_voteThreshold <= _members.length, 'MM201');
-		// There has to be at least one Safe member.
-		require(_voteThreshold >= 1, 'MM202');
-		// Initializing Safe members.
-		Member memory currentMember = SENTINEL;
-		for (uint256 i = 0; i < _members.length; i++) {
-			// Member cannot be null.
-			uint256[2] memory member = _members[i];
-			require(
-				member[0] != 0 &&
-					member[1] != 0 &&
-					member[0] != currentMember.x &&
-					member[1] != currentMember.y,
-				'MM203'
-			);
-			// No duplicate members allowed. (check has small chance of not blocking members with matching x or y)
-			require(members[member[0]].x == 0 && members[member[0]].y == 0, 'MM204');
-			members[currentMember.x] = Member({x: member[0], y: member[1]});
-			currentMember = Member({x: member[0], y: member[1]});
-		}
-		members[currentMember.x] = SENTINEL;
-		memberCount = _members.length;
-		voteThreshold = _voteThreshold;
+	/// @notice Constructor sets the accountCreationProxyData
+	/// @param singletonAccount_ Singleton from individual account factory
+	constructor(address singletonAccount_) {
+		_accountCreationProxyData = keccak256(
+			abi.encodePacked(
+				// constructor
+				bytes10(0x3d602d80600a3d3981f3),
+				// proxy code
+				bytes10(0x363d3d373d3d3d363d73),
+				singletonAccount_,
+				bytes15(0x5af43d82803e903d91602b57fd5bf3)
+			)
+		);
 	}
 
-	/// @dev Allows to add a new member to the Safe and update the voteThreshold at the same time.
-	///      This can only be done via a Safe transaction.
-	/// @notice Adds the member `member` to the Safe and updates the voteThreshold to `_voteThreshold`.
-	/// @param member New member key pair.
-	/// @param _voteThreshold New voteThreshold.
+	/// ----------------------------------------------------------------------------------------
+	///							MEMBER WRITE FUNCTIONS
+	/// ----------------------------------------------------------------------------------------
+
+	// ! consider visibility and access control
+	/// @notice Changes the voteThreshold of the Safe to `voteThreshold`.
+	/// @param voteThreshold New voteThreshold.
+	function changeVoteThreshold(uint256 voteThreshold) public authorized {
+		// Validate that voteThreshold is not bigger than number of members & is at least 1
+		if (voteThreshold < 1 || voteThreshold > _membersAddressArray.length)
+			revert InvalidThreshold();
+
+		_voteThreshold = voteThreshold;
+		emit ChangedVoteThreshold(_voteThreshold);
+	}
+
+	/// @notice Adds a member to the Safe.
+	/// @param member Member to add.
+	/// @param voteThreshold_ New voteThreshold.
 	function addMemberWithThreshold(
 		Member memory member,
-		uint256 _voteThreshold
+		uint256 voteThreshold_
 	) public authorized {
-		// Member key pair cannot be null or the sentinel
-		require(
-			member.x != 0 && member.y != 0 && member.x != SENTINEL.x && member.y != SENTINEL.y,
-			'MM203'
-		);
-		// No duplicate members allowed.
-		require(members[member.x].x == 0 && members[member.y].y == 0, 'MM204');
-		members[member.x] = members[SENTINEL.x];
-		members[SENTINEL.x] = member;
-		memberCount++;
+		address memberAddress = publicKeyAddress(member);
+		if (_members[memberAddress].x != 0) revert MemberExists();
+
+		// Validate that voteThreshold is at least 1 & is not bigger than (the new) number of members
+		if (voteThreshold_ < 1 || voteThreshold_ > _membersAddressArray.length + 1)
+			revert InvalidThreshold();
+
+		_members[memberAddress] = member;
+		_membersAddressArray.push(memberAddress);
+
+		// Update voteThreshold
+		_voteThreshold = voteThreshold_;
+
+		// ! consider a nonce or similar to prevent replies (if sigs are used)
 		emit AddedMember(member);
-		// Change voteThreshold if voteThreshold was changed.
-		if (voteThreshold != _voteThreshold) changeVoteThreshold(_voteThreshold);
 	}
 
-	/// @dev Allows to remove an member from the Safe and update the voteThreshold at the same time.
-	///      This can only be done via a Safe transaction.
-	/// @notice Removes the member `member` from the Safe and updates the voteThreshold to `_voteThreshold`.
-	/// @param prevMember Member that pointed to the member to be removed in the linked list
-	/// @param member Member key pair to be removed.
-	/// @param _voteThreshold New voteThreshold.
-	function removeMember(
-		Member memory prevMember,
-		Member memory member,
-		uint256 _voteThreshold
+	// ! improve handling of member array
+	/// @notice Removes a member from the Safe & updates threshold.
+	/// @param memberAddress Hash of the member's public key.
+	/// @param voteThreshold_ New voteThreshold.
+	function removeMemberWithThreshold(
+		address memberAddress,
+		uint256 voteThreshold_
 	) public authorized {
-		// Only allow to remove an member, if voteThreshold can still be reached.
-		require(memberCount - 1 >= _voteThreshold, 'MM201');
-		// Validate member key pair and check that it corresponds to member index.
-		require(
-			member.x != 0 && member.y != 0 && member.x != SENTINEL.x && member.y != SENTINEL.y,
-			'MM203'
-		);
-		require(
-			members[prevMember.x].x == member.x && members[prevMember.x].y == member.y,
-			'MM205'
-		);
-		members[prevMember.x] = members[member.x];
-		delete members[member.x];
-		memberCount--;
-		emit RemovedMember(member);
-		// Change voteThreshold if voteThreshold was changed.
-		if (voteThreshold != _voteThreshold) changeVoteThreshold(_voteThreshold);
-	}
+		if (_members[memberAddress].x == 0) revert CannotRemoveMember();
 
-	/// @dev Allows to swap/replace an member from the Safe with another address.
-	///      This can only be done via a Safe transaction.
-	/// @notice Replaces the member `oldMember` in the Safe with `newMember`.
-	/// @param prevMember Member that pointed to the member to be replaced in the linked list
-	/// @param oldMember Member address to be replaced.
-	/// @param newMember New member address.
-	function swapMember(
-		Member memory prevMember,
-		Member memory oldMember,
-		Member memory newMember
-	) public authorized {
-		// Member key pair cannot be null, the sentinel.
-		require(
-			newMember.x != 0 &&
-				newMember.y != 0 &&
-				newMember.x != SENTINEL.x &&
-				newMember.y != SENTINEL.y,
-			'MM203'
-		);
-		// No duplicate members allowed.
-		require(members[newMember.x].x == 0 && members[newMember.y].y == 0, 'MM204');
-		// Validate oldMember key pair and check that it corresponds to member index.
-		require(
-			oldMember.x != 0 && oldMember.x != SENTINEL.x && oldMember.y != SENTINEL.y,
-			'MM203'
-		);
-		require(
-			members[prevMember.x].x == oldMember.x && members[prevMember.y].y == oldMember.y,
-			'MM205'
-		);
-		members[newMember.x] = members[oldMember.x];
-		members[prevMember.x] = newMember;
-		members[oldMember.x] = Member({x: 0, y: 0});
-		emit RemovedMember(oldMember);
-		emit AddedMember(newMember);
-	}
+		// Validate that voteThreshold is at least 1 & is not bigger than (the new) number of members
+		// This also ensures the last member is not removed
+		if (voteThreshold_ < 1 || voteThreshold_ > _membersAddressArray.length - 1)
+			revert InvalidThreshold();
 
-	/// @dev Allows to update the number of required confirmations by Safe members.
-	///      This can only be done via a Safe transaction.
-	/// @notice Changes the voteThreshold of the Safe to `_voteThreshold`.
-	/// @param _voteThreshold New voteThreshold.
-	function changeVoteThreshold(uint256 _voteThreshold) public authorized {
-		// Validate that voteThreshold is smaller than number of members.
-		require(_voteThreshold <= memberCount, 'MM201');
-		// There has to be at least one Safe member.
-		require(_voteThreshold >= 1, 'MM202');
-		voteThreshold = _voteThreshold;
-		emit ChangedVoteThreshold(voteThreshold);
+		emit RemovedMember(_members[memberAddress]);
+
+		delete _members[memberAddress];
+		for (uint256 i = 0; i < _membersAddressArray.length; i++) {
+			if (_membersAddressArray[i] == memberAddress) {
+				_membersAddressArray[i] = _membersAddressArray[_membersAddressArray.length - 1];
+				_membersAddressArray.pop();
+				break;
+			}
+		}
+
+		// Update voteThreshold
+		_voteThreshold = voteThreshold_;
+
+		// ! consider a nonce or similar to prevent replies (if sigs are used)
 	}
 
 	/// ----------------------------------------------------------------------------------------
@@ -187,31 +151,51 @@ contract MemberManager is SelfAuthorized {
 	/// ----------------------------------------------------------------------------------------
 
 	function getVoteThreshold() public view returns (uint256) {
-		return voteThreshold;
+		return _voteThreshold;
 	}
 
-	function isMember(Member memory member) public view returns (bool) {
-		return
-			member.x != SENTINEL.x &&
-			members[member.x].x != 0 &&
-			member.y != SENTINEL.y &&
-			members[member.x].y != 0;
-	}
+	function getMembers() public view returns (uint256[2][] memory members) {
+		uint256 len = _membersAddressArray.length;
 
-	/// @dev Returns array of members.
-	/// @return array of Safe members.
-	function getMembers() public view returns (uint256[2][] memory array) {
-		array = new uint256[2][](memberCount);
+		members = new uint256[2][](len);
 
-		// populate return array
-		uint256 index = 0;
-		Member memory currentMember = members[SENTINEL.x];
-		while (currentMember.x != SENTINEL.x) {
-			array[index][0] = currentMember.x;
-			array[index][1] = currentMember.y;
-			currentMember = members[currentMember.x];
-			index++;
+		for (uint256 i; i < len; ) {
+			Member memory _mem = _members[_membersAddressArray[i]];
+			members[i] = [_mem.x, _mem.y];
+
+			// Length of member array can't exceed max uint256
+			unchecked {
+				++i;
+			}
 		}
-		return array;
+	}
+
+	/**
+	 * @notice Checks if a member is part of the group
+	 * @param memberAddress Address from publicKeyAddress based on public key
+	 * @return 1 if member is part of the group, 0 otherwise
+	 */
+	function isMember(address memberAddress) public view returns (uint256) {
+		return _members[memberAddress].x != 0 ? 1 : 0;
+	}
+
+	/**
+	 * @dev Returns the address which a public key will deploy to based of the individual account factory
+	 * ! Find a more efficient way to calculate the address
+	 */
+	function publicKeyAddress(Member memory pk) public view returns (address) {
+		return
+			address(
+				bytes20(
+					keccak256(
+						abi.encodePacked(
+							bytes1(0xff),
+							0x4e59b44847b379578588920cA78FbF26c0B4956C,
+							keccak256(abi.encodePacked(pk.x, pk.y)),
+							_accountCreationProxyData
+						)
+					) << 96
+				)
+			);
 	}
 }

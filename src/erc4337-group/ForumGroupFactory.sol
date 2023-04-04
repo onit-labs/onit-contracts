@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.15;
 
-import {GnosisSafe, Enum} from '@gnosis/GnosisSafe.sol';
+import {Safe, Enum} from '@safe/Safe.sol';
 
 import {ForumGroup} from './ForumGroup.sol';
 
@@ -19,9 +19,6 @@ contract ForumGroupFactory {
 	/// ----------------------------------------------------------------------------------------
 	/// Factory Storage
 	/// ----------------------------------------------------------------------------------------
-
-	// If we are in production
-	bool public immutable production;
 
 	// Template contract to use for new forum groups
 	address public immutable forumGroupSingleton;
@@ -43,11 +40,6 @@ contract ForumGroupFactory {
 	// Data sent to the deterministic deployment proxy to deploy a new group module
 	bytes private _createForumGroupProxyData;
 
-	// Client data used for validating passkey signatures on contract
-	string internal _clientDataStart = '{"type":"webauthn.get","challenge":"';
-	string internal _clientDataEndDevelopment = '","origin":"https://development.forumdaos.com"}';
-	string internal _clientDataEndProduction = '","origin":"https://production.forumdaos.com"}';
-
 	/// ----------------------------------------------------------------------------------------
 	/// Constructor
 	/// ----------------------------------------------------------------------------------------
@@ -56,14 +48,12 @@ contract ForumGroupFactory {
 		address payable _forumGroupSingleton,
 		address _entryPoint,
 		address _gnosisSingleton,
-		address _gnosisFallbackLibrary,
-		bool _production
+		address _gnosisFallbackLibrary
 	) {
 		forumGroupSingleton = _forumGroupSingleton;
 		entryPoint = _entryPoint;
 		gnosisSingleton = _gnosisSingleton;
 		gnosisFallbackLibrary = _gnosisFallbackLibrary;
-		production = _production;
 
 		// Data sent to the deterministic deployment proxy to deploy a new forum group
 		_createForumGroupProxyData = abi.encodePacked(
@@ -94,7 +84,7 @@ contract ForumGroupFactory {
 	) external payable virtual returns (address forumGroup) {
 		// ! Improve this salt - should be safely unique, and easily reusuable across chain
 		// ! Should also prevent any frontrunning to deploy to this address by anyone else
-		bytes32 accountSalt = keccak256(abi.encode(_name));
+		bytes32 accountSalt = keccak256(abi.encodePacked(_name));
 
 		address addr = getAddress(accountSalt);
 		uint codeSize = addr.code.length;
@@ -117,9 +107,7 @@ contract ForumGroupFactory {
 			entryPoint,
 			gnosisFallbackLibrary,
 			_voteThreshold,
-			_members,
-			_clientDataStart,
-			production ? _clientDataEndProduction : _clientDataEndDevelopment
+			_members
 		);
 
 		emit ForumGroupDeployed(forumGroup);

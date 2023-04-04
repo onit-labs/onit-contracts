@@ -46,11 +46,11 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
 		entryPointAddress = address(entryPoint);
 
 		forumAccountSingleton = new ForumAccount();
-		forumGroupSingleton = new ForumGroup();
+		forumGroupSingleton = new ForumGroup(address(forumAccountSingleton));
 
 		forumAccountFactory = new ForumAccountFactory(
 			forumAccountSingleton,
-			entryPoint,
+			entryPointAddress,
 			address(handler)
 		);
 
@@ -58,8 +58,7 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
 			payable(address(forumGroupSingleton)),
 			entryPointAddress,
 			address(safeSingleton),
-			address(handler),
-			false // indicates development
+			address(handler)
 		);
 	}
 
@@ -119,6 +118,27 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
 			);
 	}
 
+	// !!!!! combine with the above
+	function signAndFormatUserOpIndividual(
+		UserOperation memory userOp,
+		string memory signer1
+	) internal returns (UserOperation[] memory) {
+		userOp.signature = abi.encode(
+			signMessageForPublicKey(
+				signer1,
+				Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(userOp)))
+			),
+			'{"type":"webauthn.get","challenge":"',
+			'","origin":"https://development.forumdaos.com"}',
+			authentacatorData
+		);
+
+		UserOperation[] memory userOpArray = new UserOperation[](1);
+		userOpArray[0] = userOp;
+
+		return userOpArray;
+	}
+
 	// Gathers signatures from signers and formats them into the signature field for the user operation
 	// Maybe only one sig is needed, so siger2 may be empty
 	function signAndFormatUserOp(
@@ -173,7 +193,22 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
 			signerIndexes[1] = 0;
 		}
 
-		userOp.signature = abi.encode(signerIndexes, sigs, authentacatorData);
+		// Set the same auth data for tests
+		string[] memory authentacatorDataArray = new string[](signerCount);
+		if (signerCount == 1) {
+			authentacatorDataArray[0] = authentacatorData;
+		} else {
+			authentacatorDataArray[0] = authentacatorData;
+			authentacatorDataArray[1] = authentacatorData;
+		}
+
+		userOp.signature = abi.encode(
+			signerIndexes,
+			sigs,
+			'{"type":"webauthn.get","challenge":"',
+			'","origin":"https://development.forumdaos.com"}',
+			authentacatorDataArray
+		);
 
 		UserOperation[] memory userOpArray = new UserOperation[](1);
 		userOpArray[0] = userOp;

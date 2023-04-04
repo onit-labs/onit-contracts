@@ -6,11 +6,7 @@ require('dotenv').config({ path: '.env' })
 if (require.main === module) {
 	const { MUMBAI_USER_OP_RELAY_API: apiKey, MUMBAI_USER_OP_RELAY_SECRET: apiSecret } = process.env
 
-	const payload = require('fs').readFileSync(
-		'services/oz-defender/autotasks/test/relay-user-op-request.json'
-	)
-
-	const body = JSON.parse(payload.toString())
+	const body = require('./data/relay-user-op-request.json')
 
 	// Hardcode entryPoint addresses for testing
 	handler({

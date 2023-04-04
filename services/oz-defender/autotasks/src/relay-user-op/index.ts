@@ -2,6 +2,8 @@ import EntryPoint from '../../../../../out/EntryPoint.sol/EntryPoint.json'
 import { BigNumber } from '@ethersproject/bignumber'
 import { relayInputGenerator } from '../relayInputGenerator'
 
+// ! Tidy this file
+
 async function relay(signer, entryPoint, body, whitelist) {
 	const { userOp, gas } = body
 

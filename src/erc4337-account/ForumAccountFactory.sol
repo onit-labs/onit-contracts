@@ -26,7 +26,7 @@ contract ForumAccountFactory {
 	ForumAccount public immutable forumAccountSingleton;
 
 	// Entry point used for ERC4337 accounts
-	IEntryPoint public immutable entryPoint;
+	address public immutable entryPoint;
 
 	// Fallback handler for Gnosis Safe
 	address public immutable gnosisFallbackLibrary;
@@ -36,7 +36,9 @@ contract ForumAccountFactory {
 	address public constant DETERMINISTIC_DEPLOYMENT_PROXY =
 		0x4e59b44847b379578588920cA78FbF26c0B4956C;
 
-	bytes private createProxyData;
+	bytes private _createProxyData;
+
+	bytes32 private immutable _createProxyDataHash;
 
 	/// ----------------------------------------------------------------------------------------
 	/// Constructor
@@ -44,7 +46,7 @@ contract ForumAccountFactory {
 
 	constructor(
 		ForumAccount _forumAccountSingleton,
-		IEntryPoint _entryPoint,
+		address _entryPoint,
 		address _gnosisFallbackLibrary
 	) {
 		forumAccountSingleton = _forumAccountSingleton;
@@ -54,7 +56,7 @@ contract ForumAccountFactory {
 		gnosisFallbackLibrary = _gnosisFallbackLibrary;
 
 		// Data sent to the deterministic deployment proxy to deploy a new ERC4337 account
-		createProxyData = abi.encodePacked(
+		_createProxyData = abi.encodePacked(
 			// constructor
 			bytes10(0x3d602d80600a3d3981f3),
 			// proxy code
@@ -62,6 +64,9 @@ contract ForumAccountFactory {
 			forumAccountSingleton,
 			bytes15(0x5af43d82803e903d91602b57fd5bf3)
 		);
+
+		// Hashed so we can save this as immutable to save gas calcualting address
+		_createProxyDataHash = keccak256(_createProxyData);
 	}
 
 	/// ----------------------------------------------------------------------------------------
@@ -70,17 +75,14 @@ contract ForumAccountFactory {
 
 	/**
 	 * @notice Deploys a new ERC4337 account built on a Gnosis safe
-	 * @param salt Salt for deterministic address generation
 	 * @param owner Public key for secp256r1 signer
 	 * @return account The deployed account
 	 * @dev Returns an existing account address so that entryPoint.getSenderAddress() works even after account creation
-	 * @dev Salt should be keccak256(abi.encode(otherSalt, owner)) where otherSalt is some uint
 	 */
-	function createAccount(
-		bytes32 salt,
-		uint[2] calldata owner
+	function createForumAccount(
+		uint256[2] calldata owner
 	) external payable virtual returns (address payable account) {
-		bytes32 accountSalt = keccak256(abi.encode(salt, owner));
+		bytes32 accountSalt = keccak256(abi.encodePacked(owner));
 
 		address addr = getAddress(accountSalt);
 		uint codeSize = addr.code.length;
@@ -88,25 +90,19 @@ contract ForumAccountFactory {
 			return payable(addr);
 		}
 
-		// Deploy the account determinstically based on the salt (a combination of owner and otherSalt)
+		// Deploy the account determinstically based on the salt
 		(bool successCreate, bytes memory responseCreate) = DETERMINISTIC_DEPLOYMENT_PROXY.call{
 			value: 0
-		}(abi.encodePacked(accountSalt, createProxyData));
+		}(abi.encodePacked(accountSalt, _createProxyData));
 
 		// If successful, convert response to address to be returned
 		account = payable(address(uint160(bytes20(responseCreate))));
 
 		if (!successCreate || account == address(0)) revert NullDeploy();
 
-		// Initialize the account and Safe
-		(bool successInit, ) = account.call(
-			abi.encodeCall(
-				forumAccountSingleton.initialize,
-				abi.encode(entryPoint, owner, gnosisFallbackLibrary)
-			)
+		ForumAccount(payable(account)).initialize(
+			abi.encode(entryPoint, owner, gnosisFallbackLibrary)
 		);
-
-		if (!successInit) revert AccountInitFailed();
 	}
 
 	/// ----------------------------------------------------------------------------------------
@@ -115,7 +111,7 @@ contract ForumAccountFactory {
 
 	/**
 	 * @notice Get the address of an account that would be returned by createAccount()
-	 * @dev Salt should be keccak256(abi.encode(otherSalt, owner)) where otherSalt is some bytes32
+	 * @dev Salt should be keccak256(abi.encodePacked(owner)) where owner is the [x, y] public key for secp256r1 signer
 	 */
 	function getAddress(bytes32 salt) public view returns (address clone) {
 		return
@@ -126,7 +122,7 @@ contract ForumAccountFactory {
 							bytes1(0xff),
 							DETERMINISTIC_DEPLOYMENT_PROXY,
 							salt,
-							keccak256(createProxyData)
+							_createProxyDataHash
 						)
 					) << 96
 				)
