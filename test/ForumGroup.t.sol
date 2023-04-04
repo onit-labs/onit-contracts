@@ -5,8 +5,6 @@ pragma solidity ^0.8.15;
 
 import './config/ERC4337TestConfig.t.sol';
 
-import {Base64} from '@libraries/Base64.sol';
-
 import {MemberManager} from '@utils/MemberManager.sol'; // improve this import, try to take from ForumGroup
 
 /**
@@ -198,36 +196,6 @@ contract ForumGroupTest is ERC4337TestConfig {
 		assertTrue(address(newForumGroup) == address(forumGroup));
 	}
 
-	// function testUpdateThreshold(uint256 threshold) public {
-	// 	assertTrue(forumGroup.getVoteThreshold() == 1);
-
-	// 	// Add a member so we can change threshold from 1-> 2 later
-	// 	vm.prank(address(forumGroup));
-	// 	forumGroup.addMember(publicKey2);
-	// 	forumGroup.changeVoteThreshold(
-	// 		2
-	// 	);
-
-	// 	vm.startPrank(address(forumGroup));
-
-	// 	// Threshold must be greater than 1 and less then or equal to current member count (2)
-	// 	if (threshold > 2) {
-	// 		vm.expectRevert(MemberManager.InvalidThreshold.selector);
-	// 		forumGroup.changeVoteThreshold(threshold);
-	// 		threshold = 1; // fallback to default so final assertiion is correctly evaluated
-	// 	} else {
-	// 		if (threshold < 1) {
-	// 			vm.expectRevert(MemberManager.InvalidThreshold.selector);
-	// 			forumGroup.changeVoteThreshold(threshold);
-	// 			threshold = 1; // fallback to default so final assertiion is correctly evaluated
-	// 		} else {
-	// 			forumGroup.changeVoteThreshold(threshold);
-	// 		}
-	// 	}
-
-	// 	assertTrue(forumGroup.getVoteThreshold() == threshold);
-	// }
-
 	function testAddMemberWithThreshold() public {
 		assertTrue(forumGroup.getMembers().length == 1);
 
@@ -361,7 +329,6 @@ contract ForumGroupTest is ERC4337TestConfig {
 
 		entryPoint.handleOps(userOpArray, payable(bob));
 
-		// ! correct gas cost - take it from the useroperation event
 		uint256 gas = calculateGas(userOp);
 
 		// Transfer has been made, nonce incremented, used nonce set

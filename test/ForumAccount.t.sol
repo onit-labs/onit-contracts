@@ -10,9 +10,6 @@ import {EntryPoint} from '@erc4337/core/EntryPoint.sol';
 
 import './config/ERC4337TestConfig.t.sol';
 
-// ! need a way to generate test passkey sigs that match owner addresses
-// ! until then some manual effor it required to run each test
-
 contract ForumAccountTest is ERC4337TestConfig {
 	uint256[2] internal publicKey;
 	uint256[2] internal publicKey2;
@@ -56,7 +53,7 @@ contract ForumAccountTest is ERC4337TestConfig {
 		deployed4337AccountAddress = forumAccountFactory.createForumAccount(publicKey);
 		deployed4337Account = ForumAccount(deployed4337AccountAddress);
 
-		// // Deal funds to account
+		// Deal funds to account
 		deal(deployed4337AccountAddress, 1 ether);
 
 		// Build a basic transaction to execute in some tests
@@ -103,8 +100,6 @@ contract ForumAccountTest is ERC4337TestConfig {
 		deal(preCalculatedAccountAddress, 1 ether);
 		// Cast to ForumAccount - used to make some test assertions easier
 		ForumAccount testNew4337Account = ForumAccount(payable(preCalculatedAccountAddress));
-
-		// Retrieve the userOp from signature store (in future generate this and sign it here)
 
 		UserOperation[] memory userOps = signAndFormatUserOpIndividual(
 			buildUserOp(preCalculatedAccountAddress, 0, initCode, basicTransferCalldata),
