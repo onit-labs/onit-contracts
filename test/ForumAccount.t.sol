@@ -213,17 +213,19 @@ contract ForumAccountTest is ERC4337TestConfig {
 		assertEq(deployed4337Account.nonce(), 1, 'nonce not updated');
 	}
 
-	function testAccountSafeAdmin() public {
+	// Simulates adding an EOA owner to the safe (can act as a guardian in case of loss)
+	function testAccountAddOwner() public {
 		// Build payload to enable a module
-		bytes memory enableModulePayload = abi.encodeWithSignature(
-			'enableModule(address)',
-			address(this)
+		bytes memory addOwnerPayload = abi.encodeWithSignature(
+			'addOwnerWithThreshold(address,uint256)',
+			address(this),
+			1
 		);
 
 		bytes memory payload = buildExecutionPayload(
 			deployed4337AccountAddress,
 			0,
-			enableModulePayload,
+			addOwnerPayload,
 			Enum.Operation.Call
 		);
 
@@ -250,7 +252,7 @@ contract ForumAccountTest is ERC4337TestConfig {
 		// Check account nonce
 		assertEq(deployed4337Account.nonce(), 1, 'nonce not updated');
 		// Check module is enabled
-		assertTrue(deployed4337Account.isModuleEnabled(address(this)), 'module not enabled');
+		assertTrue(deployed4337Account.isOwner(address(this)), 'owner not added');
 	}
 
 	// ! Double check with new validation including the domain seperator
