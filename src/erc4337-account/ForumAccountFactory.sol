@@ -100,9 +100,7 @@ contract ForumAccountFactory {
 
 		if (!successCreate || account == address(0)) revert NullDeploy();
 
-		ForumAccount(payable(account)).initialize(
-			abi.encode(entryPoint, owner, gnosisFallbackLibrary)
-		);
+		ForumAccount(payable(account)).initialize(entryPoint, owner, gnosisFallbackLibrary);
 	}
 
 	/// ----------------------------------------------------------------------------------------
