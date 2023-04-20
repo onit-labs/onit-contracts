@@ -36,8 +36,6 @@ contract ForumGroup is IAccount, Safe, MemberManager, ForumGroupGovernance {
 	///							EVENTS & ERRORS
 	/// ----------------------------------------------------------------------------------------
 
-	error ModuleAlreadySetUp();
-
 	error NotFromEntrypoint();
 
 	error InvalidInitialisation();
@@ -61,26 +59,24 @@ contract ForumGroup is IAccount, Safe, MemberManager, ForumGroupGovernance {
 	/// -----------------------------------------------------------------------
 
 	constructor(address singletonAccount_) MemberManager(singletonAccount_) {
-		// Set the threshold on the safe, prevents calling setUp so good for singleton
+		// Set the threshold on the safe, prevents calling initalise so good for singleton
 		threshold = 1;
 	}
 
 	/**
-	 * @notice Setup the module.
+	 * @notice Setup the group account.
 	 * @param entryPoint_ The entrypoint to use on the safe
 	 * @param fallbackHandler The fallback handler to use on the safe
 	 * @param voteThreshold_ Vote threshold to pass (counted in members)
 	 * @param members_ The public key pairs of the signing members of the group
+	 * @dev This function is only callable once, and is used to set up the group (setup will revert if called again)
 	 */
-	function setUp(
+	function initalize(
 		address entryPoint_,
 		address fallbackHandler,
 		uint256 voteThreshold_,
 		uint256[2][] memory members_
 	) external {
-		// Can only be set up once
-		if (_voteThreshold != 0) revert ModuleAlreadySetUp();
-
 		// Create a placeholder owner
 		address[] memory ownerPlaceholder = new address[](1);
 		ownerPlaceholder[0] = address(0xdead);

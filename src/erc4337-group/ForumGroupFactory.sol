@@ -103,7 +103,7 @@ contract ForumGroupFactory {
 		// If not successful, revert
 		if (!successCreate || forumGroup == address(0)) revert NullDeploy();
 
-		ForumGroup(payable(forumGroup)).setUp(
+		ForumGroup(payable(forumGroup)).initalize(
 			entryPoint,
 			gnosisFallbackLibrary,
 			_voteThreshold,

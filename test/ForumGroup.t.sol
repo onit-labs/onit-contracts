@@ -18,6 +18,9 @@ contract ForumGroupTest is ERC4337TestConfig {
 
 	bytes internal basicTransferCalldata;
 
+	string internal constant GROUP_NAME_1 = 'test';
+	string internal constant GROUP_NAME_2 = 'test2';
+
 	// Token representing voting share of treasury
 	uint256 internal constant TOKEN = 0;
 
@@ -29,6 +32,24 @@ contract ForumGroupTest is ERC4337TestConfig {
 		// Create passkey signers
 		publicKey = createPublicKey(SIGNER_1);
 		publicKey2 = createPublicKey(SIGNER_2);
+
+		// Check group singelton is set in factory
+		assertEq(
+			address(forumGroupFactory.forumGroupSingleton()),
+			address(forumGroupSingleton),
+			'forumGroupSingleton not set'
+		);
+		// Check 4337 entryPoint is set in factory
+		assertEq(forumGroupFactory.entryPoint(), entryPointAddress, 'entryPoint not set');
+		// Check 4337 gnosis fallback handler is set in factory
+		assertEq(
+			address(forumGroupFactory.gnosisFallbackLibrary()),
+			address(handler),
+			'handler not set'
+		);
+		// Can not initialize the singleton
+		vm.expectRevert('GS200');
+		forumGroupSingleton.initalize(entryPointAddress, address(1), uint256(1), inputMembers);
 
 		// Format signers into arrays to be added to contract
 		inputMembers.push([publicKey[0], publicKey[1]]);
@@ -69,6 +90,10 @@ contract ForumGroupTest is ERC4337TestConfig {
 		// The safe has been initialized with a threshold of 1
 		// This threshold is not used when executing via group
 		assertTrue(forumGroup.getThreshold() == 1);
+
+		// Can not initialize the group again
+		vm.expectRevert('GS200');
+		forumGroup.initalize(entryPointAddress, address(1), uint256(1), inputMembers);
 	}
 
 	function testPublicKeyAddressMatches() public {

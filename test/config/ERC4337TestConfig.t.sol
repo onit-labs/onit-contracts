@@ -38,6 +38,14 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
 	// Addresses for easy use in tests
 	address internal entryPointAddress;
 
+	// Some public keys used as signers in tests
+	uint256[2] internal publicKey;
+	uint256[2] internal publicKey2;
+	uint256[2][] internal inputMembers;
+
+	string internal constant SIGNER_1 = '1';
+	string internal constant SIGNER_2 = '2';
+
 	string internal authentacatorData =
 		'1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000';
 
