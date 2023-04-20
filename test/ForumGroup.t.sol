@@ -16,17 +16,6 @@ contract ForumGroupTest is ERC4337TestConfig {
 	ForumGroup private forumGroup;
 	Safe private safe;
 
-	// Some public keys used as signers in tests
-	uint256[2] internal publicKey;
-	uint256[2] internal publicKey2;
-	uint256[2][] internal inputMembers;
-
-	string internal constant SIGNER_1 = '1';
-	string internal constant SIGNER_2 = '2';
-
-	string internal constant GROUP_NAME_1 = 'test';
-	string internal constant GROUP_NAME_2 = 'test2';
-
 	bytes internal basicTransferCalldata;
 
 	// Token representing voting share of treasury
@@ -46,7 +35,7 @@ contract ForumGroupTest is ERC4337TestConfig {
 
 		// Deploy a forum safe from the factory
 		forumGroup = ForumGroup(
-			payable(forumGroupFactory.deployForumGroup(GROUP_NAME_1, 1, inputMembers))
+			payable(forumGroupFactory.createForumGroup(GROUP_NAME_1, 1, inputMembers))
 		);
 
 		// Deal the account some funds
@@ -92,7 +81,7 @@ contract ForumGroupTest is ERC4337TestConfig {
 	function testDeployViaEntryPoint() public {
 		// Encode the calldata for the factory to create an account
 		bytes memory factoryCalldata = abi.encodeCall(
-			forumGroupFactory.deployForumGroup,
+			forumGroupFactory.createForumGroup,
 			(GROUP_NAME_2, 1, inputMembers)
 		);
 
@@ -156,7 +145,7 @@ contract ForumGroupTest is ERC4337TestConfig {
 		);
 
 		// Deploy an account to be used in tests
-		tmpMumbai = forumGroupFactory.deployForumGroup('test', 1, inputMembers);
+		tmpMumbai = forumGroupFactory.createForumGroup('test', 1, inputMembers);
 
 		// Fork Fuji and create an account from a fcatory
 		vm.createSelectFork(vm.envString('FUJI_RPC_URL'));
@@ -169,7 +158,7 @@ contract ForumGroupTest is ERC4337TestConfig {
 		);
 
 		// Deploy an account to be used in tests
-		tmpFuji = forumGroupFactory.deployForumGroup('test', 1, inputMembers);
+		tmpFuji = forumGroupFactory.createForumGroup('test', 1, inputMembers);
 
 		assertEq(tmpMumbai, tmpFuji, 'address not the same');
 	}
@@ -189,7 +178,7 @@ contract ForumGroupTest is ERC4337TestConfig {
 	function testReturnAddressIfAlreadyDeployed() public {
 		// Deploy a second forum safe with the same name
 		ForumGroup newForumGroup = ForumGroup(
-			payable(forumGroupFactory.deployForumGroup(GROUP_NAME_1, 1, inputMembers))
+			payable(forumGroupFactory.createForumGroup(GROUP_NAME_1, 1, inputMembers))
 		);
 
 		// Get address should return the address of the first safe
@@ -344,7 +333,7 @@ contract ForumGroupTest is ERC4337TestConfig {
 
 		// Deploy a forum safe from the factory with 2 signers and threshold 2
 		forumGroup = ForumGroup(
-			payable(forumGroupFactory.deployForumGroup(GROUP_NAME_2, 2, inputMembers))
+			payable(forumGroupFactory.createForumGroup(GROUP_NAME_2, 2, inputMembers))
 		);
 
 		deal(address(forumGroup), 10 ether);

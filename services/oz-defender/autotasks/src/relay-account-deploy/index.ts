@@ -20,7 +20,7 @@ async function relay(accountFactory, body, whitelist) {
 		? await accountFactory.createForumAccount(deployPayload.owner, {
 				gasLimit
 		  })
-		: await accountFactory.deployForumGroup(
+		: await accountFactory.createForumGroup(
 				deployPayload.name,
 				deployPayload.threshold,
 				deployPayload.members,
