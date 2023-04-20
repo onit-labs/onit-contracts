@@ -17,7 +17,7 @@ import {NftReceiver} from '@utils/NFTreceiver.sol';
  * @notice ERC4337 Managed Gnosis Safe Account Implementation
  * @author Forum (https://forumdaos.com)
  * @dev Uses infinitism style base 4337 interface, with gnosis safe account
- * @custom:warning This contract is in development and should not be used in production.
+ * @custom:warning This contract has not been audited, and is likely to change.
  */
 
 /**

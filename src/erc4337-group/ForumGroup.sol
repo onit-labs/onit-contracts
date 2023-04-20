@@ -8,7 +8,6 @@ import {HexToLiteralBytes} from '@libraries/HexToLiteralBytes.sol';
 
 import {Exec} from '@utils/Exec.sol';
 import {MemberManager} from '@utils/MemberManager.sol';
-import {NftReceiver} from '@utils/NftReceiver.sol';
 
 import {Safe, Enum} from '@safe/Safe.sol';
 import {IAccount} from '@erc4337/interfaces/IAccount.sol';
@@ -21,7 +20,7 @@ import {ForumGroupGovernance} from './ForumGroupGovernance.sol';
  * @title Forum Group
  * @notice A group 4337 wallet based on eth-infinitism IAccount, built on safe
  * @author Forum (https://github.com/forumdaos/contracts)
- * @custom:warning This contract is in development and should not be used in production.
+ * @custom:warning This contract has not been audited, and is likely to change.
  */
 
 /**
@@ -32,7 +31,7 @@ import {ForumGroupGovernance} from './ForumGroupGovernance.sol';
  * - Add check to prevent setting wrong entrypoint
  */
 
-contract ForumGroup is IAccount, Safe, MemberManager, ForumGroupGovernance, NftReceiver {
+contract ForumGroup is IAccount, Safe, MemberManager, ForumGroupGovernance {
 	/// ----------------------------------------------------------------------------------------
 	///							EVENTS & ERRORS
 	/// ----------------------------------------------------------------------------------------
