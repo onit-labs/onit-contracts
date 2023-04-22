@@ -40,6 +40,6 @@
 		"test": "forge test FOUNDRY_PROFILE=test -vvvv  ",
 		"gas": "yarn test --gas-report  ",
 		"relay": "yarn ts-node services/oz-defender/autotasks/scripts/test/relay-user-op.ts",
-		"deploy": "func () forge script script/deploy/$1.s.sol:$1 --rpc-url $(grep $2'_RPC_URL' .env | cut -d '=' -f2) --chain-id $(grep $2'_CHAIN_ID' .env | cut -d '=' -f2)  --private-key $(grep $2'_PRIVATE_KEY' .env | cut -d '=' -f2) $(grep $2'_EXPLORER_API_KEY' .env | cut -d '=' -f2) $3 ; func"
+		"deploy": "func () forge script script/deploy/$1.s.sol:$1 --rpc-url $(grep $2'_RPC_URL' .env | cut -d '=' -f2) --chain-id $(grep $2'_CHAIN_ID' .env | cut -d '=' -f2)  --private-key $(grep $2'_PRIVATE_KEY' .env | cut -d '=' -f2) --etherscan-api-key  $(grep $2'_EXPLORER_API_KEY' .env | cut -d '=' -f2) --verify $(if [ $3 = 'b' ]; then echo '--broadcast'; fi); func"
 	}
 }
