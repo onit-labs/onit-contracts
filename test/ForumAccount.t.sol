@@ -11,18 +11,9 @@ import {EntryPoint} from '@erc4337/core/EntryPoint.sol';
 import './config/ERC4337TestConfig.t.sol';
 
 contract ForumAccountTest is ERC4337TestConfig {
-	uint256[2] internal publicKey;
-	uint256[2] internal publicKey2;
-	string internal constant SIGNER_1 = '1';
-	string internal constant SIGNER_2 = '2';
-
 	// Variable used for test erc4337 account
 	ForumAccount private deployed4337Account;
 	address payable private deployed4337AccountAddress;
-
-	// Some salts
-	bytes32 private constant SALT_1 = keccak256('salt1');
-	bytes32 private constant SALT_2 = keccak256('salt2');
 
 	bytes internal basicTransferCalldata;
 
@@ -48,6 +39,9 @@ contract ForumAccountTest is ERC4337TestConfig {
 			address(handler),
 			'handler not set'
 		);
+		// Can not initialize the singleton
+		vm.expectRevert('GS200');
+		forumAccountSingleton.initialize(entryPointAddress, publicKey, address(1));
 
 		// Deploy an account to be used in tests later
 		deployed4337AccountAddress = forumAccountFactory.createForumAccount(publicKey);
@@ -69,7 +63,7 @@ contract ForumAccountTest is ERC4337TestConfig {
 	/// Deployment tests
 	/// -----------------------------------------------------------------------
 
-	function testFactoryDeploy() public {
+	function testFactoryCreateAccount() public {
 		// Check that the account from setup is deployed and data is set on account, and safe
 		assertEq(deployed4337Account.owner()[0], publicKey[0], 'owner not set');
 		assertEq(deployed4337Account.owner()[1], publicKey[1], 'owner not set');
@@ -80,6 +74,10 @@ contract ForumAccountTest is ERC4337TestConfig {
 			address(entryPoint),
 			'entry point not set'
 		);
+
+		// Can not initialize the same account twice
+		vm.expectRevert('GS200');
+		deployed4337Account.initialize(entryPointAddress, publicKey, address(1));
 	}
 
 	function testFactoryDeployFromEntryPoint() public {

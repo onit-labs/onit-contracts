@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.15;
 
+import {NftReceiver} from '@utils/NftReceiver.sol';
+
 /// @notice Minimalist and gas efficient ERC1155 based DAO implementation with governance.
 /// @author Modified from Solbase ERC1155.sol
 
@@ -11,7 +13,7 @@ pragma solidity ^0.8.15;
 // - Add erc2612  style domain separator
 // - Set name & symbol
 
-abstract contract ForumGroupGovernance {
+abstract contract ForumGroupGovernance is NftReceiver {
 	/// ----------------------------------------------------------------------------------------
 	///							EVENTS
 	/// ----------------------------------------------------------------------------------------
@@ -112,8 +114,8 @@ abstract contract ForumGroupGovernance {
 		require(
 			to.code.length == 0
 				? to != address(0)
-				: ERC1155TokenReceiver(to).onERC1155Received(msg.sender, from, id, amount, data) ==
-					ERC1155TokenReceiver.onERC1155Received.selector,
+				: NftReceiver(to).onERC1155Received(msg.sender, from, id, amount, data) ==
+					NftReceiver.onERC1155Received.selector,
 			'UNSAFE_RECIPIENT'
 		);
 	}
@@ -150,13 +152,8 @@ abstract contract ForumGroupGovernance {
 		require(
 			to.code.length == 0
 				? to != address(0)
-				: ERC1155TokenReceiver(to).onERC1155BatchReceived(
-					msg.sender,
-					from,
-					ids,
-					amounts,
-					data
-				) == ERC1155TokenReceiver.onERC1155BatchReceived.selector,
+				: NftReceiver(to).onERC1155BatchReceived(msg.sender, from, ids, amounts, data) ==
+					NftReceiver.onERC1155BatchReceived.selector,
 			'UNSAFE_RECIPIENT'
 		);
 	}
@@ -216,13 +213,8 @@ abstract contract ForumGroupGovernance {
 		require(
 			to.code.length == 0
 				? to != address(0)
-				: ERC1155TokenReceiver(to).onERC1155Received(
-					msg.sender,
-					address(0),
-					id,
-					amount,
-					data
-				) == ERC1155TokenReceiver.onERC1155Received.selector,
+				: NftReceiver(to).onERC1155Received(msg.sender, address(0), id, amount, data) ==
+					NftReceiver.onERC1155Received.selector,
 			'UNSAFE_RECIPIENT'
 		);
 	}
@@ -253,13 +245,13 @@ abstract contract ForumGroupGovernance {
 		require(
 			to.code.length == 0
 				? to != address(0)
-				: ERC1155TokenReceiver(to).onERC1155BatchReceived(
+				: NftReceiver(to).onERC1155BatchReceived(
 					msg.sender,
 					address(0),
 					ids,
 					amounts,
 					data
-				) == ERC1155TokenReceiver.onERC1155BatchReceived.selector,
+				) == NftReceiver.onERC1155BatchReceived.selector,
 			'UNSAFE_RECIPIENT'
 		);
 	}
@@ -301,24 +293,4 @@ abstract contract ForumGroupGovernance {
 
 		emit PauseFlipped(paused);
 	}
-}
-
-/// @notice A generic interface for a contract which properly accepts ERC1155 tokens.
-/// @author Solmate (https://github.com/Rari-Capital/solmate/blob/main/src/tokens/ERC1155.sol)
-interface ERC1155TokenReceiver {
-	function onERC1155Received(
-		address operator,
-		address from,
-		uint256 id,
-		uint256 amount,
-		bytes calldata data
-	) external returns (bytes4);
-
-	function onERC1155BatchReceived(
-		address operator,
-		address from,
-		uint256[] calldata ids,
-		uint256[] calldata amounts,
-		bytes calldata data
-	) external returns (bytes4);
 }

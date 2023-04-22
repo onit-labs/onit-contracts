@@ -16,7 +16,7 @@ ffi = true
 [profile.prod]
 optimize = true
 via_ir = true
-optimize_runs = 20000 
+optimizer_runs = 20000 
 
 [rpc_endpoints]
 fuji = "${FUJI_RPC_URL}"

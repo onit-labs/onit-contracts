@@ -8,36 +8,33 @@ import {HexToLiteralBytes} from '@libraries/HexToLiteralBytes.sol';
 
 import {Exec} from '@utils/Exec.sol';
 import {MemberManager} from '@utils/MemberManager.sol';
-import {NftReceiver} from '@utils/NftReceiver.sol';
 
 import {Safe, Enum} from '@safe/Safe.sol';
 import {IAccount} from '@erc4337/interfaces/IAccount.sol';
 import {UserOperation} from '@erc4337/interfaces/IEntryPoint.sol';
 import {Secp256r1, PassKeyId} from '@aa-passkeys-wallet/Secp256r1.sol';
 
-import {ForumGroupGovernance} from './ForumGroupGovernance.sol';
-
 /**
  * @title Forum Group
  * @notice A group 4337 wallet based on eth-infinitism IAccount, built on safe
  * @author Forum (https://github.com/forumdaos/contracts)
- * @custom:warning This contract is in development and should not be used in production.
+ * @custom:warning This contract has not been audited, and is likely to change.
  */
 
 /**
  * TODO
  * - Add moduleAdmin function to handle adding members, changing threshold etc
  * - Add extension function to call extensions without needing full validation
- * - Test ERC1155 token tracking and transfer
+ * - Add governance 1155
  * - Add check to prevent setting wrong entrypoint
  */
 
-contract ForumGroup is IAccount, Safe, MemberManager, ForumGroupGovernance, NftReceiver {
+contract ForumGroup is IAccount, Safe, MemberManager {
 	/// ----------------------------------------------------------------------------------------
 	///							EVENTS & ERRORS
 	/// ----------------------------------------------------------------------------------------
 
-	error ModuleAlreadySetUp();
+	error InvalidNonce();
 
 	error NotFromEntrypoint();
 
@@ -62,26 +59,24 @@ contract ForumGroup is IAccount, Safe, MemberManager, ForumGroupGovernance, NftR
 	/// -----------------------------------------------------------------------
 
 	constructor(address singletonAccount_) MemberManager(singletonAccount_) {
-		// Set the threshold on the safe, prevents calling setUp so good for singleton
+		// Set the threshold on the safe, prevents calling initalise so good for singleton
 		threshold = 1;
 	}
 
 	/**
-	 * @notice Setup the module.
+	 * @notice Setup the group account.
 	 * @param entryPoint_ The entrypoint to use on the safe
 	 * @param fallbackHandler The fallback handler to use on the safe
 	 * @param voteThreshold_ Vote threshold to pass (counted in members)
 	 * @param members_ The public key pairs of the signing members of the group
+	 * @dev This function is only callable once, and is used to set up the group (setup will revert if called again)
 	 */
-	function setUp(
+	function initalize(
 		address entryPoint_,
 		address fallbackHandler,
 		uint256 voteThreshold_,
 		uint256[2][] memory members_
 	) external {
-		// Can only be set up once
-		if (_voteThreshold != 0) revert ModuleAlreadySetUp();
-
 		// Create a placeholder owner
 		address[] memory ownerPlaceholder = new address[](1);
 		ownerPlaceholder[0] = address(0xdead);
@@ -235,10 +230,6 @@ contract ForumGroup is IAccount, Safe, MemberManager, ForumGroupGovernance, NftR
 	/// -----------------------------------------------------------------------
 	/// 						GROUP MANAGEMENT
 	/// -----------------------------------------------------------------------
-
-	// TODO Create group admin function
-
-	// TODO Create extension calling function
 
 	function setEntryPoint(address entryPoint_) external {
 		if (msg.sender != _entryPoint) revert NotFromEntrypoint();

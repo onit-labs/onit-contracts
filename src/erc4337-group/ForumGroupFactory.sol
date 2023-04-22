@@ -77,7 +77,7 @@ contract ForumGroupFactory {
 	 * @return forumGroup The deployed forum group
 	 * @dev Returns an existing account address so that entryPoint.getSenderAddress() works even after account creation
 	 */
-	function deployForumGroup(
+	function createForumGroup(
 		string calldata _name,
 		uint256 _voteThreshold,
 		uint256[2][] calldata _members
@@ -103,7 +103,7 @@ contract ForumGroupFactory {
 		// If not successful, revert
 		if (!successCreate || forumGroup == address(0)) revert NullDeploy();
 
-		ForumGroup(payable(forumGroup)).setUp(
+		ForumGroup(payable(forumGroup)).initalize(
 			entryPoint,
 			gnosisFallbackLibrary,
 			_voteThreshold,
