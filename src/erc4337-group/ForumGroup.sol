@@ -14,8 +14,6 @@ import {IAccount} from '@erc4337/interfaces/IAccount.sol';
 import {UserOperation} from '@erc4337/interfaces/IEntryPoint.sol';
 import {Secp256r1, PassKeyId} from '@aa-passkeys-wallet/Secp256r1.sol';
 
-import {ForumGroupGovernance} from './ForumGroupGovernance.sol';
-
 /**
  * @title Forum Group
  * @notice A group 4337 wallet based on eth-infinitism IAccount, built on safe
@@ -27,14 +25,16 @@ import {ForumGroupGovernance} from './ForumGroupGovernance.sol';
  * TODO
  * - Add moduleAdmin function to handle adding members, changing threshold etc
  * - Add extension function to call extensions without needing full validation
- * - Test ERC1155 token tracking and transfer
+ * - Add governance 1155
  * - Add check to prevent setting wrong entrypoint
  */
 
-contract ForumGroup is IAccount, Safe, MemberManager, ForumGroupGovernance {
+contract ForumGroup is IAccount, Safe, MemberManager {
 	/// ----------------------------------------------------------------------------------------
 	///							EVENTS & ERRORS
 	/// ----------------------------------------------------------------------------------------
+
+	error InvalidNonce();
 
 	error NotFromEntrypoint();
 
@@ -230,10 +230,6 @@ contract ForumGroup is IAccount, Safe, MemberManager, ForumGroupGovernance {
 	/// -----------------------------------------------------------------------
 	/// 						GROUP MANAGEMENT
 	/// -----------------------------------------------------------------------
-
-	// TODO Create group admin function
-
-	// TODO Create extension calling function
 
 	function setEntryPoint(address entryPoint_) external {
 		if (msg.sender != _entryPoint) revert NotFromEntrypoint();
