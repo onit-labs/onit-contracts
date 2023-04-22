@@ -14,11 +14,13 @@ async function main() {
 	const {
 		TEAM_API: apiKey,
 		TEAM_SECRET: apiSecret,
-		MUMBAI_DEPLOY_ACCOUNT_RELAY_AUTOTASK_ID: mumbaiAutotaskId
+		MUMBAI_DEPLOY_ACCOUNT_RELAY_AUTOTASK_ID: mumbaiAutotaskId,
+		POLYGON_DEPLOY_ACCOUNT_RELAY_AUTOTASK_ID: polygonAutotaskId
 	} = process.env
 
 	if (!mumbaiAutotaskId) throw new Error(`Missing autotask id`)
 	await uploadCode(mumbaiAutotaskId, apiKey, apiSecret)
+	await uploadCode(polygonAutotaskId, apiKey, apiSecret)
 	console.log(`Code updated`)
 }
 
