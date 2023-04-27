@@ -16,7 +16,7 @@ async function relay(accountFactory, body, whitelist) {
 	// Send meta-tx through relayer to the accountFactory contract
 	const gasLimit = (parseInt(gas) + 50000).toString()
 
-	return accountType == 'INDIVIDUAL'
+	return accountType == 'USER'
 		? await accountFactory.createForumAccount(deployPayload.owner, {
 				gasLimit
 		  })
@@ -49,7 +49,7 @@ async function handler(event) {
 
 	// Depending on chain use appropriate entry point
 	const targetContract =
-		body.accountType == 'INDIVIDUAL'
+		body.accountType == 'USER'
 			? new Contract(Individual_Account_Factory_Address, ForumAccountFactoryAbi, signer)
 			: new Contract(Group_Account_Factory_Address, ForumGroupFactoryAbi, signer)
 
