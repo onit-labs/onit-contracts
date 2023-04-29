@@ -51,6 +51,8 @@ contract ForumGroup is IAccount, Safe, MemberManager {
 	// Equivalent to _packValidationData(true,0,0);
 	uint256 internal constant _SIG_VALIDATION_FAILED = 1;
 
+	string public constant GROUP_VERSION = 'v0.0.1';
+
 	// Used nonces; 1 = used (prevents replaying the same userOp, while allowing out of order execution)
 	mapping(uint256 => uint256) public usedNonces;
 

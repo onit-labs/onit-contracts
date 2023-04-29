@@ -28,9 +28,9 @@ Forum groups will be extendedable with additional functionality, such as Fundrai
 
 ## Core Contracts
 
-| Contract              |                                                               Address                                                                | Description                                     |
-| :-------------------- | :----------------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------- |
-| Forum Group           |    [0xA1b5309Caa88159Bee3e07654aAd950ccc4952A2](https://polygonscan.com/address/0xA1b5309Caa88159Bee3e07654aAd950ccc4952A2#code)     | ERC4337 enabled safe with P-256 passkey members |
-| Forum Group Factory   | [0x258c7684f8cfcD727F0c1595F046Af049e1165FD](https://mumbai.polygonscan.com/address/0x258c7684f8cfcD727F0c1595F046Af049e1165FD#code) | Factory for Forum Groups                        |
-| Forum Account         | [0x412e20CB39aaC4D3BB250599349b3d904BF27262](https://mumbai.polygonscan.com/address/0x412e20CB39aaC4D3BB250599349b3d904BF27262#code) | ERC4337 enabled safe with P-256 passkey owner   |
-| Forum Account Factory |    [0xcbAf5c43571d368117B7550b2f58c4864f3Ccb2d](https://polygonscan.com/address/0xcbAf5c43571d368117B7550b2f58c4864f3Ccb2d#code)     | Factory for Forum Accounts                      |
+| Contract              |                                                            Address                                                            | Description                                     |
+| :-------------------- | :---------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------- |
+| Forum Group           | [0xd6839cdbd177012fd9766c274A92Fc27e30c80c4](https://polygonscan.com/address/0xd6839cdbd177012fd9766c274A92Fc27e30c80c4#code) | ERC4337 enabled safe with P-256 passkey members |
+| Forum Group Factory   | [0x4D5AbC4d534E6764a1BAe920e76037D2E89E970F](https://polygonscan.com/address/0x4D5AbC4d534E6764a1BAe920e76037D2E89E970F#code) | Factory for Forum Groups                        |
+| Forum Account         | [0x412e20CB39aaC4D3BB250599349b3d904BF27262](https://polygonscan.com/address/0x412e20CB39aaC4D3BB250599349b3d904BF27262#code) | ERC4337 enabled safe with P-256 passkey owner   |
+| Forum Account Factory | [0xcbAf5c43571d368117B7550b2f58c4864f3Ccb2d](https://polygonscan.com/address/0xcbAf5c43571d368117B7550b2f58c4864f3Ccb2d#code) | Factory for Forum Accounts                      |
