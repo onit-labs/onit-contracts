@@ -381,6 +381,16 @@ contract ForumGroupTest is ERC4337TestConfig {
 		assertTrue(address(alice).balance == 1 ether);
 		assertTrue(address(forumGroup).balance == 10 ether);
 		assertTrue(forumGroup.nonce() == 0);
+
+		userOpArray = signAndFormatUserOp(userOp, SIGNER_1, SIGNER_2);
+
+		// Pass if enough votes
+		entryPoint.handleOps(userOpArray, payable(address(this)));
+
+		// Transfer has been made, balances and nonce unchanged
+		assertTrue(address(alice).balance == 1.5 ether);
+		//assertTrue(address(forumGroup).balance == 10 ether);
+		assertTrue(forumGroup.nonce() == 1);
 	}
 
 	function testAuthorisedFunctionFromEntryPoint() public {

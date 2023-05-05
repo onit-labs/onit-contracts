@@ -197,8 +197,8 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
 		if (signerCount == 1) {
 			signerIndexes[0] = 0;
 		} else {
-			signerIndexes[0] = 1;
-			signerIndexes[1] = 0;
+			signerIndexes[0] = 0;
+			signerIndexes[1] = 1;
 		}
 
 		// Set the same auth data for tests
