@@ -4,15 +4,16 @@ pragma solidity ^0.8.17;
 /* solhint-disable avoid-low-level-calls */
 
 import {Base64} from "@libraries/Base64.sol";
+import {FCL_Elliptic_ZZ} from "@libraries/FCL_Elliptic_ZZ.sol";
 import {HexToLiteralBytes} from "@libraries/HexToLiteralBytes.sol";
 
 import {Exec} from "@utils/Exec.sol";
 import {MemberManager} from "@utils/MemberManager.sol";
 
-import {Safe, Enum} from "@safe/Safe.sol";
 import {IAccount} from "@erc4337/interfaces/IAccount.sol";
 import {UserOperation} from "@erc4337/interfaces/IEntryPoint.sol";
-import {Secp256r1, PassKeyId} from "@aa-passkeys-wallet/Secp256r1.sol";
+
+import {Safe, Enum} from "@safe/Safe.sol";
 
 /**
  * @title Forum Group
@@ -138,20 +139,19 @@ contract ForumGroup is IAccount, Safe, MemberManager {
         bytes32 hashedClientData =
             sha256(abi.encodePacked(clientDataStart, Base64.encode(abi.encodePacked(userOpHash)), clientDataEnd));
 
-        bytes32 fullMessage;
+        //bytes32 fullMessage;
 
         uint256 count;
 
         for (uint256 i; i < signerIndex.length;) {
-            fullMessage = sha256(abi.encodePacked(HexToLiteralBytes.fromHex(authData[i]), hashedClientData));
+            // fullMessage = sha256(abi.encodePacked(HexToLiteralBytes.fromHex(authData[i]), hashedClientData));
 
             // Check if the signature is valid and increment count if so
             if (
-                Secp256r1.Verify(
-                    PassKeyId(_members[_membersAddressArray[signerIndex[i]]].x, _members[_membersAddressArray[signerIndex[i]]].y, ""),
-                    sig[i][0],
-                    sig[i][1],
-                    uint256(fullMessage)
+                FCL_Elliptic_ZZ.ecdsa_verify(
+                    sha256(abi.encodePacked(HexToLiteralBytes.fromHex(authData[i]), hashedClientData)),
+                    [sig[i][0], sig[i][1]],
+                    [_members[_membersAddressArray[signerIndex[i]]].x, _members[_membersAddressArray[signerIndex[i]]].y]
                 )
             ) ++count;
 

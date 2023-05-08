@@ -2,12 +2,12 @@
 pragma solidity ^0.8.17;
 
 import {Safe, Enum} from "@safe/Safe.sol";
-import {Secp256r1, PassKeyId} from "@aa-passkeys-wallet/Secp256r1.sol";
 
 // Modified BaseAccount with nonce removed
 import {BaseAccount, IEntryPoint, UserOperation} from "@interfaces/BaseAccount.sol";
 
 import {Base64} from "@libraries/Base64.sol";
+import {FCL_Elliptic_ZZ} from "@libraries/FCL_Elliptic_ZZ.sol";
 import {HexToLiteralBytes} from "@libraries/HexToLiteralBytes.sol";
 
 import {Exec} from "@utils/Exec.sol";
@@ -33,8 +33,6 @@ contract ForumAccount is Safe, BaseAccount {
     /// ----------------------------------------------------------------------------------------
     ///							ACCOUNT STORAGE
     /// ----------------------------------------------------------------------------------------
-
-    error Unauthorized();
 
     // Public key for secp256r1 signer
     uint256[2] internal _owner;
@@ -160,11 +158,10 @@ contract ForumAccount is Safe, BaseAccount {
             sha256(abi.encodePacked(clientDataStart, Base64.encode(abi.encodePacked(userOpHash)), clientDataEnd));
 
         return
-            Secp256r1.Verify(
-                PassKeyId(_owner[0], _owner[1], ""),
-                sig[0],
-                sig[1],
-                uint256(sha256(abi.encodePacked(HexToLiteralBytes.fromHex(authData), hashedClientData)))
+            FCL_Elliptic_ZZ.ecdsa_verify(
+                sha256(abi.encodePacked(HexToLiteralBytes.fromHex(authData), hashedClientData)),
+                [sig[0], sig[1]],
+                [_owner[0], _owner[1]]
             )
             ? 0
             : SIG_VALIDATION_FAILED;

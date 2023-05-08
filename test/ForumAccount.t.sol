@@ -154,8 +154,6 @@ contract ForumAccountTest is ERC4337TestConfig {
     }
 
     function testAccountTransfer() public {
-        console.log(deployed4337AccountAddress);
-
         // Build user operation
         UserOperation memory userOp = buildUserOp(deployed4337AccountAddress, 0, new bytes(0), basicTransferCalldata);
 
@@ -245,8 +243,6 @@ contract ForumAccountTest is ERC4337TestConfig {
         bytes memory cd =
             abi.encodeWithSelector(entryPoint.handleOps.selector, uop, address(0xEeC7E4B2287e98B6ca30242e2D2D2F283a78Fc82));
 
-        console.logBytes(cd);
-
         address[] memory owners = deployed4337Account.getOwners();
         assertEq(owners.length, 1, "should start with 1 owner");
 
@@ -257,7 +253,7 @@ contract ForumAccountTest is ERC4337TestConfig {
 
         owners = deployed4337Account.getOwners();
         assertEq(owners.length, 2, "owner not added");
-        assertEq(owners[1], address(this), "incorrect owner");
+        assertEq(owners[0], address(this), "incorrect owner");
 
         // Simulate swapping an owner (address(1) indicates sentinel owner, which is 'prev' in linked list)
         deployed4337Account.swapOwner(address(1), address(this), alice);
