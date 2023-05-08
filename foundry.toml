@@ -27,6 +27,7 @@ fuji = { key = "${SNOWTRACE_API_KEY}" }
 mumbai = { key = "${POLYSCAN_API_KEY}" }
 
 [fmt]
-line_length=120
+line_length = 120
+multiline_func_header = "params_first"
 number_underscore="thousands"
 # handle sorting of imports

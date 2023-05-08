@@ -6,60 +6,28 @@ pragma solidity >=0.8.4;
 /// License-Identifier: MIT
 library JSON {
     /// @dev Base64 encoding/decoding table
-    string internal constant TABLE =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    string internal constant TABLE = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-    function _formattedMetadata(
-        string memory name,
-        string memory description,
-        string memory svgImg
-    ) internal pure returns (string memory) {
-        return
-            string.concat(
-                "data:application/json;base64,",
-                _encode(
-                    bytes(
-                        string.concat(
-                            "{",
-                            _prop("name", name),
-                            _prop("description", description),
-                            _xmlImage(svgImg),
-                            "}"
-                        )
-                    )
-                )
-            );
-    }
-
-    function _xmlImage(string memory svgImg)
+    function _formattedMetadata(string memory name, string memory description, string memory svgImg)
         internal
         pure
         returns (string memory)
     {
-        return
-            _prop(
-                "image",
-                string.concat(
-                    "data:image/svg+xml;base64,",
-                    _encode(bytes(svgImg))
-                ),
-                true
-            );
+        return string.concat(
+            "data:application/json;base64,",
+            _encode(bytes(string.concat("{", _prop("name", name), _prop("description", description), _xmlImage(svgImg), "}")))
+        );
     }
 
-    function _prop(string memory key, string memory val)
-        internal
-        pure
-        returns (string memory)
-    {
+    function _xmlImage(string memory svgImg) internal pure returns (string memory) {
+        return _prop("image", string.concat("data:image/svg+xml;base64,", _encode(bytes(svgImg))), true);
+    }
+
+    function _prop(string memory key, string memory val) internal pure returns (string memory) {
         return string.concat('"', key, '": ', '"', val, '", ');
     }
 
-    function _prop(
-        string memory key,
-        string memory val,
-        bool last
-    ) internal pure returns (string memory) {
+    function _prop(string memory key, string memory val, bool last) internal pure returns (string memory) {
         if (last) {
             return string.concat('"', key, '": ', '"', val, '"');
         } else {
@@ -67,11 +35,7 @@ library JSON {
         }
     }
 
-    function _object(string memory key, string memory val)
-        internal
-        pure
-        returns (string memory)
-    {
+    function _object(string memory key, string memory val) internal pure returns (string memory) {
         return string.concat('"', key, '": ', "{", val, "}");
     }
 
@@ -103,9 +67,7 @@ library JSON {
             for {
                 let dataPtr := data
                 let endPtr := add(data, mload(data))
-            } lt(dataPtr, endPtr) {
-
-            } {
+            } lt(dataPtr, endPtr) {} {
                 // Advance 3 bytes
                 dataPtr := add(dataPtr, 3)
                 let input := mload(dataPtr)
@@ -118,22 +80,13 @@ library JSON {
                 // and finally write it in the result pointer but with a left shift
                 // of 256 (1 byte) - 8 (1 ASCII char) = 248 bits
 
-                mstore8(
-                    resultPtr,
-                    mload(add(tablePtr, and(shr(18, input), 0x3F)))
-                )
+                mstore8(resultPtr, mload(add(tablePtr, and(shr(18, input), 0x3F))))
                 resultPtr := add(resultPtr, 1) // Advance
 
-                mstore8(
-                    resultPtr,
-                    mload(add(tablePtr, and(shr(12, input), 0x3F)))
-                )
+                mstore8(resultPtr, mload(add(tablePtr, and(shr(12, input), 0x3F))))
                 resultPtr := add(resultPtr, 1) // Advance
 
-                mstore8(
-                    resultPtr,
-                    mload(add(tablePtr, and(shr(6, input), 0x3F)))
-                )
+                mstore8(resultPtr, mload(add(tablePtr, and(shr(6, input), 0x3F))))
                 resultPtr := add(resultPtr, 1) // Advance
 
                 mstore8(resultPtr, mload(add(tablePtr, and(input, 0x3F))))
@@ -143,13 +96,11 @@ library JSON {
             // When data `bytes` is not exactly 3 bytes long
             // it is padded with `=` characters at the end
             switch mod(mload(data), 3)
-            case 1 {
-                mstore8(sub(resultPtr, 1), 0x3d)
-                mstore8(sub(resultPtr, 2), 0x3d)
-            }
-            case 2 {
-                mstore8(sub(resultPtr, 1), 0x3d)
-            }
+                case 1 {
+                    mstore8(sub(resultPtr, 1), 0x3d)
+                    mstore8(sub(resultPtr, 2), 0x3d)
+                }
+                case 2 { mstore8(sub(resultPtr, 1), 0x3d) }
         }
 
         return result;
