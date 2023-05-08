@@ -19,6 +19,3 @@
 	path = lib/safe-contracts
 	url = https://github.com/safe-global/safe-contracts
 	branch = v1.3.0
-[submodule "lib/aa-passkeys-wallet"]
-	path = lib/aa-passkeys-wallet
-	url = https://github.com/itsobvioustech/aa-passkeys-wallet
