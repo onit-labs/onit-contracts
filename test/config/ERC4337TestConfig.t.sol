@@ -48,6 +48,8 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
 
     string internal authentacatorData = "1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000";
 
+    uint192 internal constant BASE_NONCE_KEY = 0;
+
     constructor() {
         entryPoint = new EntryPoint();
         entryPointAddress = address(entryPoint);
@@ -86,10 +88,6 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
         paymasterAndData: new bytes(0),
         signature: new bytes(0)
     });
-
-    function getNonce(BaseAccount account) internal view returns (uint256) {
-        return account.nonce();
-    }
 
     function buildUserOp(address sender, uint256 nonce, bytes memory initCode, bytes memory callData)
         public

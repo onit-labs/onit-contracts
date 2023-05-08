@@ -4,7 +4,7 @@ pragma solidity ^0.8.17;
 import {Safe, Enum} from "@safe/Safe.sol";
 
 // Modified BaseAccount with nonce removed
-import {BaseAccount, IEntryPoint, UserOperation} from "@interfaces/BaseAccount.sol";
+import {BaseAccount, IEntryPoint, UserOperation} from "@erc4337/core/BaseAccount.sol";
 
 import {Base64} from "@libraries/Base64.sol";
 import {FCL_Elliptic_ZZ} from "@libraries/FCL_Elliptic_ZZ.sol";
@@ -124,15 +124,7 @@ contract ForumAccount is Safe, BaseAccount {
     ///							INTERNAL METHODS
     /// ----------------------------------------------------------------------------------------
 
-    /**
-     * validate the current nonce matches the UserOperation nonce.
-     * then it should update the account's state to prevent replay of this UserOperation.
-     * called only if initCode is empty (since "nonce" field is used as "salt" on account creation)
-     * @param userOp the op to validate.
-     */
-    function _validateAndUpdateNonce(UserOperation calldata userOp) internal override {
-        require(Safe.nonce++ == userOp.nonce, "account: invalid nonce");
-    }
+    // TODO consider nonce validation in here as well in on v6 entrypoint
 
     /**
      * @notice Validate the signature of the user operation
