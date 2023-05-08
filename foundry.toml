@@ -25,3 +25,8 @@ mumbai = "${MUMBAI_RPC_URL}"
 [etherscan]
 fuji = { key = "${SNOWTRACE_API_KEY}" }
 mumbai = { key = "${POLYSCAN_API_KEY}" }
+
+[fmt]
+line_length=120
+number_underscore="thousands"
+# handle sorting of imports
