@@ -39,6 +39,13 @@ contract ForumGroupFactory {
     // Data sent to the deterministic deployment proxy to deploy a new group module
     bytes private _createForumGroupProxyData;
 
+    // TODO Making these immutable would save gas, but can't yet be done with dynamic types
+    bytes public authData;
+
+    string public clientDataStart;
+
+    string public clientDataEnd;
+
     /// ----------------------------------------------------------------------------------------
     /// Constructor
     /// ----------------------------------------------------------------------------------------
@@ -47,12 +54,18 @@ contract ForumGroupFactory {
         address payable _forumGroupSingleton,
         address _entryPoint,
         address _gnosisSingleton,
-        address _gnosisFallbackLibrary
+        address _gnosisFallbackLibrary,
+        bytes memory _authData,
+        string memory _clientDataStart,
+        string memory _clientDataEnd
     ) {
         forumGroupSingleton = _forumGroupSingleton;
         entryPoint = _entryPoint;
         gnosisSingleton = _gnosisSingleton;
         gnosisFallbackLibrary = _gnosisFallbackLibrary;
+        authData = _authData;
+        clientDataStart = _clientDataStart;
+        clientDataEnd = _clientDataEnd;
 
         // Data sent to the deterministic deployment proxy to deploy a new forum group
         _createForumGroupProxyData = abi.encodePacked(
@@ -102,7 +115,9 @@ contract ForumGroupFactory {
         // If not successful, revert
         if (!successCreate || forumGroup == address(0)) revert NullDeploy();
 
-        ForumGroup(payable(forumGroup)).initalize(entryPoint, gnosisFallbackLibrary, _voteThreshold, _members);
+        ForumGroup(payable(forumGroup)).initalize(
+            entryPoint, gnosisFallbackLibrary, _voteThreshold, _members, authData, clientDataStart, clientDataEnd
+        );
 
         emit ForumGroupDeployed(forumGroup);
 

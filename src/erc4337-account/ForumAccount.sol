@@ -40,6 +40,8 @@ contract ForumAccount is Safe, BaseAccount {
     // Entry point allowed to call methods directly on this contract
     IEntryPoint internal _entryPoint;
 
+    /// @dev Values used when signing the transaction
+    /// To make this variable we can pass these with the user op signature, for now we save gas writing them on deploy
     struct SigningData {
         bytes authData;
         string clientDataStart;

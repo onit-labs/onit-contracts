@@ -55,7 +55,7 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
         entryPointAddress = address(entryPoint);
 
         forumAccountSingleton = new ForumAccount();
-        //forumGroupSingleton = new ForumGroup(address(forumAccountSingleton));
+        forumGroupSingleton = new ForumGroup(address(forumAccountSingleton));
 
         forumAccountFactory = new ForumAccountFactory(
     		forumAccountSingleton,
@@ -70,7 +70,10 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
         	payable(address(forumGroupSingleton)),
         	entryPointAddress,
         	address(safeSingleton),
-        	address(handler)
+        	address(handler),
+    		hex'1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000',
+    		'{"type":"webauthn.get","challenge":"',
+    		'","origin":"https://development.forumdaos.com"}'
         );
     }
 
@@ -186,13 +189,7 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
             authentacatorDataArray[1] = authentacatorData;
         }
 
-        userOp.signature = abi.encode(
-            signerIndexes,
-            sigs,
-            '{"type":"webauthn.get","challenge":"',
-            '","origin":"https://development.forumdaos.com"}',
-            authentacatorDataArray
-        );
+        userOp.signature = abi.encode(signerIndexes, sigs);
 
         UserOperation[] memory userOpArray = new UserOperation[](1);
         userOpArray[0] = userOp;

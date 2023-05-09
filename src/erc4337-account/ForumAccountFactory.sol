@@ -39,9 +39,12 @@ contract ForumAccountFactory {
 
     bytes32 private immutable _createProxyDataHash;
 
-    string public clientDataStart;
-    string public clientDataEnd;
+    // TODO Making these immutable would save gas, but can't yet be done with dynamic types
     bytes public authData;
+
+    string public clientDataStart;
+
+    string public clientDataEnd;
 
     /// ----------------------------------------------------------------------------------------
     /// Constructor

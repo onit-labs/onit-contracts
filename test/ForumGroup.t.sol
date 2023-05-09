@@ -45,7 +45,7 @@ contract ForumGroupTest is ERC4337TestConfig {
         assertEq(address(forumGroupFactory.gnosisFallbackLibrary()), address(handler), "handler not set");
         // Can not initialize the singleton
         vm.expectRevert("GS200");
-        forumGroupSingleton.initalize(entryPointAddress, address(1), uint256(1), inputMembers);
+        forumGroupSingleton.initalize(entryPointAddress, address(1), uint256(1), inputMembers, "", "", "");
 
         // Format signers into arrays to be added to contract
         inputMembers.push([publicKey[0], publicKey[1]]);
@@ -83,7 +83,7 @@ contract ForumGroupTest is ERC4337TestConfig {
 
         // Can not initialize the group again
         vm.expectRevert("GS200");
-        forumGroup.initalize(entryPointAddress, address(1), uint256(1), inputMembers);
+        forumGroup.initalize(entryPointAddress, address(1), uint256(1), inputMembers, "", "", "");
     }
 
     function testPublicKeyAddressMatches() public {
@@ -147,7 +147,7 @@ contract ForumGroupTest is ERC4337TestConfig {
      		payable(address(forumGroupSingleton)),
     		entryPointAddress,
     		address(safeSingleton),
-    		address(handler) 
+    		address(handler) ,'','',''
     	);
 
         // Deploy an account to be used in tests
@@ -160,7 +160,7 @@ contract ForumGroupTest is ERC4337TestConfig {
     		payable(address(forumGroupSingleton)),
     		entryPointAddress, 
     		address(safeSingleton),
-    		address(handler)
+    		address(handler),'','',''
     	);
 
         // Deploy an account to be used in tests
@@ -280,6 +280,53 @@ contract ForumGroupTest is ERC4337TestConfig {
         assertTrue(forumGroup.entryPoint() == address(this));
     }
 
+    function testValidateUserOpGroup() public {
+        // Build user operation
+        UserOperation memory userOp = buildUserOp(forumGroupAddress, 0, "", basicTransferCalldata);
+        UserOperation[] memory userOpArray = signAndFormatUserOp(userOp, SIGNER_1, "");
+
+        vm.startPrank(entryPointAddress);
+        forumGroup.validateUserOp(userOpArray[0], entryPoint.getUserOpHash(userOp), 0);
+        vm.stopPrank();
+    }
+
+    // Used in the below test, but must be storage
+    uint256[] indexes;
+    uint256[2][] sigs;
+
+    function testMaximumMemberCountValidation() public {
+        // Build user operation
+        UserOperation memory userOp = buildUserOp(forumGroupAddress, 0, "", basicTransferCalldata);
+
+        uint256[2] memory sig1 =
+            signMessageForPublicKey(SIGNER_1, Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(userOp))));
+
+        vm.startPrank(entryPointAddress);
+
+        uint256 gas;
+
+        // Loop and add a signature each time - roughly simulates validation of a group with 1 more member
+        // only approximate since we use the same signer for convenience, so reading from storage will be slightly cheaper
+        for (uint256 i = 0; i < 10; i++) {
+            indexes.push(0);
+            sigs.push(sig1);
+            userOp.signature = abi.encode(indexes, sigs);
+
+            console.log(gasleft());
+
+            gas = gasleft();
+            forumGroup.validateUserOp(userOp, entryPoint.getUserOpHash(userOp), 0);
+            gas -= gasleft();
+
+            if (gas > 1500000) {
+                console.log("Gas used: ", gas, " with ", i);
+                break;
+            }
+        }
+
+        vm.stopPrank();
+    }
+
     /// -----------------------------------------------------------------------
     /// EXECUTION TESTS
     /// -----------------------------------------------------------------------
@@ -312,13 +359,17 @@ contract ForumGroupTest is ERC4337TestConfig {
         inputMembers.push([publicKey2[0], publicKey2[1]]);
 
         // Deploy a forum safe from the factory with 2 signers and threshold 2
-        forumGroup = ForumGroup(payable(forumGroupFactory.createForumGroup(GROUP_NAME_2, 2, inputMembers)));
+        ForumGroup forumGroupLocalTest =
+            ForumGroup(payable(forumGroupFactory.createForumGroup(GROUP_NAME_2, 2, inputMembers)));
 
-        deal(forumGroupAddress, 10 ether);
+        deal(address(forumGroupLocalTest), 10 ether);
 
         // Build user operation
         UserOperation memory userOp = buildUserOp(
-            forumGroupAddress, entryPoint.getNonce(forumGroupAddress, BASE_NONCE_KEY), "", basicTransferCalldata
+            address(forumGroupLocalTest),
+            entryPoint.getNonce(address(forumGroupLocalTest), BASE_NONCE_KEY),
+            "",
+            basicTransferCalldata
         );
 
         UserOperation[] memory userOpArray = signAndFormatUserOp(userOp, SIGNER_1, "");
@@ -329,8 +380,8 @@ contract ForumGroupTest is ERC4337TestConfig {
 
         // Transfer has not been made, balances and nonce unchanged
         assertTrue(address(alice).balance == 1 ether);
-        assertTrue(forumGroupAddress.balance == 10 ether);
-        assertTrue(entryPoint.getNonce(forumGroupAddress, BASE_NONCE_KEY) == 0);
+        assertTrue(address(forumGroupLocalTest).balance == 10 ether);
+        assertTrue(entryPoint.getNonce(address(forumGroupLocalTest), BASE_NONCE_KEY) == 0);
 
         userOpArray = signAndFormatUserOp(userOp, SIGNER_1, SIGNER_2);
 
@@ -340,7 +391,7 @@ contract ForumGroupTest is ERC4337TestConfig {
         // Transfer has been made, balances and nonce unchanged
         assertTrue(address(alice).balance == 1.5 ether);
         //assertTrue(forumGroupAddress.balance == 10 ether);
-        assertTrue(entryPoint.getNonce(forumGroupAddress, BASE_NONCE_KEY) == 1);
+        assertTrue(entryPoint.getNonce(address(forumGroupLocalTest), BASE_NONCE_KEY) == 1);
     }
 
     function testAuthorisedFunctionFromEntryPoint() public {

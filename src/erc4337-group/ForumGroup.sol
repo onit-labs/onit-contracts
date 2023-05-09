@@ -5,7 +5,6 @@ pragma solidity ^0.8.17;
 
 import {Base64} from "@libraries/Base64.sol";
 import {FCL_Elliptic_ZZ} from "@libraries/FCL_Elliptic_ZZ.sol";
-import {HexToLiteralBytes} from "@libraries/HexToLiteralBytes.sol";
 
 import {Exec} from "@utils/Exec.sol";
 import {MemberManager} from "@utils/MemberManager.sol";
@@ -52,6 +51,17 @@ contract ForumGroup is IAccount, Safe, MemberManager {
 
     string public constant GROUP_VERSION = "v0.0.1";
 
+    /// @dev Values used when signing the transaction
+    /// To make this variable we can pass these with the user op signature, for now we save gas writing them on deploy
+    struct SigningData {
+        bytes authData;
+        string clientDataStart;
+        string clientDataEnd;
+    }
+
+    // todo consider visibility
+    SigningData internal _signingData;
+
     /// -----------------------------------------------------------------------
     /// 						SETUP
     /// -----------------------------------------------------------------------
@@ -73,7 +83,10 @@ contract ForumGroup is IAccount, Safe, MemberManager {
         address entryPoint_,
         address fallbackHandler,
         uint256 voteThreshold_,
-        uint256[2][] memory members_
+        uint256[2][] memory members_,
+        bytes memory authData_,
+        string memory clientDataStart_,
+        string memory clientDataEnd_
     )
         external
     {
@@ -107,6 +120,8 @@ contract ForumGroup is IAccount, Safe, MemberManager {
                 ++i;
             }
         }
+
+        _signingData = SigningData(authData_, clientDataStart_, clientDataEnd_);
     }
 
     /// -----------------------------------------------------------------------
@@ -122,29 +137,21 @@ contract ForumGroup is IAccount, Safe, MemberManager {
 
         // Extract the passkey generated signature and authentacator data
         // Signer index is the index of the signer in the members array, used to retrieve the public key
-        (
-            uint256[] memory signerIndex,
-            uint256[2][] memory sig,
-            string memory clientDataStart,
-            string memory clientDataEnd,
-            string[] memory authData
-        ) = abi.decode(userOp.signature, (uint256[], uint256[2][], string, string, string[]));
+        (uint256[] memory signerIndex, uint256[2][] memory sig) =
+            abi.decode(userOp.signature, (uint256[], uint256[2][]));
 
         // Hash the client data to produce the challenge signed by the passkey offchain
-        bytes32 hashedClientData =
-            sha256(abi.encodePacked(clientDataStart, Base64.encode(abi.encodePacked(userOpHash)), clientDataEnd));
-
-        //bytes32 fullMessage;
+        bytes32 hashedClientData = sha256(
+            abi.encodePacked(_signingData.clientDataStart, Base64.encode(abi.encodePacked(userOpHash)), _signingData.clientDataEnd)
+        );
 
         uint256 count;
 
         for (uint256 i; i < signerIndex.length;) {
-            // fullMessage = sha256(abi.encodePacked(HexToLiteralBytes.fromHex(authData[i]), hashedClientData));
-
             // Check if the signature is valid and increment count if so
             if (
                 FCL_Elliptic_ZZ.ecdsa_verify(
-                    sha256(abi.encodePacked(HexToLiteralBytes.fromHex(authData[i]), hashedClientData)),
+                    sha256(abi.encodePacked(_signingData.authData, hashedClientData)),
                     [sig[i][0], sig[i][1]],
                     [_members[_membersAddressArray[signerIndex[i]]].x, _members[_membersAddressArray[signerIndex[i]]].y]
                 )
@@ -157,7 +164,7 @@ contract ForumGroup is IAccount, Safe, MemberManager {
             validationData = _SIG_VALIDATION_FAILED;
         }
 
-        // TODO consider further nonce chhecks in here
+        // TODO consider further nonce checks in here
 
         if (missingAccountFunds > 0) {
             //Note: MAY pay more than the minimum, to deposit for future transactions
