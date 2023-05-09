@@ -55,7 +55,7 @@ contract ForumGroupTest is ERC4337TestConfig {
         vm.deal(address(forumGroup), 1 ether);
 
         // Build a basic transaction to execute in some tests
-        basicTransferCalldata = buildExecutionPayload(alice, uint256(0.5 ether), new bytes(0), Enum.Operation.Call);
+        basicTransferCalldata = buildExecutionPayload(alice, uint256(0.5 ether), "", Enum.Operation.Call);
     }
 
     /// -----------------------------------------------------------------------
@@ -134,34 +134,34 @@ contract ForumGroupTest is ERC4337TestConfig {
         address tmpMumbai;
         address tmpFuji;
 
-        uint256[2][] memory inputMembers = new uint256[2][](1);
-        inputMembers[0] = publicKey;
+        uint256[2][] memory inputMembersCrossChain = new uint256[2][](1);
+        inputMembersCrossChain[0] = publicKey;
 
         // Fork Mumbai and create an account from a fcatory
         vm.createSelectFork(vm.envString("MUMBAI_RPC_URL"));
 
         forumGroupFactory = new ForumGroupFactory(
-    payable(address(forumGroupSingleton)),
-    entryPointAddress,
-    address(safeSingleton),
-    address(handler)
-    );
+     		payable(address(forumGroupSingleton)),
+    		entryPointAddress,
+    		address(safeSingleton),
+    		address(handler) 
+    	);
 
         // Deploy an account to be used in tests
-        tmpMumbai = forumGroupFactory.createForumGroup("test", 1, inputMembers);
+        tmpMumbai = forumGroupFactory.createForumGroup("test", 1, inputMembersCrossChain);
 
         // Fork Fuji and create an account from a fcatory
         vm.createSelectFork(vm.envString("FUJI_RPC_URL"));
 
         forumGroupFactory = new ForumGroupFactory(
-    payable(address(forumGroupSingleton)),
-    entryPointAddress,
-    address(safeSingleton),
-    address(handler)
-    );
+    		payable(address(forumGroupSingleton)),
+    		entryPointAddress, 
+    		address(safeSingleton),
+    		address(handler)
+    	);
 
         // Deploy an account to be used in tests
-        tmpFuji = forumGroupFactory.createForumGroup("test", 1, inputMembers);
+        tmpFuji = forumGroupFactory.createForumGroup("test", 1, inputMembersCrossChain);
 
         assertEq(tmpMumbai, tmpFuji, "address not the same");
     }
@@ -285,11 +285,12 @@ contract ForumGroupTest is ERC4337TestConfig {
         // check balance before
         assertTrue(address(alice).balance == 1 ether);
         assertTrue(address(forumGroup).balance == 1 ether);
-        assertTrue(forumGroup.nonce() == 0);
+        assertTrue(entryPoint.getNonce(address(forumGroup), BASE_NONCE_KEY) == 0);
 
         // Build user operation
-        UserOperation memory userOp =
-            buildUserOp(address(forumGroup), forumGroup.nonce(), new bytes(0), basicTransferCalldata);
+        UserOperation memory userOp = buildUserOp(
+            address(forumGroup), entryPoint.getNonce(address(forumGroup), BASE_NONCE_KEY), "", basicTransferCalldata
+        );
 
         UserOperation[] memory userOpArray = signAndFormatUserOp(userOp, SIGNER_1, "");
 
@@ -300,8 +301,7 @@ contract ForumGroupTest is ERC4337TestConfig {
         // Transfer has been made, nonce incremented, used nonce set
         assertTrue(address(alice).balance == 1.5 ether);
         assertTrue(address(forumGroup).balance == 0.5 ether - gas);
-        assertTrue(forumGroup.nonce() == 1);
-        assertTrue(forumGroup.usedNonces(userOp.nonce) == 1);
+        assertTrue(entryPoint.getNonce(address(forumGroup), BASE_NONCE_KEY) == 1);
     }
 
     function testRevertsIfUnderThreshold() public {
@@ -314,8 +314,9 @@ contract ForumGroupTest is ERC4337TestConfig {
         deal(address(forumGroup), 10 ether);
 
         // Build user operation
-        UserOperation memory userOp =
-            buildUserOp(address(forumGroup), forumGroup.nonce(), new bytes(0), basicTransferCalldata);
+        UserOperation memory userOp = buildUserOp(
+            address(forumGroup), entryPoint.getNonce(address(forumGroup), BASE_NONCE_KEY), "", basicTransferCalldata
+        );
 
         UserOperation[] memory userOpArray = signAndFormatUserOp(userOp, SIGNER_1, "");
 
@@ -326,7 +327,7 @@ contract ForumGroupTest is ERC4337TestConfig {
         // Transfer has not been made, balances and nonce unchanged
         assertTrue(address(alice).balance == 1 ether);
         assertTrue(address(forumGroup).balance == 10 ether);
-        assertTrue(forumGroup.nonce() == 0);
+        assertTrue(entryPoint.getNonce(address(forumGroup), BASE_NONCE_KEY) == 0);
 
         userOpArray = signAndFormatUserOp(userOp, SIGNER_1, SIGNER_2);
 
@@ -336,7 +337,7 @@ contract ForumGroupTest is ERC4337TestConfig {
         // Transfer has been made, balances and nonce unchanged
         assertTrue(address(alice).balance == 1.5 ether);
         //assertTrue(address(forumGroup).balance == 10 ether);
-        assertTrue(forumGroup.nonce() == 1);
+        assertTrue(entryPoint.getNonce(address(forumGroup), BASE_NONCE_KEY) == 1);
     }
 
     function testAuthorisedFunctionFromEntryPoint() public {
@@ -355,8 +356,9 @@ contract ForumGroupTest is ERC4337TestConfig {
         basicTransferCalldata = buildExecutionPayload(address(forumGroup), 0, addMemberCalldata, Enum.Operation.Call);
 
         // Build user operation
-        UserOperation memory userOp =
-            buildUserOp(address(forumGroup), forumGroup.nonce(), new bytes(0), basicTransferCalldata);
+        UserOperation memory userOp = buildUserOp(
+            address(forumGroup), entryPoint.getNonce(address(forumGroup), BASE_NONCE_KEY), "", basicTransferCalldata
+        );
 
         UserOperation[] memory userOpArray = signAndFormatUserOp(userOp, SIGNER_1, "");
 
@@ -368,6 +370,30 @@ contract ForumGroupTest is ERC4337TestConfig {
         assertTrue(members.length == 2);
         assertTrue(members[1][0] == publicKey2[0]);
         assertTrue(members[1][1] == publicKey2[1]);
+    }
+
+    function testNonceSequence() public {
+        // Build user operation 1, nonce set to 1
+        UserOperation memory userOp1 = buildUserOp(address(forumGroup), 0, "", basicTransferCalldata);
+        UserOperation[] memory userOpArray1 = signAndFormatUserOp(userOp1, SIGNER_1, "");
+
+        // Build user operation 2, nonce set to 2
+        UserOperation memory userOp2 = buildUserOp(address(forumGroup), 1, "", basicTransferCalldata);
+        UserOperation[] memory userOpArray2 = signAndFormatUserOp(userOp2, SIGNER_1, "");
+
+        // Process first userOp
+        entryPoint.handleOps(userOpArray1, payable(bob));
+
+        assertTrue(entryPoint.getNonce(address(forumGroup), BASE_NONCE_KEY) == 1);
+
+        // Fail to process again
+        vm.expectRevert(failedOpError(uint256(0), "AA25 invalid account nonce"));
+        entryPoint.handleOps(userOpArray1, payable(bob));
+
+        // Process second userOp
+        entryPoint.handleOps(userOpArray2, payable(bob));
+
+        assertTrue(entryPoint.getNonce(address(forumGroup), BASE_NONCE_KEY) == 2);
     }
 
     /// -----------------------------------------------------------------------

@@ -35,8 +35,6 @@ contract ForumGroup is IAccount, Safe, MemberManager {
     ///							EVENTS & ERRORS
     /// ----------------------------------------------------------------------------------------
 
-    error InvalidNonce();
-
     error NotFromEntrypoint();
 
     error InvalidInitialisation();
@@ -53,9 +51,6 @@ contract ForumGroup is IAccount, Safe, MemberManager {
     uint256 internal constant _SIG_VALIDATION_FAILED = 1;
 
     string public constant GROUP_VERSION = "v0.0.1";
-
-    // Used nonces; 1 = used (prevents replaying the same userOp, while allowing out of order execution)
-    mapping(uint256 => uint256) public usedNonces;
 
     /// -----------------------------------------------------------------------
     /// 						SETUP
@@ -162,13 +157,7 @@ contract ForumGroup is IAccount, Safe, MemberManager {
             validationData = _SIG_VALIDATION_FAILED;
         }
 
-        // usedNonces mapping keeps the option to execute nonces out of order
-        // We increment nonce so we have a way to keep track of the next available nonce
-        if (userOp.initCode.length == 0) {
-            if (usedNonces[userOp.nonce] == 1) revert InvalidNonce();
-            ++usedNonces[userOp.nonce];
-            ++nonce;
-        }
+        // TODO consider further nonce chhecks in here
 
         if (missingAccountFunds > 0) {
             //Note: MAY pay more than the minimum, to deposit for future transactions

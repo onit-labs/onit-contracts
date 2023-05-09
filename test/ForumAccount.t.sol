@@ -47,7 +47,7 @@ contract ForumAccountTest is ERC4337TestConfig {
         deal(deployed4337AccountAddress, 1 ether);
 
         // Build a basic transaction to execute in some tests
-        basicTransferCalldata = buildExecutionPayload(alice, uint256(0.5 ether), new bytes(0), Enum.Operation.Call);
+        basicTransferCalldata = buildExecutionPayload(alice, uint256(0.5 ether), "", Enum.Operation.Call);
     }
 
     /// -----------------------------------------------------------------------
@@ -140,7 +140,7 @@ contract ForumAccountTest is ERC4337TestConfig {
         UserOperation memory userOp = buildUserOp(
             deployed4337AccountAddress,
             entryPoint.getNonce(deployed4337AccountAddress, BASE_NONCE_KEY),
-            new bytes(0),
+            "",
             abi.encodeWithSignature("setEntryPoint(address)", address(this))
         );
 
@@ -155,7 +155,7 @@ contract ForumAccountTest is ERC4337TestConfig {
 
     function testAccountTransfer() public {
         // Build user operation
-        UserOperation memory userOp = buildUserOp(deployed4337AccountAddress, 0, new bytes(0), basicTransferCalldata);
+        UserOperation memory userOp = buildUserOp(deployed4337AccountAddress, 0, "", basicTransferCalldata);
 
         UserOperation[] memory userOps = signAndFormatUserOpIndividual(userOp, SIGNER_1);
 
@@ -186,10 +186,7 @@ contract ForumAccountTest is ERC4337TestConfig {
 
         // Build user operation
         UserOperation memory userOp = buildUserOp(
-            deployed4337AccountAddress,
-            entryPoint.getNonce(deployed4337AccountAddress, BASE_NONCE_KEY),
-            new bytes(0),
-            payload
+            deployed4337AccountAddress, entryPoint.getNonce(deployed4337AccountAddress, BASE_NONCE_KEY), "", payload
         );
 
         UserOperation[] memory userOps = signAndFormatUserOpIndividual(userOp, SIGNER_1);
@@ -213,7 +210,7 @@ contract ForumAccountTest is ERC4337TestConfig {
     // ! Double check with new validation including the domain seperator
     function testCannotReplaySig() public {
         // Build user operation
-        UserOperation memory userOp = buildUserOp(deployed4337AccountAddress, 0, new bytes(0), basicTransferCalldata);
+        UserOperation memory userOp = buildUserOp(deployed4337AccountAddress, 0, "", basicTransferCalldata);
 
         UserOperation[] memory userOps = signAndFormatUserOpIndividual(userOp, SIGNER_1);
 
@@ -230,19 +227,6 @@ contract ForumAccountTest is ERC4337TestConfig {
     }
 
     function testAddAndRemoveGuardian() public {
-        UserOperation memory uop = UserOperation({
-            sender: 0xeBd5d5f112DecCbEa152492470536F43Bd464cd2,
-            nonce: 0,
-            initCode: "0xcbaf5c43571d368117b7550b2f58c4864f3ccb2d5ea8282cd964ab6a5bfde42c652f28c4976b7662d0cc7bf2a65a3315a3c9d79b47d609215322400749db51cdb8655e162a123ee5117ea629611688437fdbacb348b02965",
-            callData: "0x940d3c600000000000000000000000009c3c9283d3e44854697cd22d3faa240cfb03288900000000000000000000000000000000000000000000000000b1a2bc2ec50000000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004d0e30db000000000000000000000000000000000000000000000000000000000",
-            callGasLimit: 215000,
-            verificationGasLimit: 800000,
-            preVerificationGas: 215000,
-            maxFeePerGas: 883577090154,
-            maxPriorityFeePerGas: 1500000000,
-            paymasterAndData: "0x3b912be0270b59143985cc5c6aab452d99e2b4bb000000000000000000000000000000000000000000000000000000006447bbe50000000000000000000000000000000000000000000000000000000000000000c1ee375fedffaf81ba7d3512ef827e1e53c5a23ee88dfcc758032dd0f79152dd2e1deab2db84986e55c1790b0a37275f0ba86d2a41b7222e8fed41e1789a11601c",
-            signature: "0x9b9c18ab82e7104cc0ce17dff8cc18fb1aa38e8de69c1c2eaecb73e9b461318c0b263b9e288ca2285fb9b7eeb424997de097cd79ecba6d41d1358ae2a938257700000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000016000000000000000000000000000000000000000000000000000000000000000247b2274797065223a22776562617574686e2e676574222c226368616c6c656e6765223a2200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002f222c226f726967696e223a2268747470733a2f2f646576656c6f706d656e742e666f72756d64616f732e636f6d227d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004a313538343438326664663761346430623765623964343563663833353238386362353965353562383234396666663335366533336265383865636335343664313164303030303030303000000000000000000000000000000000000000000000"
-        });
         address[] memory owners = deployed4337Account.getOwners();
         assertEq(owners.length, 1, "should start with 1 owner");
 
