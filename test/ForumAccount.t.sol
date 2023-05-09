@@ -37,7 +37,7 @@ contract ForumAccountTest is ERC4337TestConfig {
         assertEq(address(forumAccountFactory.gnosisFallbackLibrary()), address(handler), "handler not set");
         // Can not initialize the singleton
         vm.expectRevert("GS200");
-        forumAccountSingleton.initialize(entryPointAddress, publicKey, address(1));
+        forumAccountSingleton.initialize(entryPointAddress, publicKey, address(1), "", "", "");
 
         // Deploy an account to be used in tests later
         deployed4337AccountAddress = forumAccountFactory.createForumAccount(publicKey);
@@ -64,7 +64,7 @@ contract ForumAccountTest is ERC4337TestConfig {
 
         // Can not initialize the same account twice
         vm.expectRevert("GS200");
-        deployed4337Account.initialize(entryPointAddress, publicKey, address(1));
+        deployed4337Account.initialize(entryPointAddress, publicKey, address(1), "", "", "");
     }
 
     function testFactoryDeployFromEntryPoint() public {
@@ -104,10 +104,13 @@ contract ForumAccountTest is ERC4337TestConfig {
         vm.createSelectFork(vm.envString("MUMBAI_RPC_URL"));
 
         forumAccountFactory = new ForumAccountFactory(
-    forumAccountSingleton,
-    entryPointAddress, 
-    address(handler)
-    );
+    		forumAccountSingleton,
+    		entryPointAddress, 
+    		address(handler),
+    		'',
+    '',
+    ''
+    	);
 
         // Deploy an account to be used in tests
         tmpMumbai = forumAccountFactory.createForumAccount(publicKey);
@@ -116,15 +119,32 @@ contract ForumAccountTest is ERC4337TestConfig {
         vm.createSelectFork(vm.envString("FUJI_RPC_URL"));
 
         forumAccountFactory = new ForumAccountFactory(
-    forumAccountSingleton,
-    entryPointAddress,
-    address(handler)
-    );
+    		forumAccountSingleton,
+    		entryPointAddress,
+    		address(handler),
+    		'',
+    '',
+    ''
+    	);
 
         // Deploy an account to be used in tests
         tmpFuji = forumAccountFactory.createForumAccount(publicKey);
 
         assertEq(tmpMumbai, tmpFuji, "address not the same");
+    }
+
+    /// -----------------------------------------------------------------------
+    /// Function tests
+    /// -----------------------------------------------------------------------
+
+    function testValidateUserOp() public {
+        // Build user operation
+        UserOperation memory userOp = buildUserOp(deployed4337AccountAddress, 0, "", basicTransferCalldata);
+        userOp.signature =
+            abi.encode(signMessageForPublicKey(SIGNER_1, Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(userOp)))));
+
+        vm.startPrank(entryPointAddress);
+        deployed4337Account.validateUserOp(userOp, entryPoint.getUserOpHash(userOp), 0);
     }
 
     /// -----------------------------------------------------------------------

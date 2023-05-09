@@ -8,8 +8,8 @@ import {BaseAccount, UserOperation} from "@erc4337/core/BaseAccount.sol";
 // Forum 4337 contracts
 import {ForumAccount} from "../../src/erc4337-account/ForumAccount.sol";
 import {ForumAccountFactory} from "../../src/erc4337-account/ForumAccountFactory.sol";
-import {ForumGroup} from "../../src/erc4337-group/ForumGroup.sol";
-import {ForumGroupFactory} from "../../src/erc4337-group/ForumGroupFactory.sol";
+//import {ForumGroup} from "../../src/erc4337-group/ForumGroup.sol";
+//import {ForumGroupFactory} from "../../src/erc4337-group/ForumGroupFactory.sol";
 import {MemberManager} from "@utils/MemberManager.sol";
 
 // Lib for encoding
@@ -27,13 +27,13 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
     ForumAccount public forumAccountSingleton;
 
     // Singleton for Forum 4337 group account implementation
-    ForumGroup public forumGroupSingleton;
+    // ForumGroup public forumGroupSingleton;
 
     // Factory for individual 4337 accounts
     ForumAccountFactory public forumAccountFactory;
 
     // Factory for 4337 group accounts
-    ForumGroupFactory public forumGroupFactory;
+    // ForumGroupFactory public forumGroupFactory;
 
     // Addresses for easy use in tests
     address internal entryPointAddress;
@@ -55,20 +55,23 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
         entryPointAddress = address(entryPoint);
 
         forumAccountSingleton = new ForumAccount();
-        forumGroupSingleton = new ForumGroup(address(forumAccountSingleton));
+        //forumGroupSingleton = new ForumGroup(address(forumAccountSingleton));
 
         forumAccountFactory = new ForumAccountFactory(
     		forumAccountSingleton,
     		entryPointAddress,
-    		address(handler)
+    		address(handler),
+    		hex'1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000',
+    		'{"type":"webauthn.get","challenge":"',
+    		'","origin":"https://development.forumdaos.com"}'
     	);
 
-        forumGroupFactory = new ForumGroupFactory(
-        	payable(address(forumGroupSingleton)),
-        	entryPointAddress,
-        	address(safeSingleton),
-        	address(handler)
-        );
+        // forumGroupFactory = new ForumGroupFactory(
+        // 	payable(address(forumGroupSingleton)),
+        // 	entryPointAddress,
+        // 	address(safeSingleton),
+        // 	address(handler)
+        // );
     }
 
     // -----------------------------------------------------------------------
@@ -118,12 +121,8 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
         internal
         returns (UserOperation[] memory)
     {
-        userOp.signature = abi.encode(
-            signMessageForPublicKey(signer1, Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(userOp)))),
-            '{"type":"webauthn.get","challenge":"',
-            '","origin":"https://development.forumdaos.com"}',
-            authentacatorData
-        );
+        userOp.signature =
+            abi.encode(signMessageForPublicKey(signer1, Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(userOp)))));
 
         UserOperation[] memory userOpArray = new UserOperation[](1);
         userOpArray[0] = userOp;

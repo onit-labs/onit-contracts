@@ -39,16 +39,33 @@ contract ForumAccountFactory {
 
     bytes32 private immutable _createProxyDataHash;
 
+    string public clientDataStart;
+    string public clientDataEnd;
+    bytes public authData;
+
     /// ----------------------------------------------------------------------------------------
     /// Constructor
     /// ----------------------------------------------------------------------------------------
 
-    constructor(ForumAccount _forumAccountSingleton, address _entryPoint, address _gnosisFallbackLibrary) {
+    constructor(
+        ForumAccount _forumAccountSingleton,
+        address _entryPoint,
+        address _gnosisFallbackLibrary,
+        bytes memory _authData,
+        string memory _clientDataStart,
+        string memory _clientDataEnd
+    ) {
         forumAccountSingleton = _forumAccountSingleton;
 
         entryPoint = _entryPoint;
 
         gnosisFallbackLibrary = _gnosisFallbackLibrary;
+
+        authData = _authData;
+
+        clientDataStart = _clientDataStart;
+
+        clientDataEnd = _clientDataEnd;
 
         // Data sent to the deterministic deployment proxy to deploy a new ERC4337 account
         _createProxyData = abi.encodePacked(
@@ -56,7 +73,7 @@ contract ForumAccountFactory {
             bytes10(0x3d602d80600a3d3981f3),
             // proxy code
             bytes10(0x363d3d373d3d3d363d73),
-            forumAccountSingleton,
+            _forumAccountSingleton,
             bytes15(0x5af43d82803e903d91602b57fd5bf3)
         );
 
@@ -92,7 +109,9 @@ contract ForumAccountFactory {
 
         if (!successCreate || account == address(0)) revert NullDeploy();
 
-        ForumAccount(payable(account)).initialize(entryPoint, owner, gnosisFallbackLibrary);
+        ForumAccount(payable(account)).initialize(
+            entryPoint, owner, gnosisFallbackLibrary, authData, clientDataStart, clientDataEnd
+        );
     }
 
     /// ----------------------------------------------------------------------------------------

@@ -3,14 +3,14 @@ pragma solidity ^0.8.17;
 
 import {Safe, Enum} from "@safe/Safe.sol";
 
-// Modified BaseAccount with nonce removed
 import {BaseAccount, IEntryPoint, UserOperation} from "@erc4337/core/BaseAccount.sol";
 
 import {Base64} from "@libraries/Base64.sol";
 import {FCL_Elliptic_ZZ} from "@libraries/FCL_Elliptic_ZZ.sol";
-import {HexToLiteralBytes} from "@libraries/HexToLiteralBytes.sol";
 
 import {Exec} from "@utils/Exec.sol";
+
+import {console} from "forge-std/console.sol";
 
 /**
  * @notice ERC4337 Managed Gnosis Safe Account Implementation
@@ -40,6 +40,15 @@ contract ForumAccount is Safe, BaseAccount {
     // Entry point allowed to call methods directly on this contract
     IEntryPoint internal _entryPoint;
 
+    struct SigningData {
+        bytes authData;
+        string clientDataStart;
+        string clientDataEnd;
+    }
+
+    // todo consider visibility
+    SigningData internal _signingData;
+
     /// ----------------------------------------------------------------------------------------
     ///							CONSTRUCTOR
     /// ----------------------------------------------------------------------------------------
@@ -59,10 +68,22 @@ contract ForumAccount is Safe, BaseAccount {
      * @param  gnosisFallbackLibrary The fallback handler for the Gnosis Safe
      * @dev This method should only be called once, and setup() will revert if already initialized
      */
-    function initialize(address entryPoint_, uint256[2] memory owner_, address gnosisFallbackLibrary) public virtual {
+    function initialize(
+        address entryPoint_,
+        uint256[2] memory owner_,
+        address gnosisFallbackLibrary,
+        bytes memory authData_,
+        string memory clientDataStart_,
+        string memory clientDataEnd_
+    )
+        public
+        virtual
+    {
         _entryPoint = IEntryPoint(entryPoint_);
 
         _owner = owner_;
+
+        _signingData = SigningData(authData_, clientDataStart_, clientDataEnd_);
 
         // Owner must be passed to safe setup as an array of addresses
         address[] memory ownerPlaceholder = new address[](1);
@@ -141,18 +162,23 @@ contract ForumAccount is Safe, BaseAccount {
         override
         returns (uint256 sigTimeRange)
     {
-        // Extract the passkey generated signature and authentacator data
-        (uint256[2] memory sig, string memory clientDataStart, string memory clientDataEnd, string memory authData) =
-            abi.decode(userOp.signature, (uint256[2], string, string, string));
-
-        // Hash the client data to produce the challenge signed by the passkey offchain
-        bytes32 hashedClientData =
-            sha256(abi.encodePacked(clientDataStart, Base64.encode(abi.encodePacked(userOpHash)), clientDataEnd));
-
+        /**
+         * @dev Validate the signature of the user operation. Parameters:
+         * - Hash of the authenticator data, and full message hash (client data and userOpHash) signed by the passkey offchain
+         * - The signature from the userOp
+         * - The public key of the passkey
+         */
         return
             FCL_Elliptic_ZZ.ecdsa_verify(
-                sha256(abi.encodePacked(HexToLiteralBytes.fromHex(authData), hashedClientData)),
-                [sig[0], sig[1]],
+                sha256(
+                    abi.encodePacked(
+                        _signingData.authData,
+                        sha256(
+                            abi.encodePacked(_signingData.clientDataStart, Base64.encode(abi.encodePacked(userOpHash)), _signingData.clientDataEnd)
+                        )
+                    )
+                ),
+                [uint256(bytes32(userOp.signature[:32])), uint256(bytes32(userOp.signature[32:]))],
                 [_owner[0], _owner[1]]
             )
             ? 0
