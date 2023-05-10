@@ -142,6 +142,7 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
         uint256 signerCount;
         uint256[2] memory sig1;
         uint256[2] memory sig2;
+        bytes memory sigs;
 
         // Get signature for the user operation
         sig1 = signMessageForPublicKey(signer1, Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(userOp))));
@@ -154,42 +155,30 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
             signerCount = 1;
         }
 
-        // Build the signatures into an array
-        uint256[2][] memory sigs = new uint256[2][](signerCount);
-        sigs[0] = sig1;
+        // Build the signatures into bytes
+        /// @dev sigs is a packed bytes which represent the r and s values of the signatures
+        /// 		- The first 64 bytes are the first signature, and so on
+        sigs = abi.encodePacked(sig1[0], sig1[1]);
         if (signerCount == 2) {
-            sigs[1] = sig2;
+            sigs = abi.encodePacked(sigs, abi.encodePacked(sig2[0], sig2[1]));
         }
 
-        /// @dev The signatures are added to the user op with some extra information
-        // 1) The index of each signer in an array
-        //		- for these tests we know that signer1 is at index 1 and signer2 is at index 0
-        //		- this is because when accounts are added they are put to the front of the linked list
-        //		- in production we can get this information by calling getMembers and getting the index of each signer
-        // 2) The authentacator data
-
-        // Build the array of signer indexes
-        /// @dev We see that if there is only one signer, the index is 0
-        // 		- this is because if there is only one signer, they are at index 0
-        //		- if there are two signers, the first signer is at index 1 and the second is at index 0 because of how they are added to the linked list
-        uint256[] memory signerIndexes = new uint256[](signerCount);
+        // Build the signer indexes
+        /// @dev signerIndexes is a packed uint256 which encodes info about the signers
+        /// 		- The first 8 bits are the number of signers (for these tests either 1 or 2)
+        /// 		- The next 8 bits are the index of the first signer, and so on (shifting by 8 more bits each time)
+        uint256 signerIndexes;
         if (signerCount == 1) {
-            signerIndexes[0] = 0;
+            // Just the number of signers, since index of first signer is 0
+            signerIndexes = uint256(1);
         } else {
-            signerIndexes[0] = 0;
-            signerIndexes[1] = 1;
+            // The number of signers, the index of the first signer, and the index of the second signer
+            signerIndexes = uint256(2);
+            signerIndexes = signerIndexes | uint256(0) << 8;
+            signerIndexes = signerIndexes | uint256(1) << 16;
         }
 
-        // Set the same auth data for tests
-        string[] memory authentacatorDataArray = new string[](signerCount);
-        if (signerCount == 1) {
-            authentacatorDataArray[0] = authentacatorData;
-        } else {
-            authentacatorDataArray[0] = authentacatorData;
-            authentacatorDataArray[1] = authentacatorData;
-        }
-
-        userOp.signature = abi.encode(signerIndexes, sigs);
+        userOp.signature = abi.encodePacked(signerIndexes, sigs);
 
         UserOperation[] memory userOpArray = new UserOperation[](1);
         userOpArray[0] = userOp;

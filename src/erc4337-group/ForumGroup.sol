@@ -14,6 +14,8 @@ import {UserOperation} from "@erc4337/interfaces/IEntryPoint.sol";
 
 import {Safe, Enum} from "@safe/Safe.sol";
 
+import {console} from "forge-std/console.sol";
+
 /**
  * @title Forum Group
  * @notice A group 4337 wallet based on eth-infinitism IAccount, built on safe
@@ -27,6 +29,8 @@ import {Safe, Enum} from "@safe/Safe.sol";
  * - Add extension function to call extensions without needing full validation
  * - Add governance 1155
  * - Add check to prevent setting wrong entrypoint
+ * - Consider alt signing method as gas is restricting max group size
+ * - Open to signing from other clients (for now we set client & auth data for Forum on deploy)
  */
 
 contract ForumGroup is IAccount, Safe, MemberManager {
@@ -135,25 +139,46 @@ contract ForumGroup is IAccount, Safe, MemberManager {
     {
         if (msg.sender != _entryPoint) revert NotFromEntrypoint();
 
-        // Extract the passkey generated signature and authentacator data
-        // Signer index is the index of the signer in the members array, used to retrieve the public key
-        (uint256[] memory signerIndex, uint256[2][] memory sig) =
-            abi.decode(userOp.signature, (uint256[], uint256[2][]));
-
-        // Hash the client data to produce the challenge signed by the passkey offchain
-        bytes32 hashedClientData = sha256(
-            abi.encodePacked(_signingData.clientDataStart, Base64.encode(abi.encodePacked(userOpHash)), _signingData.clientDataEnd)
+        // The full message signed by the passkey is the authData and the hashed client data
+        bytes32 fullMessage = sha256(
+            abi.encodePacked(
+                _signingData.authData,
+                // Hash the packed client data & userOpHash to produce the challenge signed by the passkey offchain
+                sha256(
+                    abi.encodePacked(_signingData.clientDataStart, Base64.encode(abi.encodePacked(userOpHash)), _signingData.clientDataEnd)
+                )
+            )
         );
 
+        /**
+         * @dev userOp.signature is made up of 2 parts
+         * 1) The first word (32 bytes) encodes info about the signers:
+         *		- The first byte shows how may signers voted
+         *		- The next n bytes are the index of each signer in the members array
+         * 2) The rest of the bytes are the signatures of each signer
+         *		- Each signature is 64 bytes (32 bytes for each of the r, s coordinates)
+         */
+
+        // The first word encodes info about the signers (how many signed, and their indexes)
+        uint256 signerInfo = uint256(bytes32(userOp.signature[:32]));
+
+        // Tracks how many votes have been verified
         uint256 count;
 
-        for (uint256 i; i < signerIndex.length;) {
+        // Casting as uint8 gives the first byte of signerInfo
+        for (uint256 i; i < uint8(signerInfo);) {
+            // Get the index of the current signer from the signerInfo
+            uint256 index = uint8(signerInfo >> (8 * (i + 1)));
+
+            // Offset for signatues should start from 32 and increase by 64 each time
+            uint256 offset = 32 + (index * 64);
+
             // Check if the signature is valid and increment count if so
             if (
                 FCL_Elliptic_ZZ.ecdsa_verify(
-                    sha256(abi.encodePacked(_signingData.authData, hashedClientData)),
-                    [sig[i][0], sig[i][1]],
-                    [_members[_membersAddressArray[signerIndex[i]]].x, _members[_membersAddressArray[signerIndex[i]]].y]
+                    fullMessage,
+                    [uint256(bytes32(userOp.signature[offset:])), uint256(bytes32(userOp.signature[offset + 32:]))],
+                    [_members[_membersAddressArray[index]].x, _members[_membersAddressArray[index]].y]
                 )
             ) ++count;
 

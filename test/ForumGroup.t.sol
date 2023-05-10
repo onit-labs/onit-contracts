@@ -290,10 +290,6 @@ contract ForumGroupTest is ERC4337TestConfig {
         vm.stopPrank();
     }
 
-    // Used in the below test, but must be storage
-    uint256[] indexes;
-    uint256[2][] sigs;
-
     function testMaximumMemberCountValidation() public {
         // Build user operation
         UserOperation memory userOp = buildUserOp(forumGroupAddress, 0, "", basicTransferCalldata);
@@ -308,14 +304,11 @@ contract ForumGroupTest is ERC4337TestConfig {
         // Loop and add a signature each time - roughly simulates validation of a group with 1 more member
         // only approximate since we use the same signer for convenience, so reading from storage will be slightly cheaper
         for (uint256 i = 0; i < 10; i++) {
-            indexes.push(0);
-            sigs.push(sig1);
-            userOp.signature = abi.encode(indexes, sigs);
-
-            console.log(gasleft());
+            userOp.signature = abi.encode(uint256(i));
+            userOp.signature = abi.encodePacked(userOp.signature, abi.encodePacked(sig1[0], sig1[1]));
 
             gas = gasleft();
-            forumGroup.validateUserOp(userOp, entryPoint.getUserOpHash(userOp), 0);
+            uint256 val = forumGroup.validateUserOp(userOp, entryPoint.getUserOpHash(userOp), 0);
             gas -= gasleft();
 
             if (gas > 1500000) {
