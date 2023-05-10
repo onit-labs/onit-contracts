@@ -42,6 +42,8 @@ contract ForumGroup is IAccount, Safe, MemberManager {
 
     error InvalidInitialisation();
 
+    error InvalidSigner();
+
     /// ----------------------------------------------------------------------------------------
     ///							GROUP STORAGE
     /// ----------------------------------------------------------------------------------------
@@ -155,6 +157,7 @@ contract ForumGroup is IAccount, Safe, MemberManager {
          * 1) The first word (32 bytes) encodes info about the signers:
          *		- The first byte shows how may signers voted
          *		- The next n bytes are the index of each signer in the members array
+         *		- The indexes are ordered in ascending order (lowest shifted 8 bits, highest shifted 8 * n bits)
          * 2) The rest of the bytes are the signatures of each signer
          *		- Each signature is 64 bytes (32 bytes for each of the r, s coordinates)
          */
@@ -165,23 +168,30 @@ contract ForumGroup is IAccount, Safe, MemberManager {
         // Tracks how many votes have been verified
         uint256 count;
 
+        // Tracks latest signerIndex, used to prevent duplicate sigs from same member
+        uint256 latestIndex;
+
         // Casting as uint8 gives the first byte of signerInfo
         for (uint256 i; i < uint8(signerInfo);) {
-            // Get the index of the current signer from the signerInfo
-            uint256 index = uint8(signerInfo >> (8 * (i + 1)));
+            // Get the signerIndex of the current signer from the signerInfo
+            uint256 signerIndex = uint8(signerInfo >> (8 * (i + 1)));
+
+            // Check if the signerIndex is valid (we add one since latestIndex is initialised to 0)
+            if (signerIndex + 1 <= latestIndex) revert InvalidSigner();
 
             // Offset for signatues should start from 32 and increase by 64 each time
-            uint256 offset = 32 + (index * 64);
+            uint256 offset = 32 + (signerIndex * 64);
 
             // Check if the signature is valid and increment count if so
             if (
                 FCL_Elliptic_ZZ.ecdsa_verify(
                     fullMessage,
                     [uint256(bytes32(userOp.signature[offset:])), uint256(bytes32(userOp.signature[offset + 32:]))],
-                    [_members[_membersAddressArray[index]].x, _members[_membersAddressArray[index]].y]
+                    [_members[_membersAddressArray[signerIndex]].x, _members[_membersAddressArray[signerIndex]].y]
                 )
             ) ++count;
 
+            latestIndex = signerIndex + 1;
             ++i;
         }
 
