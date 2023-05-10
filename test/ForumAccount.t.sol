@@ -1,13 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.15;
 
-// Forum 4337 contracts
-import {ForumAccount} from "../src/erc4337-account/ForumAccount.sol";
-import {ForumAccountFactory} from "../src/erc4337-account/ForumAccountFactory.sol";
-
-// Infinitism 4337 contracts
-import {EntryPoint} from "@erc4337/core/EntryPoint.sol";
-
+import {Enum} from "../src/erc4337-account/ForumAccount.sol";
 import "./config/ERC4337TestConfig.t.sol";
 
 contract ForumAccountTest is ERC4337TestConfig {
@@ -145,6 +139,14 @@ contract ForumAccountTest is ERC4337TestConfig {
 
         vm.startPrank(entryPointAddress);
         deployed4337Account.validateUserOp(userOp, entryPoint.getUserOpHash(userOp), 0);
+    }
+
+    function testOnlyEntryPoint() public {
+        vm.expectRevert();
+        deployed4337Account.validateUserOp(buildUserOp(deployed4337AccountAddress, 0, "", basicTransferCalldata), 0, 0);
+
+        vm.expectRevert();
+        deployed4337Account.executeAndRevert(address(this), 0, "", Enum.Operation.Call);
     }
 
     /// -----------------------------------------------------------------------
