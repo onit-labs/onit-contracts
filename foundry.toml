@@ -7,7 +7,7 @@ broadcast='broadcast'
 libs = ['lib', 'node_modules']
 cache_path  = 'forge-cache'
 fs_permissions = [{ access = "read-write", path = "./addresses/"}, { access ="read", path="./out/"}]
-solc = '0.8.17'
+solc = '0.8.19'
 gas_reports = ["*"]
 optimize = false # set to true to enable optimizer
 via_ir = false # set to true to enable IR compiler
@@ -16,7 +16,7 @@ ffi = true
 [profile.prod]
 optimize = true
 via_ir = true
-optimizer_runs = 20000 
+optimizer_runs = 30000 
 
 [rpc_endpoints]
 fuji = "${FUJI_RPC_URL}"
