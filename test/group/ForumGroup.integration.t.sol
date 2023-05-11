@@ -1,11 +1,32 @@
 // SPDX-License-Identifier: GPL-3.0-or-latersol
 pragma solidity ^0.8.15;
 
-/* solhint-disable no-console */
+import "./ForumGroup.base.t.sol";
 
-import "./ForumGroup.setup.t.sol";
+contract ForumGroupTestIntegrations is ForumGroupTestBase {
+    /// -----------------------------------------------------------------------
+    /// SETUP
+    /// -----------------------------------------------------------------------
 
-contract ForumGroupTestIntegrations is ForumGroupTest {
+    function setUp() public {
+        // Create passkey signers
+        publicKey = createPublicKey(SIGNER_1);
+        publicKey2 = createPublicKey(SIGNER_2);
+
+        // Format signers into arrays to be added to contract
+        inputMembers.push([publicKey[0], publicKey[1]]);
+
+        // Deploy a forum safe from the factory
+        forumGroup = ForumGroup(payable(forumGroupFactory.createForumGroup(GROUP_NAME_1, 1, inputMembers)));
+        forumGroupAddress = address(forumGroup);
+
+        // Deal the account some funds
+        vm.deal(forumGroupAddress, 1 ether);
+
+        // Build a basic transaction to execute in some tests
+        basicTransferCalldata = buildExecutionPayload(alice, uint256(0.5 ether), "", Enum.Operation.Call);
+    }
+
     /// -----------------------------------------------------------------------
     /// EXECUTION TESTS
     /// -----------------------------------------------------------------------
