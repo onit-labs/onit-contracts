@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.15;
 
-import {Enum} from "../src/erc4337-account/ForumAccount.sol";
-import "./config/ERC4337TestConfig.t.sol";
+import {Enum} from "../../src/erc4337-account/ForumAccount.sol";
+import "../config/ERC4337TestConfig.t.sol";
 
 contract ForumAccountTest is ERC4337TestConfig {
     // Variable used for test erc4337 account

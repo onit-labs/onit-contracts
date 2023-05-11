@@ -33,7 +33,7 @@ abstract contract MemberManager is SelfAuthorized {
     /**
      * @notice Member struct
      * @param x Public key of member
-     * @param y Public key of next member
+     * @param y Public key of member
      * @dev x & y are the public key of the members P-256 passkey
      */
     struct Member {
@@ -41,8 +41,7 @@ abstract contract MemberManager is SelfAuthorized {
         uint256 y;
     }
 
-    // Used to calcualte the address of the individual ERC-4337 accounts
-    // which members will have when deployed
+    // Used to calcualte the address of the individual ERC-4337 account which members will have when deployed
     bytes32 immutable _accountCreationProxyData;
 
     // Number of required signatures for a Safe transaction.
