@@ -32,11 +32,13 @@ contract ForumAccount is Safe, BaseAccount {
     ///							ACCOUNT STORAGE
     /// ----------------------------------------------------------------------------------------
 
-    // Public key for secp256r1 signer
-    uint256[2] internal _owner;
-
     // Entry point allowed to call methods directly on this contract
     IEntryPoint internal _entryPoint;
+
+    address public immutable ellipticCurveVerifier;
+
+    // Public key for secp256r1 signer
+    uint256[2] internal _owner;
 
     string public constant ACCOUNT_VERSION = "v0.2.0";
 
@@ -58,8 +60,10 @@ contract ForumAccount is Safe, BaseAccount {
      * @notice Constructor
      * @dev This contract should be deployed using a proxy, the constructor should not be called
      */
-    constructor() {
+    constructor(address ellipticCurveVerifier_) {
         threshold = 1;
+
+        ellipticCurveVerifier = ellipticCurveVerifier_;
     }
 
     /**
@@ -164,13 +168,15 @@ contract ForumAccount is Safe, BaseAccount {
         returns (uint256 sigTimeRange)
     {
         /**
-         * @dev Validate the signature of the user operation. Parameters:
+         * @dev Validate the signature of the user operation.
+         * Delegate call the ellipticCurveVerifier library address to call the ecdsa_verify function with parameters:
          * - Hash of the authenticator data, and full message hash (client data and userOpHash) signed by the passkey offchain
          * - The signature from the userOp
          * - The public key of the passkey
          */
-        return
-            FCL_Elliptic_ZZ.ecdsa_verify(
+        (, bytes memory res) = ellipticCurveVerifier.delegatecall(
+            abi.encodeWithSelector(
+                FCL_Elliptic_ZZ.ecdsa_verify.selector,
                 sha256(
                     abi.encodePacked(
                         signingData.authData,
@@ -182,7 +188,9 @@ contract ForumAccount is Safe, BaseAccount {
                 [uint256(bytes32(userOp.signature[:32])), uint256(bytes32(userOp.signature[32:]))],
                 [_owner[0], _owner[1]]
             )
-            ? 0
-            : SIG_VALIDATION_FAILED;
+        );
+
+        // Check if the validator returns true, return SIG_VALIDATION_FAILED if not
+        return bytes32(res) == bytes32(uint256(1)) ? 0 : SIG_VALIDATION_FAILED;
     }
 }

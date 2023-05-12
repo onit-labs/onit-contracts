@@ -54,8 +54,16 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
         entryPoint = new EntryPoint();
         entryPointAddress = address(entryPoint);
 
-        forumAccountSingleton = new ForumAccount();
-        forumGroupSingleton = new ForumGroup(address(forumAccountSingleton));
+        // The library is deployed and called externally
+        bytes memory ellipticLibraryByteCode =
+            abi.encodePacked(vm.getCode("FCL_Elliptic_ZZ.sol:FCL_Elliptic_ZZ"));
+        address ellipticAddress;
+        assembly {
+            ellipticAddress := create(0, add(ellipticLibraryByteCode, 0x20), mload(ellipticLibraryByteCode))
+        }
+
+        forumAccountSingleton = new ForumAccount(ellipticAddress);
+        forumGroupSingleton = new ForumGroup(address(forumAccountSingleton), ellipticAddress);
 
         forumAccountFactory = new ForumAccountFactory(
     		forumAccountSingleton,

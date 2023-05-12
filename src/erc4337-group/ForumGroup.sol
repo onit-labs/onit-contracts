@@ -14,8 +14,6 @@ import {UserOperation} from "@erc4337/interfaces/IEntryPoint.sol";
 
 import {Safe, Enum} from "@safe/Safe.sol";
 
-import {console} from "forge-std/console.sol";
-
 /**
  * @title Forum Group
  * @notice A group 4337 wallet based on eth-infinitism IAccount, built on safe
@@ -51,11 +49,13 @@ contract ForumGroup is IAccount, Safe, MemberManager {
     // Reference to latest entrypoint
     address internal _entryPoint;
 
+    address public immutable ellipticCurveVerifier;
+
     // Return value in case of signature failure, with no time-range.
     // Equivalent to _packValidationData(true,0,0);
     uint256 internal constant _SIG_VALIDATION_FAILED = 1;
 
-    string public constant GROUP_VERSION = "v0.0.1";
+    string public constant GROUP_VERSION = "v0.2.0";
 
     /// @dev Values used when signing the transaction
     /// To make this variable we can pass these with the user op signature, for now we save gas writing them on deploy
@@ -65,16 +65,17 @@ contract ForumGroup is IAccount, Safe, MemberManager {
         string clientDataEnd;
     }
 
-    // todo consider visibility
-    SigningData internal _signingData;
+    SigningData public signingData;
 
     /// -----------------------------------------------------------------------
     /// 						SETUP
     /// -----------------------------------------------------------------------
 
-    constructor(address singletonAccount_) MemberManager(singletonAccount_) {
+    constructor(address singletonAccount_, address ellipticCurveVerifier_) MemberManager(singletonAccount_) {
         // Set the threshold on the safe, prevents calling initalise so good for singleton
         threshold = 1;
+
+        ellipticCurveVerifier = ellipticCurveVerifier_;
     }
 
     /**
@@ -127,7 +128,7 @@ contract ForumGroup is IAccount, Safe, MemberManager {
             }
         }
 
-        _signingData = SigningData(authData_, clientDataStart_, clientDataEnd_);
+        signingData = SigningData(authData_, clientDataStart_, clientDataEnd_);
     }
 
     /// -----------------------------------------------------------------------
@@ -144,10 +145,10 @@ contract ForumGroup is IAccount, Safe, MemberManager {
         // The full message signed by the passkey is the authData and the hashed client data
         bytes32 fullMessage = sha256(
             abi.encodePacked(
-                _signingData.authData,
+                signingData.authData,
                 // Hash the packed client data & userOpHash to produce the challenge signed by the passkey offchain
                 sha256(
-                    abi.encodePacked(_signingData.clientDataStart, Base64.encode(abi.encodePacked(userOpHash)), _signingData.clientDataEnd)
+                    abi.encodePacked(signingData.clientDataStart, Base64.encode(abi.encodePacked(userOpHash)), signingData.clientDataEnd)
                 )
             )
         );
@@ -182,14 +183,24 @@ contract ForumGroup is IAccount, Safe, MemberManager {
             // Offset for signatues should start from 32 and increase by 64 each time
             uint256 offset = 32 + (signerIndex * 64);
 
-            // Check if the signature is valid and increment count if so
-            if (
-                FCL_Elliptic_ZZ.ecdsa_verify(
+            /**
+             * @dev Validate the signature of the user operation.
+             * Delegate call the ellipticCurveVerifier library address to call the ecdsa_verify function with parameters:
+             * - Full message signed by the passkey
+             * - Signature from the userOp
+             * - Public key of the passkey
+             */
+            (, bytes memory res) = ellipticCurveVerifier.delegatecall(
+                abi.encodeWithSelector(
+                    FCL_Elliptic_ZZ.ecdsa_verify.selector,
                     fullMessage,
                     [uint256(bytes32(userOp.signature[offset:])), uint256(bytes32(userOp.signature[offset + 32:]))],
                     [_members[_membersAddressArray[signerIndex]].x, _members[_membersAddressArray[signerIndex]].y]
                 )
-            ) ++count;
+            );
+
+            // Check if the signature is valid and increment count if so
+            if (bytes32(res) == bytes32(uint256(1))) ++count;
 
             latestIndex = signerIndex + 1;
             ++i;
