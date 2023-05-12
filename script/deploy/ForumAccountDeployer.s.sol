@@ -23,6 +23,7 @@ contract ForumAccountDeployer is DeploymentSelector {
         // No longer using external validator
         bytes memory initData = new bytes(0);
 
+        // ! ENSURE UPDATED VERSION IS SET ON CONTRACT
         (address contractAddress, bytes memory deploymentBytecode) = SelectDeployment("ForumAccount", initData);
 
         fork.set("ForumAccount", contractAddress, deploymentBytecode);

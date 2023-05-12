@@ -34,7 +34,9 @@ contract ForumAccountTestFunctions is ForumAccountTestBase {
             abi.encode(signMessageForPublicKey(SIGNER_1, Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(userOp)))));
 
         vm.startPrank(entryPointAddress);
-        forumAccount.validateUserOp(userOp, entryPoint.getUserOpHash(userOp), 0);
+        assertEq(
+            forumAccount.validateUserOp(userOp, entryPoint.getUserOpHash(userOp), 0), 0, "validateUserOp should return 0"
+        );
     }
 
     function testOnlyEntryPoint() public {

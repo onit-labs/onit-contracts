@@ -10,8 +10,6 @@ import {FCL_Elliptic_ZZ} from "@libraries/FCL_Elliptic_ZZ.sol";
 
 import {Exec} from "@utils/Exec.sol";
 
-import {console} from "forge-std/console.sol";
-
 /**
  * @notice ERC4337 Managed Gnosis Safe Account Implementation
  * @author Forum (https://forumdaos.com)
@@ -40,7 +38,9 @@ contract ForumAccount is Safe, BaseAccount {
     // Entry point allowed to call methods directly on this contract
     IEntryPoint internal _entryPoint;
 
-    /// @dev Values used when signing the transaction
+    string public constant ACCOUNT_VERSION = "v0.2.0";
+
+    /// @dev Values used when public key signs a message
     /// To make this variable we can pass these with the user op signature, for now we save gas writing them on deploy
     struct SigningData {
         bytes authData;
@@ -48,8 +48,7 @@ contract ForumAccount is Safe, BaseAccount {
         string clientDataEnd;
     }
 
-    // todo consider visibility
-    SigningData internal _signingData;
+    SigningData public signingData;
 
     /// ----------------------------------------------------------------------------------------
     ///							CONSTRUCTOR
@@ -85,7 +84,7 @@ contract ForumAccount is Safe, BaseAccount {
 
         _owner = owner_;
 
-        _signingData = SigningData(authData_, clientDataStart_, clientDataEnd_);
+        signingData = SigningData(authData_, clientDataStart_, clientDataEnd_);
 
         // Owner must be passed to safe setup as an array of addresses
         address[] memory ownerPlaceholder = new address[](1);
@@ -174,9 +173,9 @@ contract ForumAccount is Safe, BaseAccount {
             FCL_Elliptic_ZZ.ecdsa_verify(
                 sha256(
                     abi.encodePacked(
-                        _signingData.authData,
+                        signingData.authData,
                         sha256(
-                            abi.encodePacked(_signingData.clientDataStart, Base64.encode(abi.encodePacked(userOpHash)), _signingData.clientDataEnd)
+                            abi.encodePacked(signingData.clientDataStart, Base64.encode(abi.encodePacked(userOpHash)), signingData.clientDataEnd)
                         )
                     )
                 ),
