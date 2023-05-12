@@ -39,7 +39,7 @@ contract ForumGroupFactoryDeployer is DeploymentSelector {
                 '{"type":"webauthn.get","challenge":"',
                 '","origin":"https://staging.forumdaos.com"}'
             );
-            (contractAddress, deploymentBytecode) = SelectDeployment("ForumAccountFactory", initData);
+            (contractAddress, deploymentBytecode) = SelectDeployment("ForumGroupFactory", initData);
 
             // Then deploy production
             initData = abi.encode(
@@ -52,7 +52,7 @@ contract ForumGroupFactoryDeployer is DeploymentSelector {
             );
 
             // Overwrite the staging address as we will take it from console for now, prod is more important to write
-            (contractAddress, deploymentBytecode) = SelectDeployment("ForumAccountFactory", initData);
+            (contractAddress, deploymentBytecode) = SelectDeployment("ForumGroupFactory", initData);
         } else {
             // Deploy development
             initData = abi.encode(
@@ -64,7 +64,7 @@ contract ForumGroupFactoryDeployer is DeploymentSelector {
                 '","origin":"https://development.forumdaos.com"}'
             );
 
-            (contractAddress, deploymentBytecode) = SelectDeployment("ForumAccountFactory", initData);
+            (contractAddress, deploymentBytecode) = SelectDeployment("ForumGroupFactory", initData);
         }
 
         initData = abi.encode(forumGroupSingleton, entryPoint, gnosisSingleton, gnosisFallbackHandler);
