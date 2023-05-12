@@ -12,6 +12,9 @@ import {DeploymentSelector} from "../../lib/foundry-deployment-manager/src/Deplo
 contract ForumAccountDeployer is DeploymentSelector {
     ForumAccount internal account;
 
+    // TODO improve the linking of this lib
+    address internal constant FCL_ELLIPTIC_ZZ = 0xbb93A0Ca0EDb4a726f37433993ED22376CD8387a;
+
     function run() public {
         innerRun();
         outputDeployment();
@@ -21,7 +24,7 @@ contract ForumAccountDeployer is DeploymentSelector {
         startBroadcast();
 
         // No longer using external validator
-        bytes memory initData = new bytes(0);
+        bytes memory initData = abi.encode(FCL_ELLIPTIC_ZZ);
 
         // ! ENSURE UPDATED VERSION IS SET ON CONTRACT
         (address contractAddress, bytes memory deploymentBytecode) = SelectDeployment("ForumAccount", initData);

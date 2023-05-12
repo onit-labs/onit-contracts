@@ -13,6 +13,9 @@ contract ForumGroupDeployer is DeploymentSelector {
     address internal forumAccountSingleton;
     ForumGroup internal forumGroup;
 
+    // TODO improve the linking of this lib
+    address internal constant FCL_ELLIPTIC_ZZ = 0xbb93A0Ca0EDb4a726f37433993ED22376CD8387a;
+
     function run() public {
         innerRun();
         outputDeployment();
@@ -21,10 +24,11 @@ contract ForumGroupDeployer is DeploymentSelector {
     function innerRun() public {
         startBroadcast();
 
+        // ! ENSURE UPDATED VERSION IS SET ON CONTRACT
         forumAccountSingleton = fork.get("ForumAccount");
 
         // No longer using external validator
-        bytes memory initData = abi.encode(forumAccountSingleton);
+        bytes memory initData = abi.encode(forumAccountSingleton, FCL_ELLIPTIC_ZZ);
 
         (address contractAddress, bytes memory deploymentBytecode) = SelectDeployment("ForumGroup", initData);
 
