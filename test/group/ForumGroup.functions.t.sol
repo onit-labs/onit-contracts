@@ -144,7 +144,12 @@ contract ForumGroupTestFunctions is ForumGroupTestBase {
         UserOperation[] memory userOpArray = signAndFormatUserOp(userOp, SIGNER_1, "");
 
         vm.startPrank(entryPointAddress);
-        forumGroup.validateUserOp(userOpArray[0], entryPoint.getUserOpHash(userOp), 0);
+        assertEq(
+            forumGroup.validateUserOp(userOpArray[0], entryPoint.getUserOpHash(userOp), 0),
+            0,
+            "validateUserOp should return 0"
+        );
+
         vm.stopPrank();
     }
 

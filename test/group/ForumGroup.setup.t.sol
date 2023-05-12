@@ -126,7 +126,6 @@ contract ForumGroupTestSetup is ForumGroupTestBase {
         forumGroupFactory = new ForumGroupFactory(
      		payable(address(forumGroupSingleton)),
     		entryPointAddress,
-    		address(safeSingleton),
     		address(handler) ,'','',''
     	);
 
@@ -139,7 +138,6 @@ contract ForumGroupTestSetup is ForumGroupTestBase {
         forumGroupFactory = new ForumGroupFactory(
     		payable(address(forumGroupSingleton)),
     		entryPointAddress, 
-    		address(safeSingleton),
     		address(handler),'','',''
     	);
 
