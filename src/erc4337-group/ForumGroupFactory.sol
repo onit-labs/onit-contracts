@@ -26,9 +26,6 @@ contract ForumGroupFactory {
     // Entry point to use for new forum groups
     address public immutable entryPoint;
 
-    // Template contract to use for new Gnosis safe proxies
-    address public immutable gnosisSingleton;
-
     // Library to use for ERC1271 compatability
     address public immutable gnosisFallbackLibrary;
 
@@ -53,7 +50,6 @@ contract ForumGroupFactory {
     constructor(
         address payable _forumGroupSingleton,
         address _entryPoint,
-        address _gnosisSingleton,
         address _gnosisFallbackLibrary,
         bytes memory _authData,
         string memory _clientDataStart,
@@ -61,7 +57,6 @@ contract ForumGroupFactory {
     ) {
         forumGroupSingleton = _forumGroupSingleton;
         entryPoint = _entryPoint;
-        gnosisSingleton = _gnosisSingleton;
         gnosisFallbackLibrary = _gnosisFallbackLibrary;
         authData = _authData;
         clientDataStart = _clientDataStart;

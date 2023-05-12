@@ -69,7 +69,6 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
         forumGroupFactory = new ForumGroupFactory(
         	payable(address(forumGroupSingleton)),
         	entryPointAddress,
-        	address(safeSingleton),
         	address(handler),
     		hex'1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000',
     		'{"type":"webauthn.get","challenge":"',
