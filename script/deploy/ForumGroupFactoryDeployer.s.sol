@@ -11,8 +11,12 @@ import {DeploymentSelector} from "../../lib/foundry-deployment-manager/src/Deplo
  */
 contract ForumGroupFactoryDeployer is DeploymentSelector {
     address internal forumGroupSingleton;
-    address internal entryPoint = 0x0576a174D229E3cFA37253523E645A78A0C91B57;
+
+    // ! ENSURE THIS IS THE CORRECT ADDRESS FOR LATEST VERSION
+    address internal entryPoint = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
+
     address internal gnosisSingleton = 0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552;
+
     address internal gnosisFallbackHandler = 0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4;
 
     function run() public {
