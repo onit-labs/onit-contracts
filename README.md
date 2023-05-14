@@ -31,16 +31,16 @@ Forum groups will be extendedable with additional functionality, such as Fundrai
 | Contract              |                                                            Address                                                            | Description                                     |
 | :-------------------- | :---------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------- |
 | Forum Group           | [0xAce948FC346A00Eead396c23eCCB2f83c7f35ef6](https://polygonscan.com/address/0xAce948FC346A00Eead396c23eCCB2f83c7f35ef6#code) | ERC4337 enabled safe with P-256 passkey members |
-| Forum Group Factory   | [0xa780c7627205c39E4BA956f7ff1cc4Dc629EC5DC](https://polygonscan.com/address/0xa780c7627205c39E4BA956f7ff1cc4Dc629EC5DC#code) | Factory for Forum Groups                        |
+| Forum Group Factory   | [0xCD9dC60Ad2ceC294bB384B7C8190e58c39595694](https://polygonscan.com/address/0xCD9dC60Ad2ceC294bB384B7C8190e58c39595694#code) | Factory for Forum Groups                        |
 | Forum Account         | [0x9dE434EE5d7604e0A95626614AD76464dd2d65E5](https://polygonscan.com/address/0x9dE434EE5d7604e0A95626614AD76464dd2d65E5#code) | ERC4337 enabled safe with P-256 passkey owner   |
-| Forum Account Factory | [0x27305c89Cc26d77bcbA3ccf82EF0bB171319C37e](https://polygonscan.com/address/0x27305c89Cc26d77bcbA3ccf82EF0bB171319C37e#code) | Factory for Forum Accounts                      |
+| Forum Account Factory | [0x7504c55f1b6E10364f4735Ff56888BB721F97578](https://polygonscan.com/address/0x7504c55f1b6E10364f4735Ff56888BB721F97578#code) | Factory for Forum Accounts                      |
 
 <br>
 <br>
 
 Current seperation of development, staging, and production environments means that multiple factories addresses have been deployed.
 
-|  Chain  |               **Account Factory**               |                **Group Factory**                |
-| :-----: | :---------------------------------------------: | :---------------------------------------------: |
-| Mumbai  | Dev: 0x27305c89Cc26d77bcbA3ccf82EF0bB171319C37e | Dev: 0xa780c7627205c39E4BA956f7ff1cc4Dc629EC5DC |
-| Polygon |                 Staging: 'tbc'                  |                 Staging: 'tbc'                  |
+|  Chain  |                 **Account Factory**                 |                  **Group Factory**                  |
+| :-----: | :-------------------------------------------------: | :-------------------------------------------------: |
+| Mumbai  |   Dev: 0x27305c89Cc26d77bcbA3ccf82EF0bB171319C37e   |   Dev: 0xa780c7627205c39E4BA956f7ff1cc4Dc629EC5DC   |
+| Polygon | Staging: 0xD243610b2d09255C73692f26A446c71843768819 | Staging: 0x3FAb616EAc9c4dB46B0273D8C3fBCdaA0fFf9254 |
