@@ -10,11 +10,17 @@ const ec = new EC('p256')
 const entropies = [
 	'0xc042b4b9abfbb008cfa28738df5ecd5ad7efb2fc407e9a0b322b77618c914ff805c71d97ce8e212c71c707325e4835d1b4efbd0d46711da8e3eda522f4969aa02763aa042f80a7651988c0eaa368ee1eb91ec4c5902ab5630efe8896c67a38d198733950e341cbec9b981fa54a86f9741d9e290c7388696c5d6a355e4283b3564de9d86bf2de95629df202adcd72587dce1c1de5add399318a77e9189a73742b47670c713477e79d2c546247a5ac2e4f2f20b6d9b2a77cf2200d34333f46e6e2',
 	'0x1460fe6b9fd6f84531cae0875ecf21cffaadce05482662c3ec76cb1ef667981175280f66aaee2195e4f7e350bf00261bfd77a9dc5602638cdc9539359cb9a12d17c23db7980bc2bde3a4dc5ac6679a121b5654525ad81362db7448eaf2819c74cc9c1c1fafca94d3112b9cb2b7bf9ced3cc852ebe4521f122c70763914b6c49976269db6ba730fcc7d27d25afaf8d00ff7ab593a15ff08c0461474e303c84348aacf59ea38e099b2395a65161f35870849c756bc6630323fc84fcc5d06f02785',
-	'0x36da5ce3c334c13cc0a7a10f99207f3bd682866747eead27bf5dce0e38a9aa512fc80d490863ac402df598fe271b66a486305ccf3cf02ca69a9b4c5a12caa2e25c45bbf0758dec142d845d571609b33210f6fdce8631be5eb050a5884d2a9e36075a863f5382ddf58802e223aa7f48cc976668a42044084e08ceb99ab3ec46de7b38f38219ca83c5cbfa2efa27ed46673d14b25c99a86743d8e0729f89c19e46a5c9521f233830ccf6659b70b2b8bb247bf32a80ab81fec6f5043a925bf119f8'
+	'0x36da5ce3c334c13cc0a7a10f99207f3bd682866747eead27bf5dce0e38a9aa512fc80d490863ac402df598fe271b66a486305ccf3cf02ca69a9b4c5a12caa2e25c45bbf0758dec142d845d571609b33210f6fdce8631be5eb050a5884d2a9e36075a863f5382ddf58802e223aa7f48cc976668a42044084e08ceb99ab3ec46de7b38f38219ca83c5cbfa2efa27ed46673d14b25c99a86743d8e0729f89c19e46a5c9521f233830ccf6659b70b2b8bb247bf32a80ab81fec6f5043a925bf119f8',
+	'0x46da5ce3c334c13cc0a7a10f99207f3bd682866747eead27bf5dce0e38a9aa512fc80d490863ac402df598fe271b66a486305ccf3cf02ca69a9b4c5a12caa2e25c45bbf0758dec142d845d571609b33210f6fdce8631be5eb050a5884d2a9e36075a863f5382ddf58802e223aa7f48cc976668a42044084e08ceb99ab3ec46de7b38f38219ca83c5cbfa2efa27ed46673d14b25c99a86743d8e0729f89c19e46a5c9521f233830ccf6659b70b2b8bb247bf32a80ab81fec6f5043a925bf119f8',
+	'0x56da5ce3c334c13cc0a7a10f99207f3bd682866747eead27bf5dce0e38a9aa512fc80d490863ac402df598fe271b66a486305ccf3cf02ca69a9b4c5a12caa2e25c45bbf0758dec142d845d571609b33210f6fdce8631be5eb050a5884d2a9e36075a863f5382ddf58802e223aa7f48cc976668a42044084e08ceb99ab3ec46de7b38f38219ca83c5cbfa2efa27ed46673d14b25c99a86743d8e0729f89c19e46a5c9521f233830ccf6659b70b2b8bb247bf32a80ab81fec6f5043a925bf119f8',
+	'0x66da5ce3c334c13cc0a7a10f99207f3bd682866747eead27bf5dce0e38a9aa512fc80d490863ac402df598fe271b66a486305ccf3cf02ca69a9b4c5a12caa2e25c45bbf0758dec142d845d571609b33210f6fdce8631be5eb050a5884d2a9e36075a863f5382ddf58802e223aa7f48cc976668a42044084e08ceb99ab3ec46de7b38f38219ca83c5cbfa2efa27ed46673d14b25c99a86743d8e0729f89c19e46a5c9521f233830ccf6659b70b2b8bb247bf32a80ab81fec6f5043a925bf119f8',
+	'0x76da5ce3c334c13cc0a7a10f99207f3bd682866747eead27bf5dce0e38a9aa512fc80d490863ac402df598fe271b66a486305ccf3cf02ca69a9b4c5a12caa2e25c45bbf0758dec142d845d571609b33210f6fdce8631be5eb050a5884d2a9e36075a863f5382ddf58802e223aa7f48cc976668a42044084e08ceb99ab3ec46de7b38f38219ca83c5cbfa2efa27ed46673d14b25c99a86743d8e0729f89c19e46a5c9521f233830ccf6659b70b2b8bb247bf32a80ab81fec6f5043a925bf119f8',
+	'0x86da5ce3c334c13cc0a7a10f99207f3bd682866747eead27bf5dce0e38a9aa512fc80d490863ac402df598fe271b66a486305ccf3cf02ca69a9b4c5a12caa2e25c45bbf0758dec142d845d571609b33210f6fdce8631be5eb050a5884d2a9e36075a863f5382ddf58802e223aa7f48cc976668a42044084e08ceb99ab3ec46de7b38f38219ca83c5cbfa2efa27ed46673d14b25c99a86743d8e0729f89c19e46a5c9521f233830ccf6659b70b2b8bb247bf32a80ab81fec6f5043a925bf119f8',
 ]
 
 // Setup test data based off last userOp
-const rawAuthenticatorData = 'FYRIL996TQt+udRc+DUojLWeVbgkn/81bjO+iOzFRtEdAAAAAA=='
+const rawAuthenticatorData =
+	'FYRIL996TQt+udRc+DUojLWeVbgkn/81bjO+iOzFRtEdAAAAAA=='
 
 export function formatMessageFromAuthDataAndClientJson(userOpHash) {
 	// Get authentaicator and client json data into buffer form
@@ -25,12 +31,14 @@ export function formatMessageFromAuthDataAndClientJson(userOpHash) {
 	)
 
 	// Hash client data
-	const hashedClientDataJson = createHash('SHA256').update(clientDataJsonBytes).digest('hex')
+	const hashedClientDataJson = createHash('SHA256')
+		.update(clientDataJsonBytes)
+		.digest('hex')
 
 	// Build message used for sig
 	const signatureBase = Buffer.concat([
 		new Uint8Array(authenticatorDataBuffer),
-		Buffer.from(hashedClientDataJson, 'hex')
+		Buffer.from(hashedClientDataJson, 'hex'),
 	])
 
 	const messageData = createHash('SHA256').update(signatureBase).digest('hex')
@@ -50,7 +58,7 @@ function generateKeyPair(inputs: string[]) {
 	const key = ec.genKeyPair({
 		nonce: salt,
 		entropy: entropies[parseInt(salt)],
-		entropyEnc: 'hex'
+		entropyEnc: 'hex',
 	})
 
 	const publicKey = key.getPublic()
@@ -73,13 +81,18 @@ function signMessage(inputs: string[]) {
 	const key = ec.genKeyPair({
 		nonce: salt,
 		entropy: entropies[parseInt(salt)],
-		entropyEnc: 'hex'
+		entropyEnc: 'hex',
 	})
 
 	const signature = key.sign(formatMessageFromAuthDataAndClientJson(message))
 
 	// Logged to be picked up and decoded by ffi
-	console.log(encodeOutput(['uint256[2]'], [[signature.r.toString(), signature.s.toString()]]))
+	console.log(
+		encodeOutput(
+			['uint256[2]'],
+			[[signature.r.toString(), signature.s.toString()]]
+		)
+	)
 }
 
 function run(inputs) {

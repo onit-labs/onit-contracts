@@ -1,16 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.17;
 
-import {Safe, Enum} from '@safe/Safe.sol';
-import {Secp256r1, PassKeyId} from '@aa-passkeys-wallet/Secp256r1.sol';
+import {Safe, Enum} from "@safe/Safe.sol";
 
-// Modified BaseAccount with nonce removed
-import {BaseAccount, IEntryPoint, UserOperation} from '@interfaces/BaseAccount.sol';
+import {BaseAccount, IEntryPoint, UserOperation} from "@erc4337/core/BaseAccount.sol";
 
-import {Base64} from '@libraries/Base64.sol';
-import {HexToLiteralBytes} from '@libraries/HexToLiteralBytes.sol';
+import {Base64} from "@libraries/Base64.sol";
+import {FCL_Elliptic_ZZ} from "@libraries/FCL_Elliptic_ZZ.sol";
 
-import {Exec} from '@utils/Exec.sol';
+import {Exec} from "@utils/Exec.sol";
 
 /**
  * @notice ERC4337 Managed Gnosis Safe Account Implementation
@@ -30,165 +28,169 @@ import {Exec} from '@utils/Exec.sol';
  */
 
 contract ForumAccount is Safe, BaseAccount {
-	/// ----------------------------------------------------------------------------------------
-	///							ACCOUNT STORAGE
-	/// ----------------------------------------------------------------------------------------
+    /// ----------------------------------------------------------------------------------------
+    ///							ACCOUNT STORAGE
+    /// ----------------------------------------------------------------------------------------
 
-	error Unauthorized();
+    // Entry point allowed to call methods directly on this contract
+    IEntryPoint internal _entryPoint;
 
-	// Public key for secp256r1 signer
-	uint256[2] internal _owner;
+    address public immutable ellipticCurveVerifier;
 
-	// Entry point allowed to call methods directly on this contract
-	IEntryPoint internal _entryPoint;
+    // Public key for secp256r1 signer
+    uint256[2] internal _owner;
 
-	/// ----------------------------------------------------------------------------------------
-	///							CONSTRUCTOR
-	/// ----------------------------------------------------------------------------------------
+    string public constant ACCOUNT_VERSION = "v0.2.0";
 
-	/**
-	 * @notice Constructor
-	 * @dev This contract should be deployed using a proxy, the constructor should not be called
-	 */
-	constructor() {
-		threshold = 1;
-	}
+    /// @dev Values used when public key signs a message
+    /// To make this variable we can pass these with the user op signature, for now we save gas writing them on deploy
+    struct SigningData {
+        bytes authData;
+        string clientDataStart;
+        string clientDataEnd;
+    }
 
-	/**
-	 * @notice Initialize the account
-	 * @param  entryPoint_ The entrypoint that can call methods directly on this contract
-	 * @param  owner_ The public key of the owner of this account
-	 * @param  gnosisFallbackLibrary The fallback handler for the Gnosis Safe
-	 * @dev This method should only be called once, and setup() will revert if already initialized
-	 */
-	function initialize(
-		address entryPoint_,
-		uint256[2] memory owner_,
-		address gnosisFallbackLibrary
-	) public virtual {
-		_entryPoint = IEntryPoint(entryPoint_);
+    SigningData public signingData;
 
-		_owner = owner_;
+    /// ----------------------------------------------------------------------------------------
+    ///							CONSTRUCTOR
+    /// ----------------------------------------------------------------------------------------
 
-		// Owner must be passed to safe setup as an array of addresses
-		address[] memory ownerPlaceholder = new address[](1);
-		// Set dead address as owner, actions are controlled via this contract & entrypoint
-		ownerPlaceholder[0] = address(0xdead);
+    /**
+     * @notice Constructor
+     * @dev This contract should be deployed using a proxy, the constructor should not be called
+     */
+    constructor(address ellipticCurveVerifier_) {
+        threshold = 1;
 
-		// Setup the Gnosis Safe - will revert if already initialized
-		this.setup(
-			ownerPlaceholder,
-			1,
-			address(0),
-			new bytes(0),
-			gnosisFallbackLibrary,
-			address(0),
-			0,
-			payable(address(0))
-		);
-	}
+        ellipticCurveVerifier = ellipticCurveVerifier_;
+    }
 
-	/// ----------------------------------------------------------------------------------------
-	///							ACCOUNT LOGIC
-	/// ----------------------------------------------------------------------------------------
+    /**
+     * @notice Initialize the account
+     * @param  entryPoint_ The entrypoint that can call methods directly on this contract
+     * @param  owner_ The public key of the owner of this account
+     * @param  gnosisFallbackLibrary The fallback handler for the Gnosis Safe
+     * @dev This method should only be called once, and setup() will revert if already initialized
+     */
+    function initialize(
+        address entryPoint_,
+        uint256[2] memory owner_,
+        address gnosisFallbackLibrary,
+        bytes memory authData_,
+        string memory clientDataStart_,
+        string memory clientDataEnd_
+    )
+        public
+        virtual
+    {
+        _entryPoint = IEntryPoint(entryPoint_);
 
-	/**
-	 * Execute a call but also revert if the execution fails.
-	 * The default behavior of the Safe is to not revert if the call fails,
-	 * which is challenging for integrating with ERC4337 because then the
-	 * EntryPoint wouldn't know to emit the UserOperationRevertReason event,
-	 * which the frontend/client uses to capture the reason for the failure.
-	 */
-	function executeAndRevert(
-		address to,
-		uint256 value,
-		bytes memory data,
-		Enum.Operation operation
-	) external payable {
-		_requireFromEntryPoint();
+        _owner = owner_;
 
-		bool success = execute(to, value, data, operation, type(uint256).max);
+        signingData = SigningData(authData_, clientDataStart_, clientDataEnd_);
 
-		bytes memory returnData = Exec.getReturnData(type(uint256).max);
-		// Revert with the actual reason string
-		// Adopted from: https://github.com/Uniswap/v3-periphery/blob/464a8a49611272f7349c970e0fadb7ec1d3c1086/contracts/base/Multicall.sol#L16-L23
-		if (!success) {
-			if (returnData.length < 68) revert();
-			assembly {
-				returnData := add(returnData, 0x04)
-			}
-			revert(abi.decode(returnData, (string)));
-		}
-	}
+        // Owner must be passed to safe setup as an array of addresses
+        address[] memory ownerPlaceholder = new address[](1);
+        // Set dead address as owner, actions are controlled via this contract & entrypoint
+        ownerPlaceholder[0] = address(0xdead);
 
-	function setEntryPoint(IEntryPoint anEntryPoint) external virtual {
-		_requireFromEntryPoint();
+        // Setup the Gnosis Safe - will revert if already initialized
+        this.setup(
+            ownerPlaceholder, 1, address(0), new bytes(0), gnosisFallbackLibrary, address(0), 0, payable(address(0))
+        );
+    }
 
-		_entryPoint = anEntryPoint;
-	}
+    /// ----------------------------------------------------------------------------------------
+    ///							ACCOUNT LOGIC
+    /// ----------------------------------------------------------------------------------------
 
-	function entryPoint() public view virtual override returns (IEntryPoint) {
-		return _entryPoint;
-	}
+    /**
+     * Execute a call but also revert if the execution fails.
+     * The default behavior of the Safe is to not revert if the call fails,
+     * which is challenging for integrating with ERC4337 because then the
+     * EntryPoint wouldn't know to emit the UserOperationRevertReason event,
+     * which the frontend/client uses to capture the reason for the failure.
+     */
+    function executeAndRevert(address to, uint256 value, bytes memory data, Enum.Operation operation)
+        external
+        payable
+    {
+        _requireFromEntryPoint();
 
-	function owner() public view virtual returns (uint256[2] memory) {
-		return _owner;
-	}
+        bool success = execute(to, value, data, operation, type(uint256).max);
 
-	/// ----------------------------------------------------------------------------------------
-	///							INTERNAL METHODS
-	/// ----------------------------------------------------------------------------------------
+        bytes memory returnData = Exec.getReturnData(type(uint256).max);
+        // Revert with the actual reason string
+        // Adopted from: https://github.com/Uniswap/v3-periphery/blob/464a8a49611272f7349c970e0fadb7ec1d3c1086/contracts/base/Multicall.sol#L16-L23
+        if (!success) {
+            if (returnData.length < 68) revert();
+            assembly {
+                returnData := add(returnData, 0x04)
+            }
+            revert(abi.decode(returnData, (string)));
+        }
+    }
 
-	/**
-	 * validate the current nonce matches the UserOperation nonce.
-	 * then it should update the account's state to prevent replay of this UserOperation.
-	 * called only if initCode is empty (since "nonce" field is used as "salt" on account creation)
-	 * @param userOp the op to validate.
-	 */
-	function _validateAndUpdateNonce(UserOperation calldata userOp) internal override {
-		require(Safe.nonce++ == userOp.nonce, 'account: invalid nonce');
-	}
+    function setEntryPoint(IEntryPoint anEntryPoint) external virtual {
+        _requireFromEntryPoint();
 
-	/**
-	 * @notice Validate the signature of the user operation
-	 * @param userOp The user operation to validate
-	 * @param userOpHash The hash of the user operation
-	 * @return sigTimeRange The time range the signature is valid for
-	 * @dev This is a first take at getting the signature validation working using passkeys
-	 * - The signature may be validated using a domain seperator
-	 * - More efficient validation of the hashing and conversion of authData is needed
-	 */
-	function _validateSignature(
-		UserOperation calldata userOp,
-		bytes32 userOpHash
-	) internal virtual override returns (uint256 sigTimeRange) {
-		// Extract the passkey generated signature and authentacator data
-		(
-			uint256[2] memory sig,
-			string memory clientDataStart,
-			string memory clientDataEnd,
-			string memory authData
-		) = abi.decode(userOp.signature, (uint256[2], string, string, string));
+        _entryPoint = anEntryPoint;
+    }
 
-		// Hash the client data to produce the challenge signed by the passkey offchain
-		bytes32 hashedClientData = sha256(
-			abi.encodePacked(
-				clientDataStart,
-				Base64.encode(abi.encodePacked(userOpHash)),
-				clientDataEnd
-			)
-		);
+    function entryPoint() public view virtual override returns (IEntryPoint) {
+        return _entryPoint;
+    }
 
-		return
-			Secp256r1.Verify(
-				PassKeyId(_owner[0], _owner[1], ''),
-				sig[0],
-				sig[1],
-				uint256(
-					sha256(abi.encodePacked(HexToLiteralBytes.fromHex(authData), hashedClientData))
-				)
-			)
-				? 0
-				: SIG_VALIDATION_FAILED;
-	}
+    function owner() public view virtual returns (uint256[2] memory) {
+        return _owner;
+    }
+
+    /// ----------------------------------------------------------------------------------------
+    ///							INTERNAL METHODS
+    /// ----------------------------------------------------------------------------------------
+
+    // TODO consider nonce validation in here as well in on v6 entrypoint
+
+    /**
+     * @notice Validate the signature of the user operation
+     * @param userOp The user operation to validate
+     * @param userOpHash The hash of the user operation
+     * @return sigTimeRange The time range the signature is valid for
+     * @dev This is a first take at getting the signature validation working using passkeys
+     * - The signature may be validated using a domain seperator
+     * - More efficient validation of the hashing and conversion of authData is needed
+     */
+    function _validateSignature(UserOperation calldata userOp, bytes32 userOpHash)
+        internal
+        virtual
+        override
+        returns (uint256 sigTimeRange)
+    {
+        /**
+         * @dev Validate the signature of the user operation.
+         * Delegate call the ellipticCurveVerifier library address to call the ecdsa_verify function with parameters:
+         * - Hash of the authenticator data, and full message hash (client data and userOpHash) signed by the passkey offchain
+         * - The signature from the userOp
+         * - The public key of the passkey
+         */
+        (, bytes memory res) = ellipticCurveVerifier.delegatecall(
+            abi.encodeWithSelector(
+                FCL_Elliptic_ZZ.ecdsa_verify.selector,
+                sha256(
+                    abi.encodePacked(
+                        signingData.authData,
+                        sha256(
+                            abi.encodePacked(signingData.clientDataStart, Base64.encode(abi.encodePacked(userOpHash)), signingData.clientDataEnd)
+                        )
+                    )
+                ),
+                [uint256(bytes32(userOp.signature[:32])), uint256(bytes32(userOp.signature[32:]))],
+                [_owner[0], _owner[1]]
+            )
+        );
+
+        // Check if the validator returns true, return SIG_VALIDATION_FAILED if not
+        return bytes32(res) == bytes32(uint256(1)) ? 0 : SIG_VALIDATION_FAILED;
+    }
 }
