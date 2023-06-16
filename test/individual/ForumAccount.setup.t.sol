@@ -8,7 +8,7 @@ contract ForumAccountTestSetup is ForumAccountTestBase {
     /// Setup
     /// -----------------------------------------------------------------------
 
-    function setUp() public {
+    function setUp() public virtual {
         publicKey = createPublicKey(SIGNER_1);
         publicKey2 = createPublicKey(SIGNER_2);
 
