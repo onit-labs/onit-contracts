@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
 import {ERC721} from "@solbase/tokens/ERC721/ERC721.sol";
 import {LibString} from "@solbase/utils/LibString.sol";
