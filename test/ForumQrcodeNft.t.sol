@@ -13,6 +13,17 @@ contract ForumQrcodeNftTest is ForumAccountTestSetup {
         qrcodeNft = new ForumQrcodeNft(address(this), "Forum Qrcode Nft", "FORUM");
     }
 
+    function test_mintQrCode() public {
+        uint256 tokenId = getUintFromAddress(forumAccountAddress);
+
+        vm.prank(forumAccountAddress);
+        // Inputs here don't actually matter
+        qrcodeNft.mintQrcode();
+
+        assertEq(qrcodeNft.ownerOf(tokenId), forumAccountAddress);
+        assertEq(qrcodeNft.balanceOf(forumAccountAddress), 1);
+    }
+
     function test_mint() public {
         uint256 tokenId = getUintFromAddress(forumAccountAddress);
 
