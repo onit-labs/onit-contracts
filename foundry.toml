@@ -4,7 +4,7 @@ out = 'out'
 test = 'test'
 script='script'
 broadcast='broadcast'
-libs = ['lib', 'node_modules']
+libs = ['lib']
 cache_path  = 'forge-cache'
 fs_permissions = [{ access = "read-write", path = "./addresses/"}, { access ="read", path="./out/"}]
 solc = '0.8.19'
