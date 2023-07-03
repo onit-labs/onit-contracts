@@ -6,19 +6,21 @@ import {LibString} from "@solbase/utils/LibString.sol";
 
 import {Owned} from "@utils/Owned.sol";
 
-import {console} from "forge-std/console.sol";
-
-// TODO
-// consider block on mints for non forum accounts
-// consider block on all transfers
-
 /// @notice ForumQrcodeNft is a simple ERC721 NFT contract for forum QR codes.
-/// @author Forum
+/// @author Forum (https://forumdaos.com)
+
 contract ForumQrcodeNft is ERC721, Owned {
-    error InvalidId();
+    /// -----------------------------------------------------------------------
+    /// ForumQrcodeNft Storage
+    /// -----------------------------------------------------------------------
+
+    error InvalidMinterAddress();
 
     // Read only storage bucket for QR codes
-    string public baseUri = "https://pikwkrbfjjdwjbjijesv.supabase.co/storage/v1/object/public/qrcodes/";
+    string public baseUri;
+
+    // Mapping of addresses allowed to mint for other people
+    mapping(address => uint256) public allowedMinters;
 
     /// -----------------------------------------------------------------------
     /// Constructor
@@ -36,15 +38,24 @@ contract ForumQrcodeNft is ERC721, Owned {
         baseUri = _baseUri;
     }
 
+    /// @notice Adds addresses allowed to mint NFTs for others.
+    /// @param _allowedAddress The address to add.
+    function toggleAllowedMinterAddress(address _allowedAddress, uint256 _setting) external onlyOwner {
+        allowedMinters[_allowedAddress] = _setting;
+    }
+
     /// -----------------------------------------------------------------------
     /// Minting
     /// -----------------------------------------------------------------------
 
-    /// @notice Custom mint which doesn't require params
-    function mintQrcode() external payable {
+    /// @notice Custom mint function for allowed minters
+    /// @dev Lets Forum mint NFTs for accounts
+    function mintQrcode(address _to) external payable {
+        if (allowedMinters[msg.sender] != 1) revert InvalidMinterAddress();
+
         // We use address as token id to limit minting to one per address
         // and also to make linking the token uri easier
-        _safeMint(msg.sender, uint160(msg.sender));
+        _safeMint(_to, uint160(_to));
     }
 
     /// @notice Mints a new NFT.
@@ -53,18 +64,6 @@ contract ForumQrcodeNft is ERC721, Owned {
     /// use a different minting method in the future or integrate this elsewhere
     function mint(address to, uint256 _id) external payable {
         _safeMint(msg.sender, uint160(msg.sender));
-    }
-
-    /// -----------------------------------------------------------------------
-    /// Burning
-    /// -----------------------------------------------------------------------
-
-    /// @notice Burns an existing NFT.
-    /// @param _id The ID of the NFT to burn.
-    function burn(uint256 _id) external payable {
-        // check sender is owner
-
-        _burn(_id);
     }
 
     /// -----------------------------------------------------------------------
