@@ -44,3 +44,12 @@ Current seperation of development, staging, and production environments means th
 | :-----: | :-------------------------------------------------: | :-------------------------------------------------: |
 | Mumbai  |   Dev: 0x27305c89Cc26d77bcbA3ccf82EF0bB171319C37e   |   Dev: 0xa780c7627205c39E4BA956f7ff1cc4Dc629EC5DC   |
 | Polygon | Staging: 0xD243610b2d09255C73692f26A446c71843768819 | Staging: 0x3FAb616EAc9c4dB46B0273D8C3fBCdaA0fFf9254 |
+
+</br>
+
+## Other Contracts
+
+| Contract              |                                                            Address                                                            | Description                                     |
+| :-------------------- | :---------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------- |
+| Forum Qrcode NFT           | [0x5ED55f1F6849352c13e06882C7b789de93c35700](https://polygonscan.com/address/0x5ED55f1F6849352c13e06882C7b789de93c35700#code) | Simple ERC721 NFT QR Code with Farcaster PFP |
+ 

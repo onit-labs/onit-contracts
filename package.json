@@ -31,15 +31,15 @@
 	"dependencies": {
 		"@openzeppelin/contracts": "^4.5.0",
 		"@openzeppelin/contracts-upgradeable": "^4.8.0",
-		"solc": "^0.8.17",
+		"solc": "0.8.19",
 		"ts-node": "^10.8.0",
 		"typescript": "^4.8.4",
 		"web3-utils": "^1.7.1"
 	},
 	"scripts": {
-		"test": "forge test FOUNDRY_PROFILE=test -vvvv  ",
+		"test": "func () forge test $(if [ $1 != '' ]; then echo '--match-test' $1  ; fi) $(if [ $2 != '' ]; then echo '-vvvv'; else '-vvv'  ; fi); func  ",
 		"gas": "yarn test --gas-report  ",
 		"relay": "yarn ts-node services/oz-defender/autotasks/scripts/test/relay-user-op.ts",
-		"deploy": "func () forge script script/deploy/$1.s.sol:$1 --rpc-url $(grep $2'_RPC_URL' .env | cut -d '=' -f2) --chain-id $(grep $2'_CHAIN_ID' .env | cut -d '=' -f2)  --private-key $(grep $2'_PRIVATE_KEY' .env | cut -d '=' -f2) --etherscan-api-key  $(grep $2'_EXPLORER_API_KEY' .env | cut -d '=' -f2) $(if [ $3 = 'b' ]; then echo '--verify --broadcast'; fi); func"
+		"deploy": "func () forge script script/deploy/$1.s.sol:$1 --rpc-url $(grep $2'_RPC_URL' .env | cut -d '=' -f2) --chain-id $(grep $2'_CHAIN_ID' .env | cut -d '=' -f2)  --private-key $(grep $2'_PRIVATE_KEY' .env | cut -d '=' -f2) --etherscan-api-key  $(grep $2'_EXPLORER_API_KEY' .env | cut -d '=' -f2) $(if [ $3 = 'b' ]; then echo '--verify --broadcast --legacy'; fi); func"
 	}
 }
