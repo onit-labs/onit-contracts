@@ -50,17 +50,6 @@ contract ForumQrcodeNftTest is ForumAccountTestSetup {
         console.log(qrcodeNft.tokenURI(tokenId));
     }
 
-    function test_mint() public {
-        uint256 tokenId = getUintFromAddress(forumAccountAddress);
-
-        vm.prank(forumAccountAddress);
-        // Inputs here don't actually matter
-        qrcodeNft.mint(address(this), 1);
-
-        assertEq(qrcodeNft.ownerOf(tokenId), forumAccountAddress);
-        assertEq(qrcodeNft.balanceOf(forumAccountAddress), 1);
-    }
-
     /// -----------------------------------------------------------------------
     /// Utils
     /// -----------------------------------------------------------------------

@@ -7,7 +7,7 @@ import {LibString} from "@solbase/utils/LibString.sol";
 import {Owned} from "@utils/Owned.sol";
 
 /// @notice ForumQrcodeNft is a simple ERC721 NFT contract for forum QR codes.
-/// @author Forum (https://forumdaos.com)
+/// @author Forum (https://github.com/forumdaos/forum-contracts)
 
 contract ForumQrcodeNft is ERC721, Owned {
     /// -----------------------------------------------------------------------
@@ -56,14 +56,6 @@ contract ForumQrcodeNft is ERC721, Owned {
         // We use address as token id to limit minting to one per address
         // and also to make linking the token uri easier
         _safeMint(_to, uint160(_to));
-    }
-
-    /// @notice Mints a new NFT.
-    /// @param _id The ID of the NFT to mint.
-    /// @dev Include standard interface for mints on the off chance we want to
-    /// use a different minting method in the future or integrate this elsewhere
-    function mint(address to, uint256 _id) external payable {
-        _safeMint(msg.sender, uint160(msg.sender));
     }
 
     /// -----------------------------------------------------------------------
