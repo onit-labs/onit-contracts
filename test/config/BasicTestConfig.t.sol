@@ -5,12 +5,11 @@ import {MockERC20} from "../../lib/solbase/test/utils/mocks/MockERC20.sol";
 import {MockERC721} from "../../lib/solbase/test/utils/mocks/MockERC721.sol";
 import {MockERC1155} from "../../lib/solbase/test/utils/mocks/MockERC1155.sol";
 
-import "forge-std/Test.sol";
-import "forge-std/StdCheats.sol";
-import "forge-std/console.sol";
+import {StdCheats} from "../../lib/forge-std/src/StdCheats.sol";
+import {PRBTest} from "../../lib/prb-test/src/PRBTest.sol";
 
 // Config to import already setup tokens and addresses to other tests
-abstract contract BasicTestConfig is Test {
+abstract contract BasicTestConfig is PRBTest, StdCheats {
     MockERC20 public mockErc20;
     MockERC721 public mockErc721;
     MockERC1155 public mockErc1155;
@@ -30,8 +29,8 @@ abstract contract BasicTestConfig is Test {
     /// -----------------------------------------------------------------------
 
     constructor() {
-        mockErc20 = new MockERC20('MockERC20', 'M20', 18);
-        mockErc721 = new MockERC721('MockERC721', 'M721');
+        mockErc20 = new MockERC20("MockERC20", "M20", 18);
+        mockErc721 = new MockERC721("MockERC721", "M721");
         mockErc1155 = new MockERC1155();
 
         (alice, alicePk) = makeAddrAndKey("alice");
