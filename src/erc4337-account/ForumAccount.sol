@@ -6,7 +6,7 @@ import {Safe, Enum} from "@safe/Safe.sol";
 import {BaseAccount, IEntryPoint, UserOperation} from "@erc4337/core/BaseAccount.sol";
 
 import {Base64} from "@libraries/Base64.sol";
-import {FCL_Elliptic_ZZ} from "@libraries/FCL_Elliptic_ZZ.sol";
+//import {FCL_Elliptic_ZZ} from "@libraries/FCL_Elliptic_ZZ.sol";
 
 import {Exec} from "@utils/Exec.sol";
 
