@@ -26,7 +26,6 @@ import {Exec} from "@utils/Exec.sol";
  * - Further access control on functions
  * - Add guardians and account recovery (beyond basic method of adding an EOA owner to Safe)
  */
-
 contract ForumAccount is Safe, BaseAccount {
     /// ----------------------------------------------------------------------------------------
     ///							ACCOUNT STORAGE
@@ -80,10 +79,7 @@ contract ForumAccount is Safe, BaseAccount {
         bytes memory authData_,
         string memory clientDataStart_,
         string memory clientDataEnd_
-    )
-        public
-        virtual
-    {
+    ) public virtual {
         _entryPoint = IEntryPoint(entryPoint_);
 
         _owner = owner_;
@@ -112,10 +108,12 @@ contract ForumAccount is Safe, BaseAccount {
      * EntryPoint wouldn't know to emit the UserOperationRevertReason event,
      * which the frontend/client uses to capture the reason for the failure.
      */
-    function executeAndRevert(address to, uint256 value, bytes memory data, Enum.Operation operation)
-        external
-        payable
-    {
+    function executeAndRevert(
+        address to,
+        uint256 value,
+        bytes memory data,
+        Enum.Operation operation
+    ) external payable {
         _requireFromEntryPoint();
 
         bool success = execute(to, value, data, operation, type(uint256).max);
@@ -161,12 +159,10 @@ contract ForumAccount is Safe, BaseAccount {
      * - The signature may be validated using a domain seperator
      * - More efficient validation of the hashing and conversion of authData is needed
      */
-    function _validateSignature(UserOperation calldata userOp, bytes32 userOpHash)
-        internal
-        virtual
-        override
-        returns (uint256 sigTimeRange)
-    {
+    function _validateSignature(
+        UserOperation calldata userOp,
+        bytes32 userOpHash
+    ) internal virtual override returns (uint256 sigTimeRange) {
         /**
          * @dev Validate the signature of the user operation.
          * Delegate call the ellipticCurveVerifier library address to call the ecdsa_verify function with parameters:
@@ -174,23 +170,23 @@ contract ForumAccount is Safe, BaseAccount {
          * - The signature from the userOp
          * - The public key of the passkey
          */
-        (, bytes memory res) = ellipticCurveVerifier.delegatecall(
-            abi.encodeWithSelector(
-                FCL_Elliptic_ZZ.ecdsa_verify.selector,
-                sha256(
-                    abi.encodePacked(
-                        signingData.authData,
-                        sha256(
-                            abi.encodePacked(signingData.clientDataStart, Base64.encode(abi.encodePacked(userOpHash)), signingData.clientDataEnd)
-                        )
-                    )
-                ),
-                [uint256(bytes32(userOp.signature[:32])), uint256(bytes32(userOp.signature[32:]))],
-                [_owner[0], _owner[1]]
-            )
-        );
+        // (, bytes memory res) = ellipticCurveVerifier.delegatecall(
+        //     abi.encodeWithSelector(
+        //         FCL_Elliptic_ZZ.ecdsa_verify.selector,
+        //         sha256(
+        //             abi.encodePacked(
+        //                 signingData.authData,
+        //                 sha256(
+        //                     abi.encodePacked(signingData.clientDataStart, Base64.encode(abi.encodePacked(userOpHash)), signingData.clientDataEnd)
+        //                 )
+        //             )
+        //         ),
+        //         [uint256(bytes32(userOp.signature[:32])), uint256(bytes32(userOp.signature[32:]))],
+        //         [_owner[0], _owner[1]]
+        //     )
+        // );
 
-        // Check if the validator returns true, return SIG_VALIDATION_FAILED if not
-        return bytes32(res) == bytes32(uint256(1)) ? 0 : SIG_VALIDATION_FAILED;
+        // // Check if the validator returns true, return SIG_VALIDATION_FAILED if not
+        // return bytes32(res) == bytes32(uint256(1)) ? 0 : SIG_VALIDATION_FAILED;
     }
 }

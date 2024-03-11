@@ -8,8 +8,6 @@ import {BaseAccount, UserOperation} from "@erc4337/core/BaseAccount.sol";
 // Forum 4337 contracts
 import {ForumAccount} from "../../src/erc4337-account/ForumAccount.sol";
 import {ForumAccountFactory} from "../../src/erc4337-account/ForumAccountFactory.sol";
-import {ForumGroup} from "../../src/erc4337-group/ForumGroup.sol";
-import {ForumGroupFactory} from "../../src/erc4337-group/ForumGroupFactory.sol";
 import {MemberManager} from "@utils/MemberManager.sol";
 
 // Lib for encoding
@@ -26,14 +24,8 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
     // Singleton for Forum 4337 account implementation
     ForumAccount public forumAccountSingleton;
 
-    // Singleton for Forum 4337 group account implementation
-    ForumGroup public forumGroupSingleton;
-
     // Factory for individual 4337 accounts
     ForumAccountFactory public forumAccountFactory;
-
-    // Factory for 4337 group accounts
-    ForumGroupFactory public forumGroupFactory;
 
     // Addresses for easy use in tests
     address internal entryPointAddress;
@@ -55,32 +47,21 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
         entryPointAddress = address(entryPoint);
 
         // The library is deployed and called externally
-        bytes memory ellipticLibraryByteCode =
-            abi.encodePacked(vm.getCode("FCL_Elliptic_ZZ.sol:FCL_Elliptic_ZZ"));
+        bytes memory ellipticLibraryByteCode = abi.encodePacked(vm.getCode("FCL_Elliptic_ZZ.sol:FCL_Elliptic_ZZ"));
         address ellipticAddress;
         assembly {
             ellipticAddress := create(0, add(ellipticLibraryByteCode, 0x20), mload(ellipticLibraryByteCode))
         }
 
         forumAccountSingleton = new ForumAccount(ellipticAddress);
-        forumGroupSingleton = new ForumGroup(address(forumAccountSingleton), ellipticAddress);
 
         forumAccountFactory = new ForumAccountFactory(
-    		forumAccountSingleton,
-    		entryPointAddress,
-    		address(handler),
-    		hex'1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000',
-    		'{"type":"webauthn.get","challenge":"',
-    		'","origin":"https://development.forumdaos.com"}'
-    	);
-
-        forumGroupFactory = new ForumGroupFactory(
-        	payable(address(forumGroupSingleton)),
-        	entryPointAddress,
-        	address(handler),
-    		hex'1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000',
-    		'{"type":"webauthn.get","challenge":"',
-    		'","origin":"https://development.forumdaos.com"}'
+            forumAccountSingleton,
+            entryPointAddress,
+            address(handler),
+            hex"1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000",
+            '{"type":"webauthn.get","challenge":"',
+            '","origin":"https://development.forumdaos.com"}'
         );
     }
 
@@ -93,20 +74,21 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
         nonce: 0,
         initCode: new bytes(0),
         callData: new bytes(0),
-        callGasLimit: 10000000,
-        verificationGasLimit: 20000000,
-        preVerificationGas: 20000000,
+        callGasLimit: 10_000_000,
+        verificationGasLimit: 20_000_000,
+        preVerificationGas: 20_000_000,
         maxFeePerGas: 2,
         maxPriorityFeePerGas: 1,
         paymasterAndData: new bytes(0),
         signature: new bytes(0)
     });
 
-    function buildUserOp(address sender, uint256 nonce, bytes memory initCode, bytes memory callData)
-        public
-        view
-        returns (UserOperation memory userOp)
-    {
+    function buildUserOp(
+        address sender,
+        uint256 nonce,
+        bytes memory initCode,
+        bytes memory callData
+    ) public view returns (UserOperation memory userOp) {
         // Build on top of base op
         userOp = userOpBase;
 
@@ -118,21 +100,23 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
     }
 
     // Build payload which the entryPoint will call on the sender 4337 account
-    function buildExecutionPayload(address to, uint256 value, bytes memory data, Enum.Operation operation)
-        internal
-        pure
-        returns (bytes memory)
-    {
+    function buildExecutionPayload(
+        address to,
+        uint256 value,
+        bytes memory data,
+        Enum.Operation operation
+    ) internal pure returns (bytes memory) {
         return abi.encodeWithSignature("executeAndRevert(address,uint256,bytes,uint8)", to, value, data, operation);
     }
 
     // !!!!! combine with the above
-    function signAndFormatUserOpIndividual(UserOperation memory userOp, string memory signer1)
-        internal
-        returns (UserOperation[] memory)
-    {
-        userOp.signature =
-            abi.encode(signMessageForPublicKey(signer1, Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(userOp)))));
+    function signAndFormatUserOpIndividual(
+        UserOperation memory userOp,
+        string memory signer1
+    ) internal returns (UserOperation[] memory) {
+        userOp.signature = abi.encode(
+            signMessageForPublicKey(signer1, Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(userOp))))
+        );
 
         UserOperation[] memory userOpArray = new UserOperation[](1);
         userOpArray[0] = userOp;
@@ -142,10 +126,11 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
 
     // Gathers signatures from signers and formats them into the signature field for the user operation
     // Maybe only one sig is needed, so siger2 may be empty
-    function signAndFormatUserOp(UserOperation memory userOp, string memory signer1, string memory signer2)
-        internal
-        returns (UserOperation[] memory)
-    {
+    function signAndFormatUserOp(
+        UserOperation memory userOp,
+        string memory signer1,
+        string memory signer2
+    ) internal returns (UserOperation[] memory) {
         uint256 signerCount;
         uint256[2] memory sig1;
         uint256[2] memory sig2;
