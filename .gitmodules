@@ -20,3 +20,6 @@
 [submodule "lib/prb-test"]
 	path = lib/prb-test
 	url = https://github.com/PaulRBerg/prb-test
+[submodule "lib/fast-foundry-template"]
+	path = lib/fast-foundry-template
+	url = https://github.com/jamesmccomish/fast-foundry-template
