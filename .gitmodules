@@ -13,9 +13,6 @@
 	url = https://github.com/eth-infinitism/account-abstraction
 	branch = develop
 	commit = abff2ac
-[submodule "lib/foundry-deployment-manager"]
-	path = lib/foundry-deployment-manager
-	url = https://github.com/jamesmccomish/foundry-deployment-manager
 [submodule "lib/safe-contracts"]
 	path = lib/safe-contracts
 	url = https://github.com/safe-global/safe-contracts
