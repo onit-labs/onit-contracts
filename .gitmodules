@@ -23,3 +23,6 @@
 [submodule "lib/fast-foundry-template"]
 	path = lib/fast-foundry-template
 	url = https://github.com/jamesmccomish/fast-foundry-template
+[submodule "lib/safe-tools"]
+	path = lib/safe-tools
+	url = https://github.com/colinnielsen/safe-tools
