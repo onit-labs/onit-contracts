@@ -13,6 +13,7 @@ import {MemberManager} from "@utils/MemberManager.sol";
 // Lib for encoding
 import {Base64} from "@libraries/Base64.sol";
 
+// Test imports
 import "./SafeTestConfig.t.sol";
 import {BasicTestConfig} from "../../lib/fast-foundry-template/test/config/BasicTestConfig.t.sol";
 import {SignatureHelper} from "./SignatureHelper.t.sol";
