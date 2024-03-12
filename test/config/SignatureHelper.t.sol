@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 /* solhint-disable no-console */
 
-import {BasicTestConfig} from "./BasicTestConfig.t.sol";
+import {BasicTestConfig} from "../../lib/fast-foundry-template/test/config/BasicTestConfig.t.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import "forge-std/console.sol";
 

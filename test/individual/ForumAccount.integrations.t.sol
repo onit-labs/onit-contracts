@@ -65,7 +65,7 @@ contract ForumAccountTestIntegrations is ForumAccountTestBase {
 
         // Check updated balances
         assertEq(forumAccountAddress.balance, 0.5 ether - gas, "balance not updated");
-        assertEq(alice.balance, 1.5 ether, "balance not updated");
+        assertEq(alice.balance, INITIAL_BALANCE + 0.5 ether, "balance not updated");
 
         // Check account nonce
         assertEq(entryPoint.getNonce(forumAccountAddress, BASE_NONCE_KEY), 1, "nonce not updated");

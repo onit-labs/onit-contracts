@@ -14,7 +14,7 @@ import {MemberManager} from "@utils/MemberManager.sol";
 import {Base64} from "@libraries/Base64.sol";
 
 import "./SafeTestConfig.t.sol";
-import "./BasicTestConfig.t.sol";
+import {BasicTestConfig} from "../../lib/fast-foundry-template/test/config/BasicTestConfig.t.sol";
 import {SignatureHelper} from "./SignatureHelper.t.sol";
 
 contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
@@ -41,6 +41,8 @@ contract ERC4337TestConfig is BasicTestConfig, SafeTestConfig, SignatureHelper {
     string internal authentacatorData = "1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000";
 
     uint192 internal constant BASE_NONCE_KEY = 0;
+
+    uint256 internal constant INITIAL_BALANCE = 100 ether;
 
     constructor() {
         entryPoint = new EntryPoint();
