@@ -12,9 +12,6 @@
 [submodule "lib/prb-test"]
 	path = lib/prb-test
 	url = https://github.com/PaulRBerg/prb-test
-[submodule "lib/fast-foundry-template"]
-	path = lib/fast-foundry-template
-	url = https://github.com/jamesmccomish/fast-foundry-template
 [submodule "lib/safe-tools"]
 	path = lib/safe-tools
 	url = https://github.com/colinnielsen/safe-tools
@@ -22,3 +19,7 @@
 	path = lib/safe-smart-account
 	url = https://github.com/safe-global/safe-smart-account
 	branch = v1.4.1
+[submodule "lib/fast-foundry-template"]
+	path = lib/fast-foundry-template
+	url = https://github.com/jamesmccomish/fast-foundry-template
+	commit = 1e61f28
