@@ -2,14 +2,17 @@
 src = 'src'
 out = 'out'
 test = 'test'
-script='script'
-broadcast='broadcast'
+script = 'script'
+broadcast = 'broadcast'
 libs = ['lib']
-cache_path  = 'forge-cache'
-fs_permissions = [{ access = "read-write", path = "./addresses/"}, { access ="read", path="./out/"}]
-solc = '0.8.19'
+cache_path = 'forge-cache'
+fs_permissions = [
+    { access = "read-write", path = "./addresses/" },
+    { access = "read", path = "./out/" },
+]
+solc = '0.8.23'
 gas_reports = ["*"]
-ffi = true 
+ffi = true
 
 [profile.prod]
 optimize = true
@@ -27,5 +30,5 @@ mumbai = { key = "${POLYSCAN_API_KEY}" }
 [fmt]
 line_length = 120
 multiline_func_header = "params_first"
-number_underscore="thousands"
+number_underscore = "thousands"
 # handle sorting of imports
