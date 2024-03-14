@@ -5,8 +5,9 @@ pragma solidity ^0.8.13;
 import {Safe, Enum} from "@safe/Safe.sol";
 import {MultiSend} from "@safe/libraries/MultiSend.sol";
 
-// SafeTestTools imports
-/// @dev Take care that the test lib gitmodule for Safe matches ours
+import {AddModulesLib} from "@libraries/AddModulesLib.sol";
+
+/// @dev Take care that version of Safe in SafeTestTools .gitmodule matches ours
 import {
     SafeTestTools,
     CompatibilityFallbackHandler,
@@ -18,6 +19,7 @@ import {
 contract SafeTestConfig is SafeTestTools {
     MultiSend internal multisend;
     SignMessageLib internal signMessageLib;
+    AddModulesLib internal addModulesLib;
 
     // Used to store the address of the safe created in tests
     address internal safeAddress;
@@ -29,6 +31,7 @@ contract SafeTestConfig is SafeTestTools {
     constructor() {
         multisend = new MultiSend();
         signMessageLib = new SignMessageLib();
+        addModulesLib = new AddModulesLib();
     }
 
     /// -----------------------------------------------------------------------
