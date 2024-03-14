@@ -3,9 +3,13 @@ pragma solidity ^0.8.23;
 
 import {BaseAccount, IEntryPoint} from "@erc4337/core/BaseAccount.sol";
 import {PackedUserOperation} from "@erc4337/interfaces/PackedUserOperation.sol";
+import {HandlerContext} from "@safe/handler/HandlerContext.sol";
+
 import {Base64} from "@libraries/Base64.sol";
 import {Exec} from "@utils/Exec.sol";
 import {ISafe} from "@interfaces/ISafe.sol";
+
+import "forge-std/console.sol";
 
 /**
  * @notice ERC4337 Safe Module
@@ -18,10 +22,12 @@ import {ISafe} from "@interfaces/ISafe.sol";
  * - add execution function
  * - fix verify sig
  */
-contract OnitSafeModule is BaseAccount {
+contract OnitSafeModule is BaseAccount, HandlerContext {
     /// ----------------------------------------------------------------------------------------
     ///							ACCOUNT STORAGE
     /// ----------------------------------------------------------------------------------------
+
+    error NotFromEntryPoint();
 
     // Entry point allowed to call methods directly on this contract
     address internal immutable _entryPoint;
@@ -68,6 +74,7 @@ contract OnitSafeModule is BaseAccount {
         uint256 missingAccountFunds
     ) external override returns (uint256 validationData) {
         _requireFromEntryPoint();
+
         address payable safeAddress = payable(userOp.sender);
         // The entry point address is appended to the calldata in `HandlerContext` contract
         // Because of this, the relayer may manipulate the entry point address, therefore we have to verify that
@@ -128,6 +135,14 @@ contract OnitSafeModule is BaseAccount {
     /// ----------------------------------------------------------------------------------------
     ///							INTERNAL METHODS
     /// ----------------------------------------------------------------------------------------
+
+    /**
+     * @notice Require that the call is from the entry point
+     * @dev Modified from reference 4337 account to take _msgSender() from the Safe handler context
+     */
+    function _requireFromEntryPoint() internal view virtual override {
+        if (_msgSender() != _entryPoint) revert NotFromEntryPoint();
+    }
 
     // TODO consider nonce validation in here as well in on v6 entrypoint
 
