@@ -3,6 +3,8 @@ pragma solidity ^0.8.15;
 
 // 4337 imports
 import {EntryPoint} from "@erc4337/core/EntryPoint.sol";
+import {UserOperationLib} from "@erc4337/core/UserOperationLib.sol";
+import {PackedUserOperation} from "@erc4337/interfaces/PackedUserOperation.sol";
 //import {BaseAccount, UserOperation} from "@erc4337/core/BaseAccount.sol";
 
 // Lib for encoding
@@ -12,15 +14,21 @@ import {Base64} from "@libraries/Base64.sol";
 import {SignatureHelper} from "./SignatureHelper.t.sol";
 
 contract ERC4337TestConfig is SignatureHelper {
+    using UserOperationLib for PackedUserOperation;
+
     // Entry point
     EntryPoint public entryPoint;
-
-    // Addresses for easy use in tests
     address internal entryPointAddress;
 
     uint192 internal constant BASE_NONCE_KEY = 0;
-
     uint256 internal constant INITIAL_BALANCE = 100 ether;
+
+    // Default gas limits
+    uint128 internal constant CALL_GAS_LIMIT = 30_000_000;
+    uint128 internal constant VERIFICATION_GAS_LIMIT = 30_000_000;
+    uint256 internal constant PRE_VERIFICATION_GAS = 20_000_000;
+    uint128 internal constant MAX_FEE_PER_GAS = 1_000_000_000;
+    uint128 internal constant MAX_PRIORITY_FEE_PER_GAS = 1_000_000_000;
 
     constructor() {
         entryPoint = new EntryPoint();
@@ -31,35 +39,52 @@ contract ERC4337TestConfig is SignatureHelper {
     // 4337 Helper Functions
     // -----------------------------------------------------------------------
 
-    // UserOperation public userOpBase = UserOperation({
-    //     sender: address(0),
-    //     nonce: 0,
-    //     initCode: new bytes(0),
-    //     callData: new bytes(0),
-    //     callGasLimit: 10_000_000,
-    //     verificationGasLimit: 20_000_000,
-    //     preVerificationGas: 20_000_000,
-    //     maxFeePerGas: 2,
-    //     maxPriorityFeePerGas: 1,
-    //     paymasterAndData: new bytes(0),
-    //     signature: new bytes(0)
-    // });
+    PackedUserOperation public userOpBase = PackedUserOperation({
+        sender: address(0),
+        nonce: 0,
+        initCode: new bytes(0),
+        callData: new bytes(0),
+        accountGasLimits: bytes32(0),
+        preVerificationGas: PRE_VERIFICATION_GAS,
+        gasFees: bytes32(0),
+        paymasterAndData: new bytes(0),
+        signature: new bytes(0)
+    });
 
-    // function buildUserOp(
-    //     address sender,
-    //     uint256 nonce,
-    //     bytes memory initCode,
-    //     bytes memory callData
-    // ) public view returns (UserOperation memory userOp) {
-    //     // Build on top of base op
-    //     userOp = userOpBase;
+    // -----------------------------------------------------------------------
+    // Packed User Operation Helper Functions
+    // -----------------------------------------------------------------------
 
-    //     // Add sender and calldata to op
-    //     userOp.sender = sender;
-    //     userOp.nonce = nonce;
-    //     userOp.initCode = initCode;
-    //     userOp.callData = callData;
-    // }
+    // pack uint128 into lower end of a bytes32
+    function packLow128(uint128 value) internal pure returns (bytes32) {
+        return bytes32(uint256(value));
+    }
+
+    // pack uint128 into upper end of a bytes32
+    function packHigh128(uint128 value) internal pure returns (bytes32) {
+        return bytes32(uint256(value) << 128);
+    }
+
+    // -----------------------------------------------------------------------
+    // User Operation Helper Functions
+    // -----------------------------------------------------------------------
+
+    function buildUserOp(
+        address sender,
+        uint256 nonce,
+        bytes memory initCode,
+        bytes memory callData
+    ) public view returns (PackedUserOperation memory userOp) {
+        // Build on top of base op
+        userOp = userOpBase;
+
+        // Add sender and calldata to op
+        userOp.sender = sender;
+        userOp.nonce = nonce;
+        userOp.initCode = initCode;
+        userOp.callData = callData;
+        userOp.accountGasLimits = packHigh128(VERIFICATION_GAS_LIMIT) | packLow128(CALL_GAS_LIMIT);
+    }
 
     // // Build payload which the entryPoint will call on the sender 4337 account
     // function buildExecutionPayload(
@@ -71,20 +96,19 @@ contract ERC4337TestConfig is SignatureHelper {
     //     return abi.encodeWithSignature("executeAndRevert(address,uint256,bytes,uint8)", to, value, data, operation);
     // }
 
-    // // !!!!! combine with the above
-    // function signAndFormatUserOpIndividual(
-    //     UserOperation memory userOp,
-    //     string memory signer1
-    // ) internal returns (UserOperation[] memory) {
-    //     userOp.signature = abi.encode(
-    //         signMessageForPublicKey(signer1, Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(userOp))))
-    //     );
+    function signAndFormatUserOpIndividual(
+        PackedUserOperation memory userOp,
+        string memory signer1
+    ) internal returns (PackedUserOperation[] memory) {
+        userOp.signature = abi.encode(
+            signMessageForPublicKey(signer1, Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(userOp))))
+        );
 
-    //     UserOperation[] memory userOpArray = new UserOperation[](1);
-    //     userOpArray[0] = userOp;
+        PackedUserOperation[] memory userOpArray = new PackedUserOperation[](1);
+        userOpArray[0] = userOp;
 
-    //     return userOpArray;
-    // }
+        return userOpArray;
+    }
 
     // // Gathers signatures from signers and formats them into the signature field for the user operation
     // // Maybe only one sig is needed, so siger2 may be empty

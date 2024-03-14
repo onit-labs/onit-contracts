@@ -68,7 +68,7 @@ contract OnitSafeModuleTestBase is BasicTestConfig, ERC4337TestConfig, SafeTestC
             1,
             address(addModulesLib),
             abi.encodeWithSignature("enableModules(address[])", modules),
-            address(addModulesLib),
+            address(onitSafeModule),
             address(0),
             0,
             address(0)
@@ -98,6 +98,24 @@ contract OnitSafeModuleTestBase is BasicTestConfig, ERC4337TestConfig, SafeTestC
     }
 
     // test that entrypoint and other values are set correctly
+
+    /// -----------------------------------------------------------------------
+    /// Validation tests
+    /// -----------------------------------------------------------------------
+
+    function testFailsIfNotFromEntryPoint() public {
+        onitSafeModule.validateUserOp(userOpBase, entryPoint.getUserOpHash(userOpBase), 0);
+    }
+
+    function testValidateUserOp() public {
+        bytes memory transferCalldata = abi.encodeWithSignature("transfer(address,uint256)", alice, 1 ether);
+
+        PackedUserOperation memory userOp = buildUserOp(onitAccountAddress, 0, new bytes(0), transferCalldata);
+
+        PackedUserOperation[] memory userOps = signAndFormatUserOpIndividual(userOp, SIGNER_1);
+
+        entryPoint.handleOps(userOps, payable(alice));
+    }
 
     /// -----------------------------------------------------------------------
     /// HELPERS
