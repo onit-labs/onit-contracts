@@ -23,3 +23,6 @@
 	path = lib/fast-foundry-template
 	url = https://github.com/jamesmccomish/fast-foundry-template
 	commit = 1e61f28
+[submodule "lib/webauthn-sol"]
+	path = lib/webauthn-sol
+	url = https://github.com/base-org/webauthn-sol
