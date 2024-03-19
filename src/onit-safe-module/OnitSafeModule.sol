@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.23;
 
-import {BaseAccount, IEntryPoint} from "@erc4337/core/BaseAccount.sol";
-import {PackedUserOperation} from "@erc4337/interfaces/PackedUserOperation.sol";
-import {HandlerContext} from "@safe/handler/HandlerContext.sol";
+import {BaseAccount, IEntryPoint} from "../../lib/account-abstraction/contracts/core/BaseAccount.sol";
+import {PackedUserOperation} from "../../lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {HandlerContext} from "../../lib/safe-smart-account/contracts/handler/HandlerContext.sol";
+import {WebAuthn} from "../../lib/webauthn-sol/src/WebAuthn.sol";
 
-import {Base64} from "@libraries/Base64.sol";
-import {Exec} from "@utils/Exec.sol";
-import {ISafe} from "@interfaces/ISafe.sol";
+import {Base64} from "../../src/libraries/Base64.sol";
+import {Exec} from "../../src/utils/Exec.sol";
+import {ISafe} from "../../src/interfaces/ISafe.sol";
 
-import "forge-std/console.sol";
+import "../../lib/forge-std/src/console.sol";
 
 /**
  * @notice ERC4337 Safe Module
@@ -151,14 +152,19 @@ contract OnitSafeModule is BaseAccount, HandlerContext {
      * @param userOp The user operation to validate
      * @param userOpHash The hash of the user operation
      * @return sigTimeRange The time range the signature is valid for
-     * @dev This is a first take at getting the signature validation working using passkeys
-     * - The signature may be validated using a domain seperator
-     * - More efficient validation of the hashing and conversion of authData is needed
      */
     function _validateSignature(
         PackedUserOperation calldata userOp,
         bytes32 userOpHash
     ) internal virtual override returns (uint256 sigTimeRange) {
-        return 0;
+        WebAuthn.WebAuthnAuth memory auth = abi.decode(userOp.signature, (WebAuthn.WebAuthnAuth));
+
+        return WebAuthn.verify({
+            challenge: abi.encodePacked(userOpHash),
+            requireUV: false,
+            webAuthnAuth: auth,
+            x: owner()[0],
+            y: owner()[1]
+        }) ? 0 : 1;
     }
 }

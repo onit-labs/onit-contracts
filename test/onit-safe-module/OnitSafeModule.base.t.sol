@@ -5,6 +5,9 @@ import "../config/ERC4337TestConfig.t.sol";
 import "../config/SafeTestConfig.t.sol";
 import "../config/AddressTestConfig.t.sol";
 
+import {WebAuthnUtils, WebAuthnInfo} from "../../src/utils/WebAuthnUtils.sol";
+import {WebAuthn} from "../../lib/webauthn-sol/src/WebAuthn.sol";
+
 import {OnitSafeModule} from "../../src/onit-safe-module/OnitSafeModule.sol";
 
 /**
@@ -29,7 +32,18 @@ contract OnitSafeModuleTestBase is AddressTestConfig, ERC4337TestConfig, SafeTes
     string internal constant SIGNER_1 = "1";
     string internal constant SIGNER_2 = "2";
 
-    string internal authentacatorData = "1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000";
+    string internal authentacatorDataOnit = "1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000";
+
+    // base values //
+    bytes authenticatorData = hex"49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97630500000000";
+    string origin = "https://sign.coinbase.com";
+    // Tmp public key for testing with base auth data
+    uint256[2] internal pk = [
+        0x1c05286fe694493eae33312f2d2e0d0abeda8db76238b7a204be1fb87f54ce42,
+        0x28fef61ef4ac300f631657635c28e59bfb2fe71bce1634c81c65642042f6dc4d
+    ];
+    // Tmp private key for testing with base auth data
+    uint256 passkeyPrivateKey = uint256(0x03d99692017473e2d631945a812607b23269d85721e0f370b8d3e7d29a874fd2);
 
     /// -----------------------------------------------------------------------
     /// Setup
@@ -52,7 +66,7 @@ contract OnitSafeModuleTestBase is AddressTestConfig, ERC4337TestConfig, SafeTes
     // See https://github.com/safe-global/safe-modules/modules/4337/README.md
     function deployOnitAccount() internal {
         // Deploy module with passkey
-        onitSafeModule = new OnitSafeModule(entryPointAddress, publicKey);
+        onitSafeModule = new OnitSafeModule(entryPointAddress, pk);
 
         address[] memory modules = new address[](1);
         modules[0] = address(onitSafeModule);
@@ -92,8 +106,8 @@ contract OnitSafeModuleTestBase is AddressTestConfig, ERC4337TestConfig, SafeTes
         assertTrue(onitAccount.isModuleEnabled(address(onitSafeModule)));
 
         assertEq(address(onitSafeModule.entryPoint()), entryPointAddress);
-        assertEq(onitSafeModule.owner()[0], publicKey[0]);
-        assertEq(onitSafeModule.owner()[1], publicKey[1]);
+        assertEq(onitSafeModule.owner()[0], pk[0]);
+        assertEq(onitSafeModule.owner()[1], pk[1]);
     }
 
     // test that entrypoint and other values are set correctly
@@ -107,21 +121,50 @@ contract OnitSafeModuleTestBase is AddressTestConfig, ERC4337TestConfig, SafeTes
     }
 
     function testValidateUserOp() public {
-        bytes memory transferCalldata = abi.encodeWithSignature("transfer(address,uint256)", alice, 1 ether);
+        // Some basic user operation
+        PackedUserOperation memory userOp = buildUserOp(onitAccountAddress, 0, new bytes(0), new bytes(0));
 
-        PackedUserOperation memory userOp = buildUserOp(onitAccountAddress, 0, new bytes(0), transferCalldata);
+        // Get the webauthn struct which will be verified by the module
+        bytes32 challenge = entryPoint.getUserOpHash(userOp);
+        WebAuthnInfo memory webAuthn = WebAuthnUtils.getWebAuthnStruct(challenge, authenticatorData, origin);
 
-        PackedUserOperation[] memory userOps = signAndFormatUserOpIndividual(userOp, SIGNER_1);
+        (bytes32 r, bytes32 s) = vm.signP256(passkeyPrivateKey, webAuthn.messageHash);
 
-        entryPoint.handleOps(userOps, payable(alice));
+        // Format the signature data
+        bytes memory pksig = abi.encode(
+            WebAuthn.WebAuthnAuth({
+                authenticatorData: webAuthn.authenticatorData,
+                clientDataJSON: webAuthn.clientDataJSON,
+                typeIndex: 1,
+                challengeIndex: 23,
+                r: uint256(r),
+                s: uint256(s)
+            })
+        );
+        userOp.signature = pksig;
+
+        bytes memory validateUserOpCalldata =
+            abi.encodeWithSelector(OnitSafeModule.validateUserOp.selector, userOp, challenge, 0);
+
+        // We prank entrypoint and call like this so the safe handler context passes the _requireFromEntryPoint check
+        vm.prank(entryPointAddress);
+        (, bytes memory validationData) = onitAccountAddress.call(validateUserOpCalldata);
+
+        assertEq(keccak256(validationData), keccak256(abi.encodePacked(uint256(0))));
     }
 
     /// -----------------------------------------------------------------------
-    /// HELPERS
+    /// Utils
     /// -----------------------------------------------------------------------
 
-    function accountSalt(uint256[2] memory owner) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(owner));
+    // Build payload which the entryPoint will call on the sender Onit 4337 account
+    function buildExecutionPayload(
+        address to,
+        uint256 value,
+        bytes memory data,
+        Enum.Operation operation
+    ) internal pure returns (bytes memory) {
+        return abi.encodeWithSignature("executeUserOp(address,uint256,bytes,uint8)", to, value, data, uint8(0));
     }
 
     receive() external payable { // Allows this contract to receive ether
