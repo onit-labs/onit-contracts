@@ -26,3 +26,4 @@ FreshCryptoLib/=lib/webauthn-sol/lib/FreshCryptoLib/solidity/src/
 erc4626-tests/=lib/webauthn-sol/lib/openzeppelin-contracts/lib/erc4626-tests/
 openzeppelin-contracts/=lib/webauthn-sol/lib/openzeppelin-contracts/
 webauthn-sol/=lib/webauthn-sol/src/
+@oz/=node_modules/@openzeppelin/
