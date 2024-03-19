@@ -3,15 +3,14 @@ pragma solidity ^0.8.15;
 
 import "../config/ERC4337TestConfig.t.sol";
 import "../config/SafeTestConfig.t.sol";
-
-import {BasicTestConfig} from "../../lib/fast-foundry-template/test/config/BasicTestConfig.t.sol";
+import "../config/AddressTestConfig.t.sol";
 
 import {OnitSafeModule} from "../../src/onit-safe-module/OnitSafeModule.sol";
 
 /**
  * @notice Some variables and functions used to test the Onit Safe Module
  */
-contract OnitSafeModuleTestBase is BasicTestConfig, ERC4337TestConfig, SafeTestConfig {
+contract OnitSafeModuleTestBase is AddressTestConfig, ERC4337TestConfig, SafeTestConfig {
     // The Onit account is a Safe controlled by an ERC4337 module with passkey signer
     Safe internal onitAccount;
     address payable internal onitAccountAddress;

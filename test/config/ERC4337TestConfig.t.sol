@@ -2,13 +2,12 @@
 pragma solidity ^0.8.15;
 
 // 4337 imports
-import {EntryPoint} from "@erc4337/core/EntryPoint.sol";
-import {UserOperationLib} from "@erc4337/core/UserOperationLib.sol";
-import {PackedUserOperation} from "@erc4337/interfaces/PackedUserOperation.sol";
-//import {BaseAccount, UserOperation} from "@erc4337/core/BaseAccount.sol";
+import {EntryPoint} from "../../lib/account-abstraction/contracts/core/EntryPoint.sol";
+import {UserOperationLib} from "../../lib/account-abstraction/contracts/core/UserOperationLib.sol";
+import {PackedUserOperation} from "../../lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 
 // Lib for encoding
-import {Base64} from "@libraries/Base64.sol";
+import {Base64} from "../../src/libraries/Base64.sol";
 
 // Test imports
 import {SignatureHelper} from "./SignatureHelper.t.sol";

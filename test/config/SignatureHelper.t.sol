@@ -3,14 +3,14 @@ pragma solidity ^0.8.13;
 
 /* solhint-disable no-console */
 
-import {BasicTestConfig} from "../../lib/fast-foundry-template/test/config/BasicTestConfig.t.sol";
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {Test} from "../../lib/forge-std/src/Test.sol";
+import {Strings} from "../../node_modules/@openzeppelin/contracts/utils/Strings.sol";
 
 /**
  * @notice - This contract runs the signatureHelper.ts script
  * 			 It is used to create and sign messages, similar to how the passkey would, for testing
  */
-contract SignatureHelper is BasicTestConfig {
+contract SignatureHelper is Test {
     function createPublicKey(string memory salt) public returns (uint256[2] memory) {
         string[] memory cmd = new string[](6);
 
