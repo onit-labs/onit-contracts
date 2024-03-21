@@ -4,16 +4,19 @@ pragma solidity ^0.8.15;
 import "../config/ERC4337TestConfig.t.sol";
 import "../config/SafeTestConfig.t.sol";
 import "../config/AddressTestConfig.t.sol";
+import "../../lib/forge-std/src/Test.sol";
+import "forge-std/console.sol";
 
 import {WebAuthnUtils, WebAuthnInfo} from "../../src/utils/WebAuthnUtils.sol";
 import {WebAuthn} from "../../lib/webauthn-sol/src/WebAuthn.sol";
+import {Base64} from "../../lib/webauthn-sol/lib/openzeppelin-contracts/contracts/utils/Base64.sol";
 
 import {OnitSafeModule} from "../../src/onit-safe-module/OnitSafeModule.sol";
 
 /**
  * @notice Some variables and functions used to test the Onit Safe Module
  */
-contract OnitSafeModuleTestBase is AddressTestConfig, ERC4337TestConfig, SafeTestConfig {
+contract OnitSafeModuleTestBase is AddressTestConfig, ERC4337TestConfig, SafeTestConfig, Test {
     // The Onit account is a Safe controlled by an ERC4337 module with passkey signer
     Safe internal onitAccount;
     address payable internal onitAccountAddress;
@@ -24,25 +27,14 @@ contract OnitSafeModuleTestBase is AddressTestConfig, ERC4337TestConfig, SafeTes
     // Some calldata for transactions
     bytes internal basicTransferCalldata;
 
-    // Some public keys used as signers in tests
-    uint256[2] internal publicKey;
-    uint256[2] internal publicKey2;
-    uint256[2][] internal inputMembers;
-
-    string internal constant SIGNER_1 = "1";
-    string internal constant SIGNER_2 = "2";
-
-    string internal authentacatorDataOnit = "1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000";
-
-    // base values //
+    // Base values - see smart-wallet demo repo //
     bytes authenticatorData = hex"49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97630500000000";
     string origin = "https://sign.coinbase.com";
-    // Tmp public key for testing with base auth data
-    uint256[2] internal pk = [
+    // Public & private key for testing with base auth data
+    uint256[2] internal publicKeyBase = [
         0x1c05286fe694493eae33312f2d2e0d0abeda8db76238b7a204be1fb87f54ce42,
         0x28fef61ef4ac300f631657635c28e59bfb2fe71bce1634c81c65642042f6dc4d
     ];
-    // Tmp private key for testing with base auth data
     uint256 passkeyPrivateKey = uint256(0x03d99692017473e2d631945a812607b23269d85721e0f370b8d3e7d29a874fd2);
 
     /// -----------------------------------------------------------------------
@@ -50,11 +42,8 @@ contract OnitSafeModuleTestBase is AddressTestConfig, ERC4337TestConfig, SafeTes
     /// -----------------------------------------------------------------------
 
     function setUp() public virtual {
-        publicKey = createPublicKey(SIGNER_1);
-        publicKey2 = createPublicKey(SIGNER_2);
-
         // deploy module with pk and ep
-        deployOnitAccount();
+        deployOnitAccount(publicKeyBase);
 
         // Deal funds to account
         deal(onitAccountAddress, 1 ether);
@@ -64,8 +53,8 @@ contract OnitSafeModuleTestBase is AddressTestConfig, ERC4337TestConfig, SafeTes
     }
 
     // See https://github.com/safe-global/safe-modules/modules/4337/README.md
-    function deployOnitAccount() internal {
-        // Deploy module with passkey
+    function deployOnitAccount(uint256[2] memory pk) internal {
+        // Deploy module with passkey public key as owner
         onitSafeModule = new OnitSafeModule(entryPointAddress, pk);
 
         address[] memory modules = new address[](1);
@@ -94,6 +83,8 @@ contract OnitSafeModuleTestBase is AddressTestConfig, ERC4337TestConfig, SafeTes
 
         onitAccountAddress = payable(proxyFactory.createProxyWithNonce(address(singleton), initializer, 99));
         onitAccount = Safe(onitAccountAddress);
+
+        deal(onitAccountAddress, 1 ether);
     }
 
     /// -----------------------------------------------------------------------
@@ -106,8 +97,8 @@ contract OnitSafeModuleTestBase is AddressTestConfig, ERC4337TestConfig, SafeTes
         assertTrue(onitAccount.isModuleEnabled(address(onitSafeModule)));
 
         assertEq(address(onitSafeModule.entryPoint()), entryPointAddress);
-        assertEq(onitSafeModule.owner()[0], pk[0]);
-        assertEq(onitSafeModule.owner()[1], pk[1]);
+        assertEq(onitSafeModule.owner()[0], publicKeyBase[0]);
+        assertEq(onitSafeModule.owner()[1], publicKeyBase[1]);
     }
 
     // test that entrypoint and other values are set correctly
@@ -151,6 +142,49 @@ contract OnitSafeModuleTestBase is AddressTestConfig, ERC4337TestConfig, SafeTes
         (, bytes memory validationData) = onitAccountAddress.call(validateUserOpCalldata);
 
         assertEq(keccak256(validationData), keccak256(abi.encodePacked(uint256(0))));
+    }
+
+    /// -----------------------------------------------------------------------
+    /// Execution tests
+    /// -----------------------------------------------------------------------
+
+    // TODO fix general txdata signing
+    function testExecuteTx() public {
+        // Init values for test
+        uint256 aliceBalanceBefore = alice.balance;
+        uint256 onitAccountBalanceBefore = onitAccountAddress.balance;
+        uint256 transferAmount = 0.1 ether;
+
+        // Some transfer user operation
+        bytes memory transferExecutionCalldata = new bytes(0);
+        //buildExecutionPayload(alice, transferAmount, new bytes(0), Enum.Operation.Call);
+
+        //PackedUserOperation memory userOp = buildUserOp(onitAccountAddress, 0, new bytes(0), tmp1);
+        PackedUserOperation memory userOp = buildUserOp(onitAccountAddress, 0, new bytes(0), transferExecutionCalldata);
+
+        // Get the webauthn struct which will be verified by the module
+        bytes32 challenge = entryPoint.getUserOpHash(userOp);
+        WebAuthnInfo memory webAuthn = WebAuthnUtils.getWebAuthnStruct(challenge, authenticatorData, origin);
+
+        (bytes32 r, bytes32 s) = vm.signP256(passkeyPrivateKey, webAuthn.messageHash);
+
+        // Format the signature data
+        bytes memory pksig = abi.encode(
+            WebAuthn.WebAuthnAuth({
+                authenticatorData: webAuthn.authenticatorData,
+                clientDataJSON: webAuthn.clientDataJSON,
+                typeIndex: 1,
+                challengeIndex: 23,
+                r: uint256(r),
+                s: uint256(s)
+            })
+        );
+
+        PackedUserOperation[] memory userOps = new PackedUserOperation[](1);
+        userOps[0] = userOp;
+        userOp.signature = pksig;
+
+        entryPoint.handleOps(userOps, payable(alice));
     }
 
     /// -----------------------------------------------------------------------

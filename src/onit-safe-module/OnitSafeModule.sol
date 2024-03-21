@@ -6,8 +6,6 @@ import {PackedUserOperation} from "../../lib/account-abstraction/contracts/inter
 import {HandlerContext} from "../../lib/safe-smart-account/contracts/handler/HandlerContext.sol";
 import {WebAuthn} from "../../lib/webauthn-sol/src/WebAuthn.sol";
 
-import {Base64} from "../../src/libraries/Base64.sol";
-import {Exec} from "../../src/utils/Exec.sol";
 import {ISafe} from "../../src/interfaces/ISafe.sol";
 
 import "../../lib/forge-std/src/console.sol";
@@ -16,12 +14,6 @@ import "../../lib/forge-std/src/console.sol";
  * @notice ERC4337 Safe Module
  * @author Onit Labs (https://onit.fun)
  * @custom:warning This contract has not been audited, and is likely to change.
- */
-
-/**
- * TODO
- * - add execution function
- * - fix verify sig
  */
 contract OnitSafeModule is BaseAccount, HandlerContext {
     /// ----------------------------------------------------------------------------------------
@@ -37,16 +29,6 @@ contract OnitSafeModule is BaseAccount, HandlerContext {
     uint256[2] internal _owner;
 
     string public constant ACCOUNT_VERSION = "v0.2.0";
-
-    /// @dev Values used when public key signs a message
-    /// To make this variable we can pass these with the user op signature, for now we save gas writing them on deploy
-    struct SigningData {
-        bytes authData;
-        string clientDataStart;
-        string clientDataEnd;
-    }
-
-    SigningData public signingData;
 
     /// ----------------------------------------------------------------------------------------
     ///							CONSTRUCTOR
@@ -97,33 +79,17 @@ contract OnitSafeModule is BaseAccount, HandlerContext {
     }
 
     /**
-     * Execute a call but also revert if the execution fails.
-     * The default behavior of the Safe is to not revert if the call fails,
-     * which is challenging for integrating with ERC4337 because then the
-     * EntryPoint wouldn't know to emit the UserOperationRevertReason event,
-     * which the frontend/client uses to capture the reason for the failure.
+     * @notice Executes a user operation provided by the entry point.
+     * @param to Destination address of the user operation.
+     * @param value Ether value of the user operation.
+     * @param data Data payload of the user operation.
+     * @param operation Operation type of the user operation.
      */
-    // function executeAndRevert(
-    //     address to,
-    //     uint256 value,
-    //     bytes memory data,
-    //     Enum.Operation operation
-    // ) external payable {
-    //     _requireFromEntryPoint();
+    function executeUserOp(address to, uint256 value, bytes memory data, uint8 operation) external {
+        _requireFromEntryPoint();
 
-    //     bool success = execute(to, value, data, operation, type(uint256).max);
-
-    //     bytes memory returnData = Exec.getReturnData(type(uint256).max);
-    //     // Revert with the actual reason string
-    //     // Adopted from: https://github.com/Uniswap/v3-periphery/blob/464a8a49611272f7349c970e0fadb7ec1d3c1086/contracts/base/Multicall.sol#L16-L23
-    //     if (!success) {
-    //         if (returnData.length < 68) revert();
-    //         assembly {
-    //             returnData := add(returnData, 0x04)
-    //         }
-    //         revert(abi.decode(returnData, (string)));
-    //     }
-    // }
+        require(ISafe(msg.sender).execTransactionFromModule(to, value, data, operation), "Execution failed");
+    }
 
     function entryPoint() public view virtual override returns (IEntryPoint) {
         return IEntryPoint(_entryPoint);

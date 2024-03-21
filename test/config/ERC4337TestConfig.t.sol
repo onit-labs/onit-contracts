@@ -6,13 +6,11 @@ import {EntryPoint} from "../../lib/account-abstraction/contracts/core/EntryPoin
 import {UserOperationLib} from "../../lib/account-abstraction/contracts/core/UserOperationLib.sol";
 import {PackedUserOperation} from "../../lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 
-// Lib for encoding
-import {Base64} from "../../src/libraries/Base64.sol";
-
 // Test imports
-import {SignatureHelper} from "./SignatureHelper.t.sol";
+// TODO update sig helper to use built in signp256
+//import {SignatureHelper} from "./SignatureHelper.t.sol";
 
-contract ERC4337TestConfig is SignatureHelper {
+contract ERC4337TestConfig {
     using UserOperationLib for PackedUserOperation;
 
     // Entry point
@@ -95,19 +93,19 @@ contract ERC4337TestConfig is SignatureHelper {
     //     return abi.encodeWithSignature("executeAndRevert(address,uint256,bytes,uint8)", to, value, data, operation);
     // }
 
-    function signAndFormatUserOpIndividual(
-        PackedUserOperation memory userOp,
-        string memory signer1
-    ) internal returns (PackedUserOperation[] memory) {
-        userOp.signature = abi.encode(
-            signMessageForPublicKey(signer1, Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(userOp))))
-        );
+    // function signAndFormatUserOpIndividual(
+    //     PackedUserOperation memory userOp,
+    //     string memory signer1
+    // ) internal returns (PackedUserOperation[] memory) {
+    //     userOp.signature = abi.encode(
+    //         signMessageForPublicKey(signer1, Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(userOp))))
+    //     );
 
-        PackedUserOperation[] memory userOpArray = new PackedUserOperation[](1);
-        userOpArray[0] = userOp;
+    //     PackedUserOperation[] memory userOpArray = new PackedUserOperation[](1);
+    //     userOpArray[0] = userOp;
 
-        return userOpArray;
-    }
+    //     return userOpArray;
+    // }
 
     // // Gathers signatures from signers and formats them into the signature field for the user operation
     // // Maybe only one sig is needed, so siger2 may be empty
