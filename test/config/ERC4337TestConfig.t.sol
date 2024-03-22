@@ -7,15 +7,17 @@ import {UserOperationLib} from "../../lib/account-abstraction/contracts/core/Use
 import {PackedUserOperation} from "../../lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 
 // Test imports
+import {Test, console} from "../../lib/forge-std/src/Test.sol";
 // TODO update sig helper to use built in signp256
 //import {SignatureHelper} from "./SignatureHelper.t.sol";
 
-contract ERC4337TestConfig {
+contract ERC4337TestConfig is Test {
     using UserOperationLib for PackedUserOperation;
 
     // Entry point
     EntryPoint public entryPoint;
-    address internal entryPointAddress;
+    address internal constant ENTRY_POINT_V7 = 0x0000000071727De22E5E9d8BAf0edAc6f37da032;
+    address internal entryPointAddress = ENTRY_POINT_V7;
 
     uint192 internal constant BASE_NONCE_KEY = 0;
     uint256 internal constant INITIAL_BALANCE = 100 ether;
@@ -29,7 +31,7 @@ contract ERC4337TestConfig {
 
     constructor() {
         entryPoint = new EntryPoint();
-        entryPointAddress = address(entryPoint);
+        vm.etch(entryPointAddress, address(entryPoint).code);
     }
 
     // -----------------------------------------------------------------------

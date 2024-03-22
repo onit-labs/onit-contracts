@@ -4,8 +4,6 @@ pragma solidity ^0.8.15;
 import "../config/ERC4337TestConfig.t.sol";
 import "../config/SafeTestConfig.t.sol";
 import "../config/AddressTestConfig.t.sol";
-import "../../lib/forge-std/src/Test.sol";
-import "forge-std/console.sol";
 
 import {WebAuthnUtils, WebAuthnInfo} from "../../src/utils/WebAuthnUtils.sol";
 import {WebAuthn} from "../../lib/webauthn-sol/src/WebAuthn.sol";
@@ -16,7 +14,7 @@ import {OnitSafeModule} from "../../src/onit-safe-module/OnitSafeModule.sol";
 /**
  * @notice Some variables and functions used to test the Onit Safe Module
  */
-contract OnitSafeModuleTestBase is AddressTestConfig, ERC4337TestConfig, SafeTestConfig, Test {
+contract OnitSafeModuleTestBase is AddressTestConfig, ERC4337TestConfig, SafeTestConfig {
     // The Onit account is a Safe controlled by an ERC4337 module with passkey signer
     Safe internal onitAccount;
     address payable internal onitAccountAddress;
