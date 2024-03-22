@@ -7,7 +7,7 @@ import "safe-smart-account/contracts/proxies/SafeProxyFactory.sol";
 // Safe Module which we will deploy and set as fallback / module on our Safes
 import {OnitSafeModule} from "./OnitSafeModule.sol";
 
-contract OnitSafeFactory {
+contract OnitSafeModuleFactory {
     SafeProxyFactory public proxyFactory;
 
     address public immutable addModulesLibAddress;

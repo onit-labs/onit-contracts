@@ -10,12 +10,12 @@ import {WebAuthn} from "../../lib/webauthn-sol/src/WebAuthn.sol";
 import {Base64} from "../../lib/webauthn-sol/lib/openzeppelin-contracts/contracts/utils/Base64.sol";
 
 import {OnitSafeModule} from "../../src/onit-safe-module/OnitSafeModule.sol";
-import {OnitSafeFactory} from "../../src/onit-safe-module/OnitSafeFactory.sol";
+import {OnitSafeModuleFactory} from "../../src/onit-safe-module/OnitSafeModuleFactory.sol";
 
 /**
  * @notice Some variables and functions used to test the Onit Safe Module
  */
-contract OnitSafeFactoryTestBase is AddressTestConfig, ERC4337TestConfig, SafeTestConfig {
+contract OnitSafeModuleFactoryTestBase is AddressTestConfig, ERC4337TestConfig, SafeTestConfig {
     // The Onit account is a Safe controlled by an ERC4337 module with passkey signer
     Safe internal onitAccount;
     address payable internal onitAccountAddress;
@@ -23,8 +23,8 @@ contract OnitSafeFactoryTestBase is AddressTestConfig, ERC4337TestConfig, SafeTe
     // The Onit Safe Module is where the passkey is verified
     OnitSafeModule internal onitSafeModule;
 
-    OnitSafeFactory internal onitSafeFactory;
-    address internal onitSafeFactoryAddress;
+    OnitSafeModuleFactory internal onitSafeModuleFactory;
+    address internal onitSafeModuleFactoryAddress;
 
     // Base values - see smart-wallet demo repo //
     bytes authenticatorData = hex"49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97630500000000";
@@ -41,9 +41,9 @@ contract OnitSafeFactoryTestBase is AddressTestConfig, ERC4337TestConfig, SafeTe
     /// -----------------------------------------------------------------------
 
     function setUp() public virtual {
-        onitSafeFactory =
-            new OnitSafeFactory(address(proxyFactory), address(addModulesLib), address(singleton), entryPointAddress);
-        onitSafeFactoryAddress = address(onitSafeFactory);
+        onitSafeModuleFactory =
+            new OnitSafeModuleFactory(address(proxyFactory), address(addModulesLib), address(singleton), entryPointAddress);
+        onitSafeModuleFactoryAddress = address(onitSafeModuleFactory);
     }
 
     /// -----------------------------------------------------------------------
@@ -51,10 +51,10 @@ contract OnitSafeFactoryTestBase is AddressTestConfig, ERC4337TestConfig, SafeTe
     /// -----------------------------------------------------------------------
 
     function testFactorySetupCorrectly() public {
-        assertEq(address(onitSafeFactory.proxyFactory()), address(proxyFactory));
-        assertEq(onitSafeFactory.addModulesLibAddress(), address(addModulesLib));
-        assertEq(onitSafeFactory.safeSingletonAddress(), address(singleton));
-        assertEq(onitSafeFactory.entryPointAddress(), entryPointAddress);
+        assertEq(address(onitSafeModuleFactory.proxyFactory()), address(proxyFactory));
+        assertEq(onitSafeModuleFactory.addModulesLibAddress(), address(addModulesLib));
+        assertEq(onitSafeModuleFactory.safeSingletonAddress(), address(singleton));
+        assertEq(onitSafeModuleFactory.entryPointAddress(), entryPointAddress);
     }
 
     // test that entrypoint and other values are set correctly
