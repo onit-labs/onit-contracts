@@ -19,7 +19,7 @@ import {IEntryPoint, PackedUserOperation} from "../../lib/account-abstraction/co
  * @dev An adaptation of the v0.7.0 ERC4337 Base Account. Intended to be inherited and constructed into an account elsewhere
  * @custom:warning This contract has not been audited, and is likely to change.
  */
-contract Onit4337Wrapper {
+abstract contract Onit4337Wrapper {
     /// ----------------------------------------------------------------------------------------
     ///							ACCOUNT STORAGE
     /// ----------------------------------------------------------------------------------------
@@ -46,7 +46,7 @@ contract Onit4337Wrapper {
         PackedUserOperation calldata userOp,
         bytes32 userOpHash,
         uint256 missingAccountFunds
-    ) external virtual returns (uint256 validationData) {}
+    ) external virtual returns (uint256 validationData);
 
     /// @notice Execute the given call from this account.
     /// @param target The target call address.
@@ -54,7 +54,7 @@ contract Onit4337Wrapper {
     /// @param data   The raw call data.
     /// @param operation The Safe operation type (CALL, DELEGATECALL)
     ///
-    function execute(address target, uint256 value, bytes calldata data, uint8 operation) external payable virtual {}
+    function execute(address target, uint256 value, bytes calldata data, uint8 operation) external payable virtual;
 
     // TODO batch execute function
 
@@ -111,7 +111,7 @@ contract Onit4337Wrapper {
     function _validateSignature(
         PackedUserOperation calldata userOp,
         bytes32 userOpHash
-    ) internal virtual returns (uint256 validationData) {}
+    ) internal virtual returns (uint256 validationData);
 
     /**
      * Validate the nonce of the UserOperation.
@@ -129,7 +129,7 @@ contract Onit4337Wrapper {
      *
      * solhint-disable-next-line no-empty-blocks
      */
-    function _validateNonce(uint256 nonce) internal view virtual {}
+    function _validateNonce(uint256 nonce) internal view virtual;
 
     /// @dev Sends to the EntryPoint (i.e. `msg.sender`) the missing funds for this transaction.
     /// Subclass MAY override this modifier for better funds management.

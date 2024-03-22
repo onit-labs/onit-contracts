@@ -34,6 +34,29 @@ contract OnitSafe is Safe, Onit4337Wrapper {
     ///							ACCOUNT LOGIC
     /// ----------------------------------------------------------------------------------------
 
+    function validateUserOp(
+        PackedUserOperation calldata userOp,
+        bytes32 userOpHash,
+        uint256 missingAccountFunds
+    ) external virtual override returns (uint256 validationData) {
+        _requireFromEntryPoint();
+        
+        // Validate the signature
+        return _validateSignature(userOp, userOpHash);
+   
+        _payPrefund(missingAccountFunds);
+    }
+
+    function execute(
+        address target,
+        uint256 value,
+        bytes calldata data,
+        uint8 operation
+    ) external payable virtual override {
+        // Execute the call 
+        // TODO use safe execution fn here?
+        _call(target, value, data);
+    }
     /// ----------------------------------------------------------------------------------------
     ///							INTERNAL METHODS
     /// ----------------------------------------------------------------------------------------
@@ -41,10 +64,8 @@ contract OnitSafe is Safe, Onit4337Wrapper {
     // TODO consider nonce validation in here as well in on v6 entrypoint
 
     /**
-     * @notice Validate the signature of the user operation
-     * @param userOp The user operation to validate
-     * @param userOpHash The hash of the user operation
-     * @return sigTimeRange The time range the signature is valid for
+     * @inheritdoc Onit4337Wrapper
+     * @dev Validate the user signed the user operation.
      */
     function _validateSignature(
         PackedUserOperation calldata userOp,
@@ -59,5 +80,13 @@ contract OnitSafe is Safe, Onit4337Wrapper {
             x: _owner[0],
             y: _owner[1]
         }) ? 0 : 1;
+    }
+
+    /**
+     * @inheritdoc Onit4337Wrapper
+     * @dev Not used yet, implemented to complete abstract contract
+     */
+    function _validateNonce(uint256 nonce) internal view virtual override {
+        // TODO
     }
 }
