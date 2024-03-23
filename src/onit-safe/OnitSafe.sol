@@ -52,8 +52,7 @@ contract OnitSafe is Safe, Onit4337Wrapper {
     ) external virtual override returns (uint256 validationData) {
         _requireFromEntryPoint();
 
-        // Validate the signature
-        return _validateSignature(userOp, userOpHash);
+        validationData = _validateSignature(userOp, userOpHash);
 
         _payPrefund(missingAccountFunds);
     }

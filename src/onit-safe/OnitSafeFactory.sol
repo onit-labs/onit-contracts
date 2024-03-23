@@ -29,8 +29,6 @@ contract OnitSafeProxyFactory {
         // Check that the salt is tied to the owner if required, regardless.
         //LibClone.checkStartsWith(salt, owner);
 
-        console.log("safeSingletonAddress", safeSingletonAddress);
-
         // Constructor data is optional, and is omitted for easier Etherscan verification.
         (bool alreadyDeployed, address account) =
             LibClone.createDeterministicERC1967(msg.value, safeSingletonAddress, salt);
@@ -53,6 +51,9 @@ contract OnitSafeProxyFactory {
 
         if (!alreadyDeployed) {
             account.call(initializer);
+
+            bytes memory setOwner = abi.encodeWithSignature("setupOnitSafe(uint256[2])", passkeyPublicKey);
+            account.call(setOwner);
 
             // TODO setup onit signers
 
