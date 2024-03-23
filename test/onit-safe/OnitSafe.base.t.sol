@@ -1,40 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.15;
 
-import "../config/ERC4337TestConfig.t.sol";
-import "../config/SafeTestConfig.t.sol";
-import "../config/AddressTestConfig.t.sol";
-import "forge-std/console.sol";
+import {OnitSafeTestCommon, Enum, PackedUserOperation, OnitSafe} from "../OnitSafe.common.t.sol";
 
 import {WebAuthnUtils, WebAuthnInfo} from "../../src/utils/WebAuthnUtils.sol";
 import {WebAuthn} from "../../lib/webauthn-sol/src/WebAuthn.sol";
 import {Base64} from "../../lib/webauthn-sol/lib/openzeppelin-contracts/contracts/utils/Base64.sol";
 
-import {OnitSafe} from "../../src/onit-safe/OnitSafe.sol";
-
 /**
  * @notice Some variables and functions used to test the Onit Safe Module
  */
-contract OnitSafeTestBase is AddressTestConfig, ERC4337TestConfig, SafeTestConfig {
-    OnitSafe internal onitSingleton;
-    
-    // The Onit account is a Safe controlled by an ERC4337 module with passkey signer
-    OnitSafe internal onitAccount;
-    address payable internal onitAccountAddress;
-
-    // Some calldata for transactions
-    bytes internal basicTransferCalldata;
-
-    // Base values - see smart-wallet demo repo //
-    bytes authenticatorData = hex"49960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d97630500000000";
-    string origin = "https://sign.coinbase.com";
-    // Public & private key for testing with base auth data
-    uint256[2] internal publicKeyBase = [
-        0x1c05286fe694493eae33312f2d2e0d0abeda8db76238b7a204be1fb87f54ce42,
-        0x28fef61ef4ac300f631657635c28e59bfb2fe71bce1634c81c65642042f6dc4d
-    ];
-    uint256 passkeyPrivateKey = uint256(0x03d99692017473e2d631945a812607b23269d85721e0f370b8d3e7d29a874fd2);
-
+contract OnitSafeTestBase is OnitSafeTestCommon {
     /// -----------------------------------------------------------------------
     /// Setup
     /// -----------------------------------------------------------------------
@@ -67,7 +43,7 @@ contract OnitSafeTestBase is AddressTestConfig, ERC4337TestConfig, SafeTestConfi
             owners,
             1,
             address(0),
-            new bytes (0), // abi.encodeWithSignature("enableModules(address[])", modules),
+            new bytes(0), // abi.encodeWithSignature("enableModules(address[])", modules),
             address(handler),
             address(0),
             0,
@@ -92,7 +68,7 @@ contract OnitSafeTestBase is AddressTestConfig, ERC4337TestConfig, SafeTestConfi
     function testOnitAccountDeployedCorrectly() public {
         //assertEq(onitAccount.getOwners()[0], address(0xdead));
         assertEq(onitAccount.getThreshold(), 1);
-       // assertTrue(onitAccount.isModuleEnabled(address(onitSafeModule)));
+        // assertTrue(onitAccount.isModuleEnabled(address(onitSafeModule)));
 
         assertEq(address(onitAccount.entryPoint()), entryPointAddress);
         assertEq(onitAccount.owner()[0], publicKeyBase[0]);
@@ -198,7 +174,4 @@ contract OnitSafeTestBase is AddressTestConfig, ERC4337TestConfig, SafeTestConfi
     // ) internal pure returns (bytes memory) {
     //     return abi.encodeWithSignature("executeUserOp(address,uint256,bytes,uint8)", to, value, data, uint8(0));
     // }
-
-    receive() external payable { // Allows this contract to receive ether
-    }
 }
