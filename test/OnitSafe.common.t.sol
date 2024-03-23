@@ -6,11 +6,11 @@ import "./config/ERC4337TestConfig.t.sol";
 import "./config/SafeTestConfig.t.sol";
 import "forge-std/console.sol";
 
-import {OnitSafe} from "../../src/onit-safe/OnitSafe.sol";
-import {OnitSafeFactory} from "../../src/onit-safe/OnitSafeFactory.sol";
+import {OnitSafe} from "../src/onit-safe/OnitSafe.sol";
+import {OnitSafeProxyFactory} from "../src/onit-safe/OnitSafeFactory.sol";
 
-import {OnitSafeModule} from "../../src/onit-safe-module/OnitSafeModule.sol";
-import {OnitSafeModuleFactory} from "../../src/onit-safe-module/OnitSafeModuleFactory.sol";
+import {OnitSafeModule} from "../src/onit-safe-module/OnitSafeModule.sol";
+import {OnitSafeModuleFactory} from "../src/onit-safe-module/OnitSafeModuleFactory.sol";
 
 /**
  * @notice Some variables and functions used in most tests of the Onit Safe
@@ -23,7 +23,7 @@ contract OnitSafeTestCommon is AddressTestConfig, ERC4337TestConfig, SafeTestCon
     address payable internal onitAccountAddress;
 
     // The Onit account factory
-    OnitSafeFactory internal onitSafeFactory;
+    OnitSafeProxyFactory internal onitSafeFactory;
     address internal onitSafeFactoryAddress;
 
     // The Onit account module - WIP!
