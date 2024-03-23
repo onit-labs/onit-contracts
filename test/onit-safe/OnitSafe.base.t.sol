@@ -87,8 +87,16 @@ contract OnitSafeTestBase is OnitSafeTestCommon {
         // We prank entrypoint and call like this for _requireFromEntryPoint check
         vm.prank(entryPointAddress);
         (, bytes memory validationData) = onitAccountAddress.call(validateUserOpCalldata);
-
         assertEq(keccak256(validationData), keccak256(abi.encodePacked(uint256(0))));
+
+        userOp.signature = new bytes(200);
+        validateUserOpCalldata =
+            abi.encodeWithSelector(OnitSafe.validateUserOp.selector, userOp, entryPoint.getUserOpHash(userOp), 0);
+
+        // Returns 1 for  failed signature verification
+        vm.prank(entryPointAddress);
+        (, validationData) = onitAccountAddress.call(validateUserOpCalldata);
+        assertEq(keccak256(validationData), keccak256(abi.encodePacked(uint256(1))));
     }
 
     function testValidateUserOpWithPrefund() public {
@@ -109,6 +117,8 @@ contract OnitSafeTestBase is OnitSafeTestCommon {
         assertEq(keccak256(validationData), keccak256(abi.encodePacked(uint256(0))));
         assertEq(onitAccountAddress.balance, 0.5 ether);
     }
+
+    // todo isValidSignature 1271 test
 
     /// -----------------------------------------------------------------------
     /// Execution tests
@@ -138,6 +148,17 @@ contract OnitSafeTestBase is OnitSafeTestCommon {
         assertEq(alice.balance, aliceBalanceBefore + transferAmount);
         assertEq(onitAccountAddress.balance, onitAccountBalanceBefore - transferAmount);
     }
+
+    function testETHReceived() public {
+        (bool success,) = onitAccountAddress.call{value: 1 ether}("");
+        assertTrue(success);
+    }
+
+    // todo test other receive functions
+
+    // /// -----------------------------------------------------------------------
+    // /// Upgrade tests
+    // /// -----------------------------------------------------------------------
 
     // /// -----------------------------------------------------------------------
     // /// Utils
