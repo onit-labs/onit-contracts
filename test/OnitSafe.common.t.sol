@@ -12,6 +12,8 @@ import {WebAuthnUtils, WebAuthnInfo} from "../src/utils/WebAuthnUtils.sol";
 import {WebAuthn} from "../lib/webauthn-sol/src/WebAuthn.sol";
 import {Base64} from "../lib/webauthn-sol/lib/openzeppelin-contracts/contracts/utils/Base64.sol";
 
+import {Onit4337Wrapper} from "../src/Onit4337Wrapper.sol";
+
 // Onit Safe imports
 import {OnitSafe} from "../src/onit-safe/OnitSafe.sol";
 import {OnitSafeProxyFactory} from "../src/onit-safe/OnitSafeFactory.sol";

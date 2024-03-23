@@ -99,4 +99,9 @@ contract OnitSafe is Safe, Onit4337Wrapper {
     function _validateNonce(uint256 nonce) internal view virtual override {
         // TODO
     }
+
+    /// @dev To ensure that only the owner or the account itself can upgrade the implementation.
+    function _authorizeUpgrade(address) internal virtual override {
+        _requireFromEntryPoint();
+    }
 }

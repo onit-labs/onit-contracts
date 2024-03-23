@@ -2,11 +2,10 @@
 pragma solidity ^0.8.23;
 
 import {IEntryPoint, PackedUserOperation} from "../lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import {UUPSUpgradeable} from "../lib/webauthn-sol/lib/solady/src/utils/UUPSUpgradeable.sol";
 
 /**
  * TODO
- * - Make this an upgradable proxy, or consider other options here
- * - convert for use with proxy?
  * - consider execute functions given this contract will be inherited by the safe OR a module/fallback
  * - more advanced nonce management (out of order, session keys etc)
  */
@@ -19,7 +18,7 @@ import {IEntryPoint, PackedUserOperation} from "../lib/account-abstraction/contr
  * @dev An adaptation of the v0.7.0 ERC4337 Base Account. Intended to be inherited and constructed into an account elsewhere
  * @custom:warning This contract has not been audited, and is likely to change.
  */
-abstract contract Onit4337Wrapper {
+abstract contract Onit4337Wrapper is UUPSUpgradeable {
     /// ----------------------------------------------------------------------------------------
     ///							ACCOUNT STORAGE
     /// ----------------------------------------------------------------------------------------

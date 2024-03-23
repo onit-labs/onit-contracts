@@ -7,13 +7,19 @@ import {
     PackedUserOperation,
     OnitSafe,
     OnitSafeProxyFactory,
+    Onit4337Wrapper,
     console
 } from "../OnitSafe.common.t.sol";
+
+import {UUPSUpgradeable} from "../../lib/webauthn-sol/lib/solady/src/utils/UUPSUpgradeable.sol";
 
 /**
  * @notice Some variables and functions used to test the Onit Safe Module
  */
 contract OnitSafeTestBase is OnitSafeTestCommon {
+    bytes32 internal constant _ERC1967_IMPLEMENTATION_SLOT =
+        0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
+
     /// -----------------------------------------------------------------------
     /// Setup
     /// -----------------------------------------------------------------------
@@ -159,6 +165,29 @@ contract OnitSafeTestBase is OnitSafeTestCommon {
     // /// -----------------------------------------------------------------------
     // /// Upgrade tests
     // /// -----------------------------------------------------------------------
+
+    function testUpgradeTo() public {
+        OnitSafe impl2 = new OnitSafe();
+
+        vm.prank(entryPointAddress);
+        onitAccount.upgradeToAndCall(address(impl2), bytes(""));
+
+        bytes32 v = vm.load(onitAccountAddress, _ERC1967_IMPLEMENTATION_SLOT);
+        assertEq(address(uint160(uint256(v))), address(impl2));
+    }
+
+    function testUpgradeToRevertWithUnauthorized() public {
+        vm.expectRevert(Onit4337Wrapper.NotFromEntryPoint.selector);
+        onitAccount.upgradeToAndCall(DEAD_ADDRESS, bytes(""));
+    }
+
+    function testUpgradeToRevertWithUpgradeFailed() public {
+        vm.expectRevert(UUPSUpgradeable.UpgradeFailed.selector);
+        onitAccount.upgradeToAndCall(address(0xABCD), bytes(""));
+    }
+
+    // todo consider upgrateToAndCall tests
+    // todo consider delegation and proxy guard tests
 
     // /// -----------------------------------------------------------------------
     // /// Utils
