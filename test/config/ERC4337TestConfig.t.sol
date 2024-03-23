@@ -32,6 +32,7 @@ contract ERC4337TestConfig is Test {
     constructor() {
         entryPoint = new EntryPoint();
         vm.etch(entryPointAddress, address(entryPoint).code);
+        entryPoint = EntryPoint(payable(entryPointAddress));
     }
 
     // -----------------------------------------------------------------------
