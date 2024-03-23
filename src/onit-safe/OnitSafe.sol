@@ -23,11 +23,22 @@ contract OnitSafe is Safe, Onit4337Wrapper {
     ///							CONSTRUCTOR
     /// ----------------------------------------------------------------------------------------
 
+    /**
+     * @notice Constructor
+     * @dev Ensures that this contract can only be used as a singleton for Proxy contracts
+     */
+    constructor() Safe() {
+        // The implementation should not be setup so we set owner to prevent it
+        _owner = [1, 1];
+    }
+
     function setupOnitSafe(uint256[2] memory setupOwner) public {
+        if (_owner[0] != 0 || _owner[1] != 0) {
+            revert AlreadyInitialized();
+        }
+
         // Set the owner of the implementation contract so it can not be initialized again
         _owner = setupOwner;
-
-        // super.setup();
     }
 
     /// ----------------------------------------------------------------------------------------
@@ -40,10 +51,10 @@ contract OnitSafe is Safe, Onit4337Wrapper {
         uint256 missingAccountFunds
     ) external virtual override returns (uint256 validationData) {
         _requireFromEntryPoint();
-        
+
         // Validate the signature
         return _validateSignature(userOp, userOpHash);
-   
+
         _payPrefund(missingAccountFunds);
     }
 
@@ -53,7 +64,7 @@ contract OnitSafe is Safe, Onit4337Wrapper {
         bytes calldata data,
         uint8 operation
     ) external payable virtual override {
-        // Execute the call 
+        // Execute the call
         // TODO use safe execution fn here?
         _call(target, value, data);
     }

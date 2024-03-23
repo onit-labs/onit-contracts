@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.15;
 
-import {OnitSafeTestCommon, Enum, PackedUserOperation, OnitSafe} from "../OnitSafe.common.t.sol";
+import {OnitSafeTestCommon, Enum, PackedUserOperation, OnitSafe, OnitSafeProxyFactory} from "../OnitSafe.common.t.sol";
 
 import {WebAuthnUtils, WebAuthnInfo} from "../../src/utils/WebAuthnUtils.sol";
 import {WebAuthn} from "../../lib/webauthn-sol/src/WebAuthn.sol";
@@ -14,10 +14,13 @@ contract OnitSafeTestBase is OnitSafeTestCommon {
     /// -----------------------------------------------------------------------
     /// Setup
     /// -----------------------------------------------------------------------
-
     function setUp() public virtual {
-        // deploy module with pk and ep
-        deployOnitAccount(publicKeyBase);
+        // Deploy contracts
+        onitSingleton = new OnitSafe();
+        onitSafeFactory = new OnitSafeProxyFactory(address(handler), address(onitSingleton));
+
+        onitAccount = OnitSafe(payable(onitSafeFactory.createAccount(publicKeyBase, keccak256("a"))));
+        onitAccountAddress = payable(address(onitAccount));
 
         // Deal funds to account
         deal(onitAccountAddress, 1 ether);
@@ -26,51 +29,35 @@ contract OnitSafeTestBase is OnitSafeTestCommon {
         //basicTransferCalldata = buildExecutionPayload(alice, uint256(0.5 ether), "", Enum.Operation.Call);
     }
 
-    // See https://github.com/safe-global/safe-modules/modules/4337/README.md
-    function deployOnitAccount(uint256[2] memory pk) internal {
-        // Deploy module with passkey public key as owner
-        onitSingleton = new OnitSafe();
-
-        // address[] memory modules = new address[](1);
-        // modules[0] = address(onitSafeModule);
-
-        // Placeholder owners
-        address[] memory owners = new address[](1);
-        owners[0] = address(0xdead);
-
-        bytes memory initializer = abi.encodeWithSignature(
-            "setup(address[],uint256,address,bytes,address,address,uint256,address)",
-            owners,
-            1,
-            address(0),
-            new bytes(0), // abi.encodeWithSignature("enableModules(address[])", modules),
-            address(handler),
-            address(0),
-            0,
-            address(0)
-        );
-
-        // bytes memory initCallData =
-        //     abi.encodeWithSignature("createProxyWithNonce(address,bytes,uint256)", address(singleton), initializer, 99);
-
-        // bytes memory initCode = abi.encodePacked(address(proxyFactory), initCallData);
-
-        onitAccountAddress = payable(proxyFactory.createProxyWithNonce(address(onitSingleton), initializer, 99));
-        onitAccount = OnitSafe(onitAccountAddress);
-
-        deal(onitAccountAddress, 1 ether);
-    }
-
     /// -----------------------------------------------------------------------
     /// Setup tests
     /// -----------------------------------------------------------------------
 
-    function testOnitAccountDeployedCorrectly() public {
-        //assertEq(onitAccount.getOwners()[0], address(0xdead));
-        assertEq(onitAccount.getThreshold(), 1);
-        // assertTrue(onitAccount.isModuleEnabled(address(onitSafeModule)));
+    function testCannotSetupSingleton() public {
+        // Try to setup the Onit function on singleton
+        vm.expectRevert(OnitSafe.AlreadyInitialized.selector);
+        onitSingleton.setupOnitSafe(publicKeyBase);
 
+        // Check that the owner is still the placeholder
+        assertEq(onitSingleton.owner()[0], 1);
+        assertEq(onitSingleton.owner()[1], 1);
+
+        address[] memory owners = new address[](1);
+        owners[0] = address(0xdead);
+
+        // Try to setup the safe function on singleton
+        vm.expectRevert("GS200");
+        onitSingleton.setup(owners, 1, address(0), new bytes(0), address(0), address(0), 0, payable(0));
+    }
+
+    function testOnitAccountDeployedCorrectly() public {
+        // Safe variables set
+        assertEq(onitAccount.getOwners()[0], address(0xdead));
+        assertEq(onitAccount.getThreshold(), 1);
+
+        // 4337 variables set
         assertEq(address(onitAccount.entryPoint()), entryPointAddress);
+        assertEq(onitAccount.getNonce(), 0);
         assertEq(onitAccount.owner()[0], publicKeyBase[0]);
         assertEq(onitAccount.owner()[1], publicKeyBase[1]);
     }

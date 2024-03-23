@@ -1,46 +1,39 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-// Factory for deploying Safes
-import "safe-smart-account/contracts/proxies/SafeProxyFactory.sol";
+import {LibClone} from "../../lib/webauthn-sol/lib/solady/src/utils/LibClone.sol";
 
 // Safe Module which we will deploy and set as fallback / module on our Safes
 import {OnitSafe} from "./OnitSafe.sol";
 
-contract OnitSafeFactory {
-    SafeProxyFactory public proxyFactory;
+import "forge-std/console.sol";
 
-    address public immutable addModulesLibAddress;
+/// @title OnitSafeProxyFactory
+/// @notice Factory contract to deploy OnitSafeProxy contracts
+/// @author Onit Labs
+/// @author modified from Solady (https://github.com/Vectorized/solady/blob/main/src/accounts/ERC4337Factory.sol)
+contract OnitSafeProxyFactory {
+    address public immutable compatibilityFallbackHandler;
     address public immutable safeSingletonAddress;
-    address public immutable entryPointAddress;
 
-    constructor(
-        address _proxyFactoryAddress,
-        address _addModulesLibAddress,
-        address _safeSingletonAddress,
-        address _entryPointAddress
-    ) {
-        proxyFactory = SafeProxyFactory(_proxyFactoryAddress);
-
-        addModulesLibAddress = _addModulesLibAddress;
+    constructor(address _compatibilityFallbackHandler, address _safeSingletonAddress) {
+        compatibilityFallbackHandler = _compatibilityFallbackHandler;
         safeSingletonAddress = _safeSingletonAddress;
-        entryPointAddress = _entryPointAddress;
     }
 
-    /**
-     * @notice Deploys a Safe with a OnitSafeModule and a passkey signer
-     * @param passkeyPublicKey The public key of the passkey signer
-     * @dev See https://github.com/safe-global/safe-modules/modules/4337/README.md for explaination of this initialisation
-     */
-    function createOnitSafe(
-        uint256[2] memory passkeyPublicKey,
-        uint256 nonce
-    ) public returns (address payable onitAccountAddress) {
-        // Deploy module with passkey signer
-        OnitSafe safe4337Module = new OnitSafe();
+    /// @dev Deploys an ERC4337 account with `salt` and returns its deterministic address.
+    /// If the account is already deployed, it will simply return its address.
+    /// Any `msg.value` will simply be forwarded to the account, regardless.
+    function createAccount(uint256[2] memory passkeyPublicKey, bytes32 salt) public payable virtual returns (address) {
+        // TODO consider checkstartswith here
+        // Check that the salt is tied to the owner if required, regardless.
+        //LibClone.checkStartsWith(salt, owner);
 
-        address[] memory modules = new address[](1);
-        modules[0] = address(safe4337Module);
+        console.log("safeSingletonAddress", safeSingletonAddress);
+
+        // Constructor data is optional, and is omitted for easier Etherscan verification.
+        (bool alreadyDeployed, address account) =
+            LibClone.createDeterministicERC1967(msg.value, safeSingletonAddress, salt);
 
         // Placeholder owners since we use a passkey signer only
         address[] memory owners = new address[](1);
@@ -50,14 +43,34 @@ contract OnitSafeFactory {
             "setup(address[],uint256,address,bytes,address,address,uint256,address)",
             owners,
             1,
-            addModulesLibAddress,
-            abi.encodeWithSignature("enableModules(address[])", modules),
-            address(safe4337Module),
+            address(0), // compatibilityFallbackHandler,
+            new bytes(0), //abi.encodeWithSignature("enableModules(address[])", modules),
+            compatibilityFallbackHandler,
             address(0),
             0,
             address(0)
         );
 
-        onitAccountAddress = payable(proxyFactory.createProxyWithNonce(safeSingletonAddress, initializer, nonce));
+        if (!alreadyDeployed) {
+            account.call(initializer);
+
+            // TODO setup onit signers
+
+            /// @solidity memory-safe-assembly
+            // assembly {
+            //     mstore(0x14, owner) // Store the `owner` argument.
+            //     mstore(0x00, 0xc4d66de8000000000000000000000000) // `initialize(address)`.
+            //     if iszero(call(gas(), account, 0, 0x10, 0x24, codesize(), 0x00)) {
+            //         returndatacopy(mload(0x40), 0x00, returndatasize())
+            //         revert(mload(0x40), returndatasize())
+            //     }
+            // }
+        }
+        return account;
+    }
+
+    /// @dev Returns the deterministic address of the account created via `createAccount`.
+    function getAddress(bytes32 salt) public view virtual returns (address) {
+        return LibClone.predictDeterministicAddressERC1967(safeSingletonAddress, salt, address(this));
     }
 }
