@@ -11,6 +11,7 @@ pragma solidity ^0.8.4;
 ///      hash. The domain separator of this outer hash contains the chain id and address of this contract, so that
 ///      it cannot be used on two accounts (see `replaySafeHash()` for the implementation details).
 ///
+/// @author Onit - modified from:
 /// @author Coinbase (https://github.com/coinbase/smart-wallet)
 /// @author Solady (https://github.com/vectorized/solady/blob/main/src/accounts/ERC1271.sol)
 abstract contract ERC1271 {
@@ -95,9 +96,10 @@ abstract contract ERC1271 {
     ///
     /// @dev Implements domainSeparator = hashStruct(eip712Domain).
     ///      See https://eips.ethereum.org/EIPS/eip-712#definition-of-domainseparator.
+    /// @dev Renamed to avoid clash with non virtual Safe function
     ///
     /// @return The 32 bytes domain separator result.
-    function domainSeparator() public view returns (bytes32) {
+    function eip712DomainSeparator() public view returns (bytes32) {
         (string memory name, string memory version) = _domainNameAndVersion();
         return keccak256(
             abi.encode(
@@ -119,7 +121,7 @@ abstract contract ERC1271 {
     ////
     /// @return The resulting EIP-712 hash.
     function _eip712Hash(bytes32 hash) internal view virtual returns (bytes32) {
-        return keccak256(abi.encodePacked("\x19\x01", domainSeparator(), _hashStruct(hash)));
+        return keccak256(abi.encodePacked("\x19\x01", eip712DomainSeparator(), _hashStruct(hash)));
     }
 
     /// @notice Returns the EIP-712 `hashStruct` result of the `CoinbaseSmartWalletMessage(bytes32 hash)` data structure.
