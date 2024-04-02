@@ -183,6 +183,7 @@ contract OnitSafeTestBase is OnitSafeTestCommon {
 
     function testUpgradeToRevertWithUpgradeFailed() public {
         vm.expectRevert(UUPSUpgradeable.UpgradeFailed.selector);
+        vm.prank(entryPointAddress);
         onitAccount.upgradeToAndCall(address(0xABCD), bytes(""));
     }
 

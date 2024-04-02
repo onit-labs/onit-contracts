@@ -46,6 +46,20 @@ contract OnitSafe is Safe, Onit4337Wrapper, ERC1271 {
     ///							ACCOUNT LOGIC
     /// ----------------------------------------------------------------------------------------
 
+    /// @notice Custom implemenentation of the ERC-4337 `validateUserOp` method. The EntryPoint will
+    ///         make the call to the recipient only if this validation call returns successfully.
+    ///         See `IAccount.validateUserOp()`.
+    ///
+    /// @dev Signature failure should be reported by returning 1 (see: `_validateSignature()`). This
+    ///      allows making a "simulation call" without a valid signature. Other failures (e.g. nonce
+    ///      mismatch, or invalid signature format) should still revert to signal failure.
+    /// @dev Reverts if the signature verification fails (except for the case mentionned earlier).
+    ///
+    /// @param userOp              The `UserOperation` to validate.
+    /// @param userOpHash          The `UserOperation` hash (including the chain ID).
+    /// @param missingAccountFunds The missing account funds that must be deposited on the Entrypoint.
+    ///
+    /// @return validationData The encoded `ValidationData` structure
     function validateUserOp(
         PackedUserOperation calldata userOp,
         bytes32 userOpHash,
@@ -53,11 +67,17 @@ contract OnitSafe is Safe, Onit4337Wrapper, ERC1271 {
     ) external virtual override returns (uint256 validationData) {
         _requireFromEntryPoint();
 
-        validationData = _validateSignature(userOp, userOpHash);
+        validationData = _validateSignature(userOpHash, userOp.signature) ? 0 : 1;
 
         _payPrefund(missingAccountFunds);
     }
 
+    /// @notice Execute a call from this account
+    ///
+    /// @param target contract address to call
+    /// @param value value to send
+    /// @param data to be executed on the target contract
+    /// @param operation type of operation (CALL, DELEGATECALL)
     function execute(
         address target,
         uint256 value,
@@ -69,20 +89,20 @@ contract OnitSafe is Safe, Onit4337Wrapper, ERC1271 {
         _call(target, value, data);
     }
 
-    // TODO
-    function domainSeparator() public view override(Safe, ERC1271) returns (bytes32) {}
-
     /// ----------------------------------------------------------------------------------------
     ///							INTERNAL METHODS
     /// ----------------------------------------------------------------------------------------
 
-    /**
-     * @notice Validate the signature of a message for ERC1271
-     * @param message   The message whose signature has been performed on
-     * @param signature The signature associated with `message`
-     * @return `true` is the signature is valid, else `false`
-     * // TODO
-     */
+    /// @inheritdoc ERC1271
+    ///
+    /// @dev Used both for classic ERC-1271 signature AND `UserOperation` validations.
+    /// @dev Reverts if the signature does not correspond to an ERC-1271 signature or to the abi
+    ///      encoded version of a `WebAuthnAuth` struct.
+    /// @dev Does NOT revert if the signature verification fails to allow making a "simulation call"
+    ///      without a valid signature.
+    ///
+    /// @param message   The message whose signature has been performed on
+    /// @param signature The abi encoded `SignatureWrapper` struct
     function _validateSignature(bytes32 message, bytes calldata signature) internal view override returns (bool) {
         return WebAuthn.verify({
             challenge: abi.encodePacked(message),
@@ -93,24 +113,24 @@ contract OnitSafe is Safe, Onit4337Wrapper, ERC1271 {
         });
     }
 
-    /**
-     * @inheritdoc Onit4337Wrapper
-     * @dev Validate the user signed the user operation.
-     */
-    function _validateSignature(
-        PackedUserOperation calldata userOp,
-        bytes32 userOpHash
-    ) internal virtual override returns (uint256 sigTimeRange) {
-        WebAuthn.WebAuthnAuth memory auth = abi.decode(userOp.signature, (WebAuthn.WebAuthnAuth));
+    // /**
+    //  * @inheritdoc Onit4337Wrapper
+    //  * @dev Validate the user signed the user operation.
+    //  */
+    // function _validateSignature(
+    //     PackedUserOperation calldata userOp,
+    //     bytes32 userOpHash
+    // ) internal virtual override returns (uint256 sigTimeRange) {
+    //     WebAuthn.WebAuthnAuth memory auth = abi.decode(userOp.signature, (WebAuthn.WebAuthnAuth));
 
-        return WebAuthn.verify({
-            challenge: abi.encodePacked(userOpHash),
-            requireUV: false,
-            webAuthnAuth: auth,
-            x: _owner[0],
-            y: _owner[1]
-        }) ? 0 : 1;
-    }
+    //     return WebAuthn.verify({
+    //         challenge: abi.encodePacked(userOpHash),
+    //         requireUV: false,
+    //         webAuthnAuth: auth,
+    //         x: _owner[0],
+    //         y: _owner[1]
+    //     }) ? 0 : 1;
+    // }
 
     /**
      * @inheritdoc Onit4337Wrapper

@@ -40,6 +40,7 @@ abstract contract Onit4337Wrapper is UUPSUpgradeable {
     /// @param userOpHash The hash of the user operation
     /// @param missingAccountFunds The amount of funds missing in the account
     /// @return validationData The validation data, detailed in _validateSignature
+    /// @dev Implementation should provide some _validateSignature logic
     ///
     function validateUserOp(
         PackedUserOperation calldata userOp,
@@ -84,33 +85,12 @@ abstract contract Onit4337Wrapper is UUPSUpgradeable {
     ///							INTERNAL METHODS
     /// ----------------------------------------------------------------------------------------
 
-    // TODO consider nonce validation in here as well in on v6 entrypoint
-
     /**
      * Ensure the request comes from the known entrypoint.
      */
     function _requireFromEntryPoint() internal view virtual {
         if (msg.sender != address(entryPoint())) revert NotFromEntryPoint();
     }
-
-    /**
-     * Validate the signature is valid for this message.
-     * @param userOp          - Validate the userOp.signature field.
-     * @param userOpHash      - Convenient field: the hash of the request, to check the signature against.
-     *                          (also hashes the entrypoint and chain id)
-     * @return validationData - Signature and time-range of this operation.
-     *                          <20-byte> aggregatorOrSigFail - 0 for valid signature, 1 to mark signature failure,
-     *                                    otherwise, an address of an aggregator contract.
-     *                          <6-byte> validUntil - last timestamp this operation is valid. 0 for "indefinite"
-     *                          <6-byte> validAfter - first timestamp this operation is valid
-     *                          If the account doesn't use time-range, it is enough to return
-     *                          SIG_VALIDATION_FAILED value (1) for signature failure.
-     *                          Note that the validation code cannot use block.timestamp (or block.number) directly.
-     */
-    function _validateSignature(
-        PackedUserOperation calldata userOp,
-        bytes32 userOpHash
-    ) internal virtual returns (uint256 validationData);
 
     /**
      * Validate the nonce of the UserOperation.
