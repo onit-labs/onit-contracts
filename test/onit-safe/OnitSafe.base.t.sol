@@ -3,11 +3,14 @@ pragma solidity ^0.8.15;
 
 import {
     OnitSafeTestCommon,
+    Safe,
     Enum,
     PackedUserOperation,
     OnitSafe,
     OnitSafeProxyFactory,
     Onit4337Wrapper,
+    SafeInstance,
+    EnumTestTools,
     console
 } from "../OnitSafe.common.t.sol";
 
@@ -124,8 +127,63 @@ contract OnitSafeTestBase is OnitSafeTestCommon {
         assertEq(onitAccountAddress.balance, 0.5 ether);
     }
 
-    // todo isValidSignature 1271 test
+    function testIsValidSignature() public {
+        // Some basic user operation
+        PackedUserOperation memory userOp = buildUserOp(onitAccountAddress, 0, new bytes(0), new bytes(0));
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
 
+        // Sign the user operation and format signature into webauthn format to verify
+        bytes memory sig = webauthnSignHash(onitAccount.replaySafeHash(userOpHash), passkeyPrivateKey);
+
+        bytes4 result = onitAccount.isValidSignature(userOpHash, sig);
+
+        // Check that the signature is valid
+        assert(result == 0x1626ba7e);
+    }
+
+    function testSignAsOwnerOnASafe() public {
+        // Setup a test safe where the onit account is an owner
+        address[] memory owners = new address[](2);
+        owners[0] = alice;
+        owners[1] = onitAccountAddress;
+
+        Safe testSafe = Safe(
+            payable(
+                proxyFactory.createProxyWithNonce(
+                    address(singleton),
+                    abi.encodeWithSignature(
+                        "setup(address[],uint256,address,bytes,address,address,uint256,address)",
+                        owners,
+                        1,
+                        address(0),
+                        new bytes(0),
+                        address(0),
+                        address(0),
+                        0,
+                        payable(0)
+                    ),
+                    0
+                )
+            )
+        );
+
+        // Sign the safe tx with the passkey onit safe & format signature into webauthn format
+        bytes memory sig = webauthnSignHash(
+            onitAccount.getMessageHash(
+                testSafe.encodeTransactionData(
+                    address(onitAccountAddress), 0, "", Enum.Operation.Call, 0, 0, 0, address(0), payable(0), 0
+                )
+            ),
+            passkeyPrivateKey
+        );
+
+        // format the sig into [r, s, v, signature] format (used for contract sigs on safe)
+        bytes memory formattedSafeSig = abi.encode(address(uint160(owners[1])), uint256(128), uint8(0), sig);
+
+        testSafe.execTransaction(
+            address(onitAccountAddress), 0, "", Enum.Operation.Call, 0, 0, 0, address(0), payable(0), formattedSafeSig
+        );
+    }
     /// -----------------------------------------------------------------------
     /// Execution tests
     /// -----------------------------------------------------------------------

@@ -9,6 +9,12 @@ import {ERC1271} from "../utils/ERC1271.sol";
 import "../../lib/forge-std/src/console.sol";
 
 /**
+ * @TODO
+ * - Implement _validateNonce
+ * - Consider all paths that could lead to isValidSignature (from Safe for a contract signature, from dapp etc)
+ */
+
+/**
  * @notice ERC4337 Safe Account
  * @author Onit Labs (https://onit.fun)
  * @custom:warning This contract has not been audited, and is likely to change.
@@ -19,6 +25,9 @@ contract OnitSafe is Safe, Onit4337Wrapper, ERC1271 {
     /// ----------------------------------------------------------------------------------------
 
     error AlreadyInitialized();
+
+    // keccak256("SafeMessage(bytes message)");
+    bytes32 private constant SAFE_MSG_TYPEHASH = 0x60b3cbf8b4a223d68d641b3b6ddf9a298e7f33710cf3d3a9d1146b5a6150fbca;
 
     /// ----------------------------------------------------------------------------------------
     ///							CONSTRUCTOR
@@ -90,6 +99,64 @@ contract OnitSafe is Safe, Onit4337Wrapper, ERC1271 {
     }
 
     /// ----------------------------------------------------------------------------------------
+    ///							LEGACY EIP-1271 METHOD
+    /// ----------------------------------------------------------------------------------------
+
+    /**
+     * @notice Legacy EIP-1271 signature validation method.
+     * @dev Implementation of ISignatureValidator (see Safe `interfaces/ISignatureValidator.sol`)
+     * @param _data Arbitrary length data signed on the behalf of address(msg.sender).
+     * @param _signature Signature byte array associated with _data.
+     * @return The Legacy EIP-1271 magic value: bytes4(keccak256("isValidSignature(bytes,bytes)") = 0x20c13b0b
+     */
+    function isValidSignature(bytes memory _data, bytes calldata _signature) public view returns (bytes4) {
+        // TODO Consider check if this call is coming from another Safe
+        // if not do not form the message hash in the same way
+
+        bytes memory messageData = encodeMessageData(_data);
+        bytes32 messageHash = keccak256(messageData);
+        if (_signature.length == 0) {
+            require(signedMessages[messageHash] != 0, "Hash not approved");
+        } else {
+            console.logBytes32(messageHash);
+            if (_validateSignature(messageHash, _signature)) return EIP1271_MAGIC_VALUE;
+        }
+    }
+
+    /// ----------------------------------------------------------------------------------------
+    ///							SAFE MESSAGE METHODS
+    /// ----------------------------------------------------------------------------------------
+
+    /**
+     * @dev
+     * The below Safe message methods are moved here from their normal place in the Safe CompatibilityFallbackHandler.
+     * That is because we implement the ISignatureValidator and updated EIP1271 logic here on the OnitSafe contract.
+     * Beyond moving these methods here, nothing changes in relation to Safe messages - they are still:
+     * - Created by delegate calling the `signMessage` method on the SignMessageLib contract
+     * - Written to the signedMessages storage mapping
+     * - Checked in the `isValidSignature` method when signature is empty
+     */
+
+    /**
+     * @dev Returns the hash of a message to be signed by owners.
+     * @param message Raw message bytes.
+     * @return Message hash.
+     */
+    function getMessageHash(bytes memory message) public view returns (bytes32) {
+        return keccak256(encodeMessageData(message));
+    }
+
+    /**
+     * @dev Returns the pre-image of the message hash (see getMessageHash).
+     * @param message Message that should be encoded.
+     * @return Encoded message.
+     */
+    function encodeMessageData(bytes memory message) public view returns (bytes memory) {
+        bytes32 safeMessageHash = keccak256(abi.encode(SAFE_MSG_TYPEHASH, keccak256(message)));
+        return abi.encodePacked(bytes1(0x19), bytes1(0x01), domainSeparator(), safeMessageHash);
+    }
+
+    /// ----------------------------------------------------------------------------------------
     ///							INTERNAL METHODS
     /// ----------------------------------------------------------------------------------------
 
@@ -112,25 +179,6 @@ contract OnitSafe is Safe, Onit4337Wrapper, ERC1271 {
             y: _owner[1]
         });
     }
-
-    // /**
-    //  * @inheritdoc Onit4337Wrapper
-    //  * @dev Validate the user signed the user operation.
-    //  */
-    // function _validateSignature(
-    //     PackedUserOperation calldata userOp,
-    //     bytes32 userOpHash
-    // ) internal virtual override returns (uint256 sigTimeRange) {
-    //     WebAuthn.WebAuthnAuth memory auth = abi.decode(userOp.signature, (WebAuthn.WebAuthnAuth));
-
-    //     return WebAuthn.verify({
-    //         challenge: abi.encodePacked(userOpHash),
-    //         requireUV: false,
-    //         webAuthnAuth: auth,
-    //         x: _owner[0],
-    //         y: _owner[1]
-    //     }) ? 0 : 1;
-    // }
 
     /**
      * @inheritdoc Onit4337Wrapper

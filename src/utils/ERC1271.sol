@@ -23,6 +23,9 @@ abstract contract ERC1271 {
     ///         - An EIP-712 hash: keccak256("\x19\x01" || someDomainSeparator || hashStruct(someStruct))
     bytes32 private constant _MESSAGE_TYPEHASH = keccak256("CoinbaseSmartWalletMessage(bytes32 hash)");
 
+    /// @dev EIP-1271 return value: bytes4(keccak256("isValidSignature(bytes32,bytes)")
+    bytes4 internal constant UPDATED_EIP1271_MAGIC_VALUE = 0x1626ba7e;
+
     /// @notice Returns information about the `EIP712Domain` used to create EIP-712 compliant hashes.
     ///
     /// @dev Follows ERC-5267 (see https://eips.ethereum.org/EIPS/eip-5267).
@@ -68,12 +71,7 @@ abstract contract ERC1271 {
     ///
     /// @return result `0x1626ba7e` if validation succeeded, else `0xffffffff`.
     function isValidSignature(bytes32 hash, bytes calldata signature) public view virtual returns (bytes4 result) {
-        if (_validateSignature({message: replaySafeHash(hash), signature: signature})) {
-            // bytes4(keccak256("isValidSignature(bytes32,bytes)"))
-            return 0x1626ba7e;
-        }
-
-        return 0xffffffff;
+        return _validateSignature(replaySafeHash(hash), signature) ? UPDATED_EIP1271_MAGIC_VALUE : bytes4(0xffffffff);
     }
 
     /// @notice Wrapper around `_eip712Hash()` to produce a replay-safe hash fron the given `hash`.

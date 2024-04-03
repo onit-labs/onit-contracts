@@ -67,7 +67,17 @@ contract OnitSafeTestCommon is AddressTestConfig, ERC4337TestConfig, SafeTestCon
     ) internal returns (PackedUserOperation memory) {
         // Get the webauthn struct which will be verified by the module
         bytes32 challenge = entryPoint.getUserOpHash(userOp);
-        WebAuthnInfo memory webAuthn = WebAuthnUtils.getWebAuthnStruct(challenge, authenticatorData, origin);
+
+        // Sign the challenge with the private key
+        bytes memory pksig = webauthnSignHash(challenge, privateKey);
+        userOp.signature = pksig;
+
+        return userOp;
+    }
+
+    function webauthnSignHash(bytes32 hash, uint256 privateKey) internal view returns (bytes memory) {
+        // Get the webauthn struct which will be verified by the module
+        WebAuthnInfo memory webAuthn = WebAuthnUtils.getWebAuthnStruct(hash, authenticatorData, origin);
 
         (bytes32 r, bytes32 s) = vm.signP256(privateKey, webAuthn.messageHash);
 
@@ -82,9 +92,8 @@ contract OnitSafeTestCommon is AddressTestConfig, ERC4337TestConfig, SafeTestCon
                 s: uint256(s)
             })
         );
-        userOp.signature = pksig;
 
-        return userOp;
+        return pksig;
     }
 
     receive() external payable { // Allows this contract to receive ether

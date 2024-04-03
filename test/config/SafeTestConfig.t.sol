@@ -12,7 +12,9 @@ import {
     SafeTestTools,
     CompatibilityFallbackHandler,
     SafeProxyFactory,
-    SignMessageLib
+    SignMessageLib,
+    SafeInstance,
+    Enum as EnumTestTools
 } from "../../lib/safe-tools/src/SafeTestTools.sol";
 
 // General setup helper for all safe contracts
