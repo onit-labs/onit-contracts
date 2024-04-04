@@ -89,11 +89,26 @@ contract OnitSafeTestCommon is AddressTestConfig, ERC4337TestConfig, SafeTestCon
                 typeIndex: 1,
                 challengeIndex: 23,
                 r: uint256(r),
-                s: uint256(s)
+                s: sMalleabilityCheck(uint256(s))
             })
         );
 
         return pksig;
+    }
+
+    function sMalleabilityCheck(uint256 s) internal pure returns (uint256 checkedS) {
+        checkedS = s;
+
+        // Values from the P256 curve
+        uint256 P256_N = 0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551;
+        uint256 P256_N_DIV_2 =
+            57_896_044_605_178_124_381_348_723_474_703_786_764_998_477_612_067_880_171_211_129_530_534_256_022_184;
+
+        if (uint256(s) > P256_N_DIV_2) {
+            // Use complement to get the correct s value
+            // https://github.com/indutny/elliptic/blob/75700785ff41bb5d029d19186beff26d4883caa5/lib/elliptic/ec/index.js#L147
+            checkedS = (P256_N - uint256(s)) % P256_N;
+        }
     }
 
     receive() external payable { // Allows this contract to receive ether
