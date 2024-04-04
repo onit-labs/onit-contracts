@@ -52,9 +52,58 @@ abstract contract Onit4337Wrapper is UUPSUpgradeable {
     /// @param target The target call address.
     /// @param value  The call value to user.
     /// @param data   The raw call data.
-    /// @param operation The Safe operation type (CALL, DELEGATECALL)
+    /// @return result The result of the call.
     ///
-    function execute(address target, uint256 value, bytes calldata data, uint8 operation) external payable virtual;
+    function execute(
+        address target,
+        uint256 value,
+        bytes calldata data
+    ) public payable virtual returns (bytes memory result) {
+        _requireFromEntryPoint();
+
+        /// @solidity memory-safe-assembly
+        assembly {
+            result := mload(0x40)
+            calldatacopy(result, data.offset, data.length)
+            if iszero(call(gas(), target, value, result, data.length, codesize(), 0x00)) {
+                // Bubble up the revert if the call reverts.
+                returndatacopy(result, 0x00, returndatasize())
+                revert(result, returndatasize())
+            }
+            mstore(result, returndatasize()) // Store the length.
+            let o := add(result, 0x20)
+            returndatacopy(o, 0x00, returndatasize()) // Copy the returndata.
+            mstore(0x40, add(o, returndatasize())) // Allocate the memory.
+        }
+    }
+
+    /// @notice Execute a delegatecall with `delegate` on this account.
+    /// @param delegate The delegate call address.
+    /// @param data The raw call data.
+    /// @return result The result of the delegate call.
+    ///
+    function delegateExecute(
+        address delegate,
+        bytes calldata data
+    ) public payable virtual delegateExecuteGuard returns (bytes memory result) {
+        _requireFromEntryPoint();
+
+        /// @solidity memory-safe-assembly
+        assembly {
+            result := mload(0x40)
+            calldatacopy(result, data.offset, data.length)
+            // Forwards the `data` to `delegate` via delegatecall.
+            if iszero(delegatecall(gas(), delegate, result, data.length, codesize(), 0x00)) {
+                // Bubble up the revert if the call reverts.
+                returndatacopy(result, 0x00, returndatasize())
+                revert(result, returndatasize())
+            }
+            mstore(result, returndatasize()) // Store the length.
+            let o := add(result, 0x20)
+            returndatacopy(o, 0x00, returndatasize()) // Copy the returndata.
+            mstore(0x40, add(o, returndatasize())) // Allocate the memory.
+        }
+    }
 
     // TODO batch execute function
 
@@ -128,18 +177,18 @@ abstract contract Onit4337Wrapper is UUPSUpgradeable {
         }
     }
 
-    /// @notice Execute the given call from this account.
-    /// @dev Reverts if the call reverted.
-    /// @dev modified from https://github.com/coinbase/smart-wallet/main/src/CoinbaseSmartWallet.sol
-    /// @param target The target call address.
-    /// @param value  The call value to user.
-    /// @param data   The raw call data.
-    function _call(address target, uint256 value, bytes memory data) internal {
-        (bool success, bytes memory result) = target.call{value: value}(data);
-        if (!success) {
-            assembly ("memory-safe") {
-                revert(add(result, 32), mload(result))
-            }
+    /// @dev Ensures that the owner and implementation slots' values aren't changed.
+    /// You can override this modifier to ensure the sanctity of other storage slots too.
+    modifier delegateExecuteGuard() virtual {
+        bytes32 implementationSlotValue;
+        /// @solidity memory-safe-assembly
+        assembly {
+            implementationSlotValue := sload(_ERC1967_IMPLEMENTATION_SLOT)
+        }
+        _;
+        /// @solidity memory-safe-assembly
+        assembly {
+            if iszero(eq(implementationSlotValue, sload(_ERC1967_IMPLEMENTATION_SLOT))) { revert(codesize(), 0x00) }
         }
     }
 }

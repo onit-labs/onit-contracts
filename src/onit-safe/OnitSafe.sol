@@ -81,23 +81,6 @@ contract OnitSafe is Safe, Onit4337Wrapper, ERC1271 {
         _payPrefund(missingAccountFunds);
     }
 
-    /// @notice Execute a call from this account
-    ///
-    /// @param target contract address to call
-    /// @param value value to send
-    /// @param data to be executed on the target contract
-    /// @param operation type of operation (CALL, DELEGATECALL)
-    function execute(
-        address target,
-        uint256 value,
-        bytes calldata data,
-        uint8 operation
-    ) external payable virtual override {
-        // Execute the call
-        // TODO use safe execution fn here?
-        _call(target, value, data);
-    }
-
     /// ----------------------------------------------------------------------------------------
     ///							LEGACY EIP-1271 METHOD
     /// ----------------------------------------------------------------------------------------
