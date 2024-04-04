@@ -171,7 +171,7 @@ contract OnitSafeTestBase is OnitSafeTestCommon {
         bytes memory sig = webauthnSignHash(
             onitAccount.getMessageHash(
                 testSafe.encodeTransactionData(
-                    address(onitAccountAddress), 0, "", Enum.Operation.Call, 0, 0, 0, address(0), payable(0), 0
+                    address(onitAccountAddress), 0.1 ether, "", Enum.Operation.Call, 0, 0, 0, address(0), payable(0), 0
                 )
             ),
             passkeyPrivateKey
@@ -181,8 +181,86 @@ contract OnitSafeTestBase is OnitSafeTestCommon {
         bytes memory formattedSafeSig = abi.encode(address(uint160(owners[1])), uint256(128), uint8(0), sig);
 
         testSafe.execTransaction(
-            address(onitAccountAddress), 0, "", Enum.Operation.Call, 0, 0, 0, address(0), payable(0), formattedSafeSig
+            address(onitAccountAddress),
+            0.1 ether,
+            "",
+            Enum.Operation.Call,
+            0,
+            0,
+            0,
+            address(0),
+            payable(0),
+            formattedSafeSig
         );
+    }
+
+    function testSignMessage() public returns (Safe testSafe, bytes32 messageHash) {
+        // Setup a test safe where the onit account is an owner
+        address[] memory owners = new address[](2);
+        owners[0] = alice;
+        owners[1] = onitAccountAddress;
+
+        testSafe = Safe(
+            payable(
+                proxyFactory.createProxyWithNonce(
+                    address(singleton),
+                    abi.encodeWithSignature(
+                        "setup(address[],uint256,address,bytes,address,address,uint256,address)",
+                        owners,
+                        1,
+                        address(0),
+                        new bytes(0),
+                        address(0),
+                        address(0),
+                        0,
+                        payable(0)
+                    ),
+                    0
+                )
+            )
+        );
+
+        // Get the message hash required to authorize some transaction
+        bytes memory transferCalldata = testSafe.encodeTransactionData(
+            address(onitAccountAddress), 0.1 ether, "", Enum.Operation.Call, 0, 0, 0, address(0), payable(0), 0
+        );
+        messageHash = onitAccount.getMessageHash(transferCalldata);
+        assertEq(onitAccount.signedMessages(messageHash), 0);
+
+        // Create a userop to set the signed message on the onit safe
+        bytes memory signMessageCalldata = abi.encodeWithSelector(signMessageLib.signMessage.selector, transferCalldata);
+        bytes memory executeSignMessageCalldata = abi.encodeWithSelector(
+            Onit4337Wrapper.delegateExecute.selector, address(signMessageLib), signMessageCalldata
+        );
+        PackedUserOperation memory userOp = buildUserOp(onitAccountAddress, 0, new bytes(0), executeSignMessageCalldata);
+
+        // Sign the userop with the passkey onit safe & format signature into webauthn format
+        userOp = webauthnSignUserOperation(userOp, passkeyPrivateKey);
+
+        // Execute the call from the Onit account via the entrypoint
+        PackedUserOperation[] memory userOps = new PackedUserOperation[](1);
+        userOps[0] = userOp;
+        entryPoint.handleOps(userOps, payable(alice));
+
+        assertEq(onitAccount.signedMessages(messageHash), 1);
+    }
+
+    function testSignWithSignedMessageAsOwnerOnSafe() public {
+        (Safe testSafe, bytes32 messageHash) = testSignMessage();
+        vm.deal(address(testSafe), 1 ether);
+
+        assertEq(onitAccount.signedMessages(messageHash), 1);
+        assertEq(address(testSafe).balance, 1 ether);
+
+        // Form the messageHash signature for the Safe - bytes(0) for sig since we'll use the signed message
+        bytes memory safeSig = abi.encode(onitAccountAddress, uint256(128), uint8(0), new bytes(0));
+
+        // Execute the transaction on the Safe
+        testSafe.execTransaction(
+            address(onitAccountAddress), 0.1 ether, "", Enum.Operation.Call, 0, 0, 0, address(0), payable(0), safeSig
+        );
+
+        assertEq(address(testSafe).balance, 0.9 ether);
     }
     /// -----------------------------------------------------------------------
     /// Execution tests
@@ -195,8 +273,7 @@ contract OnitSafeTestBase is OnitSafeTestCommon {
         uint256 transferAmount = 0.1 ether;
 
         // Some transfer user operation
-        bytes memory transferExecutionCalldata =
-            buildExecutionPayload(alice, transferAmount, new bytes(0), Enum.Operation.Call);
+        bytes memory transferExecutionCalldata = buildExecutionPayload(alice, transferAmount, new bytes(0));
 
         PackedUserOperation memory userOp = buildUserOp(onitAccountAddress, 0, new bytes(0), transferExecutionCalldata);
 
@@ -253,12 +330,12 @@ contract OnitSafeTestBase is OnitSafeTestCommon {
     // /// -----------------------------------------------------------------------
 
     // Build payload which the entryPoint will call on the sender Onit 4337 account
-    function buildExecutionPayload(
-        address to,
-        uint256 value,
-        bytes memory data,
-        Enum.Operation operation
-    ) internal pure returns (bytes memory) {
-        return abi.encodeWithSignature("execute(address,uint256,bytes,uint8)", to, value, data, uint8(0));
+    function buildExecutionPayload(address to, uint256 value, bytes memory data) internal pure returns (bytes memory) {
+        return abi.encodeWithSignature("execute(address,uint256,bytes)", to, value, data);
+    }
+
+    // Build delegateExecution payload
+    function buildDelegateExecutionPayload(address delegate, bytes memory data) internal pure returns (bytes memory) {
+        return abi.encodeWithSignature("delegateExecute(address,bytes)", delegate, data);
     }
 }

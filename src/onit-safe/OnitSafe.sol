@@ -98,12 +98,13 @@ contract OnitSafe is Safe, Onit4337Wrapper, ERC1271 {
 
         bytes memory messageData = encodeMessageData(_data);
         bytes32 messageHash = keccak256(messageData);
+
         if (_signature.length == 0) {
             require(signedMessages[messageHash] != 0, "Hash not approved");
         } else {
-            console.logBytes32(messageHash);
-            if (_validateSignature(messageHash, _signature)) return EIP1271_MAGIC_VALUE;
+            require(_validateSignature(messageHash, _signature), "Invalid signature");
         }
+        return EIP1271_MAGIC_VALUE;
     }
 
     /// ----------------------------------------------------------------------------------------
