@@ -42,13 +42,13 @@ contract OnitSafe is Safe, Onit4337Wrapper, ERC1271 {
         _owner = [1, 1];
     }
 
-    function setupOnitSafe(uint256[2] memory setupOwner) public {
+    function setupOnitSafe(uint256 ownerX, uint256 ownerY) public {
         if (_owner[0] != 0 || _owner[1] != 0) {
             revert AlreadyInitialized();
         }
 
         // Set the owner of the implementation contract so it can not be initialized again
-        _owner = setupOwner;
+        _owner = [ownerX, ownerY];
     }
 
     /// ----------------------------------------------------------------------------------------

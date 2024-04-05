@@ -31,7 +31,7 @@ contract OnitSafeTestBase is OnitSafeTestCommon {
         onitSingleton = new OnitSafe();
         onitSafeFactory = new OnitSafeProxyFactory(address(handler), address(onitSingleton));
 
-        onitAccount = OnitSafe(payable(onitSafeFactory.createAccount(publicKeyBase, keccak256("a"))));
+        onitAccount = OnitSafe(payable(onitSafeFactory.createAccount(publicKeyBase[0], publicKeyBase[1], 1)));
         onitAccountAddress = payable(address(onitAccount));
 
         // Deal funds to account
@@ -48,7 +48,7 @@ contract OnitSafeTestBase is OnitSafeTestCommon {
     function testCannotSetupSingleton() public {
         // Try to setup the Onit function on singleton
         vm.expectRevert(OnitSafe.AlreadyInitialized.selector);
-        onitSingleton.setupOnitSafe(publicKeyBase);
+        onitSingleton.setupOnitSafe(publicKeyBase[0], publicKeyBase[1]);
 
         // Check that the owner is still the placeholder
         assertEq(onitSingleton.owner()[0], 1);
@@ -166,6 +166,7 @@ contract OnitSafeTestBase is OnitSafeTestCommon {
                 )
             )
         );
+        vm.deal(address(testSafe), 1 ether);
 
         // Sign the safe tx with the passkey onit safe & format signature into webauthn format
         bytes memory sig = webauthnSignHash(
