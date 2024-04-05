@@ -11,18 +11,30 @@ import "forge-std/console.sol";
 /// @title OnitSafeProxyFactory
 /// @notice Factory contract to deploy OnitSafeProxy contracts
 /// @author Onit Labs
-/// @author modified from Solady (https://github.com/Vectorized/solady/blob/main/src/accounts/ERC4337Factory.sol)
+/// @author Modified from Solady (https://github.com/Vectorized/solady/blob/main/src/accounts/ERC4337Factory.sol)
 contract OnitSafeProxyFactory {
+    /// ----------------------------------------------------------------------------------------
+    ///							FACTORY STORAGE
+    /// ----------------------------------------------------------------------------------------
+
     error SafeInitialisationFailed();
     error OnitAccountSetupFailed();
 
     address public immutable compatibilityFallbackHandler;
     address public immutable safeSingletonAddress;
 
+    /// ----------------------------------------------------------------------------------------
+    ///							CONSTRUCTOR
+    /// ----------------------------------------------------------------------------------------
+
     constructor(address _compatibilityFallbackHandler, address _safeSingletonAddress) {
         compatibilityFallbackHandler = _compatibilityFallbackHandler;
         safeSingletonAddress = _safeSingletonAddress;
     }
+
+    /// ----------------------------------------------------------------------------------------
+    ///							ACCOUNT FACTORY FUNCTIONS
+    /// ----------------------------------------------------------------------------------------
 
     /// @dev Deploys an ERC4337 account with `salt` and returns its deterministic address.
     /// If the account is already deployed, it will simply return its address.

@@ -16,45 +16,52 @@ contract OnitSafeFactoryTestBase is OnitSafeTestCommon {
     /// -----------------------------------------------------------------------
 
     function setUp() public virtual {
-        //onitSafeFactory =
-        //new OnitSafeFactory(address(proxyFactory), address(addModulesLib), address(singleton), entryPointAddress);
-        onitSafeFactoryAddress = address(onitSafeFactory);
+        // Deploy contracts
+        onitSingleton = new OnitSafe();
+        onitSafeFactory = new OnitSafeProxyFactory(address(handler), address(onitSingleton));
     }
 
     /// -----------------------------------------------------------------------
     /// Setup tests
     /// -----------------------------------------------------------------------
 
-    // function testFactorySetupCorrectly() public {
-    //     assertEq(address(onitSafeFactory.proxyFactory()), address(proxyFactory));
-    //     assertEq(onitSafeFactory.addModulesLibAddress(), address(addModulesLib));
-    //     assertEq(onitSafeFactory.safeSingletonAddress(), address(singleton));
-    //     assertEq(onitSafeFactory.entryPointAddress(), entryPointAddress);
-    // }
-
-    // test that entrypoint and other values are set correctly
+    function testFactorySetupCorrectly() public {
+        assertEq(address(onitSafeFactory.compatibilityFallbackHandler()), address(handler));
+        assertEq(onitSafeFactory.safeSingletonAddress(), address(onitSingleton));
+    }
 
     /// -----------------------------------------------------------------------
     /// Create account tests
     /// -----------------------------------------------------------------------
 
-    // function testCreateOnitSafe() public {
-    //     onitAccountAddress = onitSafeFactory.createOnitSafe(publicKeyBase, 0);
-    //     onitAccount = OnitSafe(onitAccountAddress);
+    function testCreateOnitSafe() public {
+        onitAccountAddress = payable(onitSafeFactory.createAccount(publicKeyBase[0], publicKeyBase[1], 0));
+        onitAccount = OnitSafe(onitAccountAddress);
 
-    //     assertEq(onitAccount.getOwners()[0], address(0xdead));
-    //     assertEq(onitAccount.getThreshold(), 1);
-    //     // assertTrue(onitAccount.isModuleEnabled(address(onitSafeModule)));
+        // Check Safe values
+        assertEq(onitAccount.getOwners()[0], address(0xdead));
+        assertEq(onitAccount.getThreshold(), 1);
+        // Check Onit values
+        assertEq(address(onitAccount.entryPoint()), entryPointAddress);
+        assertEq(onitAccount.owner()[0], publicKeyBase[0]);
+        assertEq(onitAccount.owner()[1], publicKeyBase[1]);
+        _checkImplementationSlot(address(onitAccount), address(onitSingleton));
+    }
 
-    //     assertEq(address(onitAccount.entryPoint()), entryPointAddress);
-    //     assertEq(onitAccount.owner()[0], publicKeyBase[0]);
-    //     assertEq(onitAccount.owner()[1], publicKeyBase[1]);
-    // }
-    /// -----------------------------------------------------------------------
-    /// Execution tests
-    /// -----------------------------------------------------------------------
+    function testGetAddressMatchesDeployedAddress() public {
+        bytes32 salt = keccak256(abi.encodePacked(publicKeyBase[0], publicKeyBase[1], uint256(0)));
+        address predictedAddress = onitSafeFactory.getAddress(salt);
+
+        onitAccountAddress = payable(onitSafeFactory.createAccount(publicKeyBase[0], publicKeyBase[1], 0));
+        assertEq(predictedAddress, onitAccountAddress);
+    }
 
     /// -----------------------------------------------------------------------
     /// Utils
     /// -----------------------------------------------------------------------
+
+    function _checkImplementationSlot(address proxy, address implementation_) internal {
+        bytes32 slot = bytes32(uint256(keccak256("eip1967.proxy.implementation")) - 1);
+        assertEq(vm.load(proxy, slot), bytes32(uint256(uint160(implementation_))));
+    }
 }
