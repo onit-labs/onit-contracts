@@ -141,6 +141,45 @@ contract OnitSafeTestBase is OnitSafeTestCommon {
         assert(result == 0x1626ba7e);
     }
 
+    /// -----------------------------------------------------------------------
+    /// Execution tests
+    /// -----------------------------------------------------------------------
+
+    function testExecuteTx() public {
+        // Init values for test
+        uint256 aliceBalanceBefore = alice.balance;
+        uint256 onitAccountBalanceBefore = onitAccountAddress.balance;
+        uint256 transferAmount = 0.1 ether;
+
+        // Some transfer user operation
+        bytes memory transferExecutionCalldata = buildExecutionPayload(alice, transferAmount, new bytes(0));
+
+        PackedUserOperation memory userOp = buildUserOp(onitAccountAddress, 0, new bytes(0), transferExecutionCalldata);
+
+        // Sign the user operation and format signature into webauthn format to verify
+        userOp = webauthnSignUserOperation(userOp, passkeyPrivateKey);
+
+        PackedUserOperation[] memory userOps = new PackedUserOperation[](1);
+        userOps[0] = userOp;
+
+        entryPoint.handleOps(userOps, payable(alice));
+
+        // Check that the transfer was executed
+        assertEq(alice.balance, aliceBalanceBefore + transferAmount);
+        assertEq(onitAccountAddress.balance, onitAccountBalanceBefore - transferAmount);
+    }
+
+    function testETHReceived() public {
+        (bool success,) = onitAccountAddress.call{value: 1 ether}("");
+        assertTrue(success);
+    }
+
+    // todo test other receive functions
+
+    /// -----------------------------------------------------------------------
+    /// Signature tests
+    /// -----------------------------------------------------------------------
+
     function testSignAsOwnerOnASafe() public {
         // Setup a test safe where the onit account is an owner
         address[] memory owners = new address[](2);
@@ -193,6 +232,80 @@ contract OnitSafeTestBase is OnitSafeTestCommon {
             payable(0),
             formattedSafeSig
         );
+    }
+
+    function testSignAsOwnerOnASafeViaEntrypoint() public {
+        // Setup a test safe where the onit account is an owner
+        address[] memory owners = new address[](2);
+        owners[0] = alice;
+        owners[1] = onitAccountAddress;
+
+        Safe testSafe = Safe(
+            payable(
+                proxyFactory.createProxyWithNonce(
+                    address(singleton),
+                    abi.encodeWithSignature(
+                        "setup(address[],uint256,address,bytes,address,address,uint256,address)",
+                        owners,
+                        1,
+                        address(0),
+                        new bytes(0),
+                        address(0),
+                        address(0),
+                        0,
+                        payable(0)
+                    ),
+                    0
+                )
+            )
+        );
+        vm.deal(address(testSafe), 1 ether);
+
+        // Sign the safe tx with the passkey onit safe & format signature into webauthn format
+        bytes memory sig = webauthnSignHash(
+            onitAccount.getMessageHash(
+                testSafe.encodeTransactionData(
+                    address(onitAccountAddress), 0.1 ether, "", Enum.Operation.Call, 0, 0, 0, address(0), payable(0), 0
+                )
+            ),
+            passkeyPrivateKey
+        );
+
+        // format the sig into [r, s, v, signature] format (used for contract sigs on safe)
+        bytes memory formattedSafeSig = abi.encode(address(uint160(owners[1])), uint256(128), uint8(0), sig);
+
+        // Create the calldata the entrypoint will execute for the passkey account
+        bytes memory executeTxCalldata = abi.encodeWithSelector(
+            Onit4337Wrapper.execute.selector,
+            address(testSafe),
+            0,
+            abi.encodeWithSelector(
+                testSafe.execTransaction.selector,
+                address(onitAccountAddress),
+                0.1 ether,
+                "",
+                Enum.Operation.Call,
+                0,
+                0,
+                0,
+                address(0),
+                payable(0),
+                formattedSafeSig
+            )
+        );
+
+        // Create the user operation for the passkey account
+        PackedUserOperation memory userOp = buildUserOp(onitAccountAddress, 0, new bytes(0), executeTxCalldata);
+
+        // Sign the user operation and format signature into webauthn format to verify
+        userOp = webauthnSignUserOperation(userOp, passkeyPrivateKey);
+
+        // Execute the call from the Onit account via the entrypoint
+        PackedUserOperation[] memory userOps = new PackedUserOperation[](1);
+        userOps[0] = userOp;
+        entryPoint.handleOps(userOps, payable(alice));
+
+        assertEq(address(testSafe).balance, 0.9 ether);
     }
 
     function testSignMessage() public returns (Safe testSafe, bytes32 messageHash) {
@@ -263,40 +376,6 @@ contract OnitSafeTestBase is OnitSafeTestCommon {
 
         assertEq(address(testSafe).balance, 0.9 ether);
     }
-    /// -----------------------------------------------------------------------
-    /// Execution tests
-    /// -----------------------------------------------------------------------
-
-    function testExecuteTx() public {
-        // Init values for test
-        uint256 aliceBalanceBefore = alice.balance;
-        uint256 onitAccountBalanceBefore = onitAccountAddress.balance;
-        uint256 transferAmount = 0.1 ether;
-
-        // Some transfer user operation
-        bytes memory transferExecutionCalldata = buildExecutionPayload(alice, transferAmount, new bytes(0));
-
-        PackedUserOperation memory userOp = buildUserOp(onitAccountAddress, 0, new bytes(0), transferExecutionCalldata);
-
-        // Sign the user operation and format signature into webauthn format to verify
-        userOp = webauthnSignUserOperation(userOp, passkeyPrivateKey);
-
-        PackedUserOperation[] memory userOps = new PackedUserOperation[](1);
-        userOps[0] = userOp;
-
-        entryPoint.handleOps(userOps, payable(alice));
-
-        // Check that the transfer was executed
-        assertEq(alice.balance, aliceBalanceBefore + transferAmount);
-        assertEq(onitAccountAddress.balance, onitAccountBalanceBefore - transferAmount);
-    }
-
-    function testETHReceived() public {
-        (bool success,) = onitAccountAddress.call{value: 1 ether}("");
-        assertTrue(success);
-    }
-
-    // todo test other receive functions
 
     // /// -----------------------------------------------------------------------
     // /// Upgrade tests
