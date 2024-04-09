@@ -3,15 +3,14 @@ pragma solidity ^0.8.13;
 
 /* solhint-disable no-console */
 
-import {BasicTestConfig} from "./BasicTestConfig.t.sol";
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
-import "forge-std/console.sol";
+import {Test} from "../../lib/forge-std/src/Test.sol";
+import {Strings} from "../../lib/webauthn-sol/lib/openzeppelin-contracts/contracts/utils/Strings.sol";
 
 /**
  * @notice - This contract runs the signatureHelper.ts script
  * 			 It is used to create and sign messages, similar to how the passkey would, for testing
  */
-contract SignatureHelper is BasicTestConfig {
+contract SignatureHelper is Test {
     function createPublicKey(string memory salt) public returns (uint256[2] memory) {
         string[] memory cmd = new string[](6);
 
@@ -23,12 +22,7 @@ contract SignatureHelper is BasicTestConfig {
         cmd[5] = salt;
 
         bytes memory res = vm.ffi(cmd);
-
         uint256[2] memory publicKey = abi.decode(res, (uint256[2]));
-
-        // console.log('keys');
-        // console.log(publicKey[0]);
-        // console.log(publicKey[1]);
 
         return publicKey;
     }
@@ -45,14 +39,7 @@ contract SignatureHelper is BasicTestConfig {
         cmd[6] = message;
 
         bytes memory res = vm.ffi(cmd);
-
-        //console.log(string(res));
-
         uint256[2] memory sig = abi.decode(res, (uint256[2]));
-
-        // console.log('sigs');
-        // console.log(sig[0]);
-        // console.log(sig[1]);
 
         return sig;
     }

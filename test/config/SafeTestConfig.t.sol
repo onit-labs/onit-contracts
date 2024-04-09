@@ -1,21 +1,27 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-// Gnosis Safe imports
-import {Safe, Enum} from "@safe/Safe.sol";
-import {CompatibilityFallbackHandler} from "@safe/handler/CompatibilityFallbackHandler.sol";
-import {MultiSend} from "@safe/libraries/MultiSend.sol";
-import {SafeProxyFactory} from "@safe/proxies/SafeProxyFactory.sol";
-import {SignMessageLib} from "@safe/libraries/SignMessageLib.sol";
+// Safe imports
+import {Safe, Enum} from "../../lib/safe-smart-account/contracts/Safe.sol";
+import {MultiSend} from "../../lib/safe-smart-account/contracts/libraries/MultiSend.sol";
+
+import {AddModulesLib} from "../../src/libraries/AddModulesLib.sol";
+
+/// @dev Take care that version of Safe in SafeTestTools .gitmodule matches ours
+import {
+    SafeTestTools,
+    CompatibilityFallbackHandler,
+    SafeProxyFactory,
+    SignMessageLib,
+    SafeInstance,
+    Enum as EnumTestTools
+} from "../../lib/safe-tools/src/SafeTestTools.sol";
 
 // General setup helper for all safe contracts
-abstract contract SafeTestConfig {
-    // Safe contract types
-    Safe internal safeSingleton;
+contract SafeTestConfig is SafeTestTools {
     MultiSend internal multisend;
-    CompatibilityFallbackHandler internal handler;
-    SafeProxyFactory internal safeProxyFactory;
     SignMessageLib internal signMessageLib;
+    AddModulesLib internal addModulesLib;
 
     // Used to store the address of the safe created in tests
     address internal safeAddress;
@@ -25,22 +31,21 @@ abstract contract SafeTestConfig {
     /// -----------------------------------------------------------------------
 
     constructor() {
-        safeSingleton = new Safe();
         multisend = new MultiSend();
-        handler = new CompatibilityFallbackHandler();
-        safeProxyFactory = new SafeProxyFactory();
         signMessageLib = new SignMessageLib();
+        addModulesLib = new AddModulesLib();
     }
 
     /// -----------------------------------------------------------------------
     /// Utils
     /// -----------------------------------------------------------------------
 
-    function buildSafeMultisend(Enum.Operation operation, address to, uint256 value, bytes memory data)
-        internal
-        pure
-        returns (bytes memory)
-    {
+    function buildSafeMultisend(
+        Enum.Operation operation,
+        address to,
+        uint256 value,
+        bytes memory data
+    ) internal pure returns (bytes memory) {
         // Encode the multisend transaction
         // (needed to delegate call from the safe as addModule is 'authorised')
         bytes memory tmp = abi.encodePacked(operation, to, value, uint256(data.length), data);
