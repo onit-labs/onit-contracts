@@ -19,13 +19,6 @@ optimize = true
 optimizer_runs = 40000
 via_ir = true
 
-[rpc_endpoints]
-fuji = "${FUJI_RPC_URL}"
-mumbai = "${MUMBAI_RPC_URL}"
-
-[etherscan]
-fuji = { key = "${SNOWTRACE_API_KEY}" }
-mumbai = { key = "${POLYSCAN_API_KEY}" }
 
 [fmt]
 line_length = 120

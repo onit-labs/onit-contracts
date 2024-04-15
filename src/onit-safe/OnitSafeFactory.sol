@@ -6,7 +6,7 @@ import {LibClone} from "../../lib/webauthn-sol/lib/solady/src/utils/LibClone.sol
 // Safe Module which we will deploy and set as fallback / module on our Safes
 import {OnitSafe} from "./OnitSafe.sol";
 
-import "forge-std/console.sol";
+// TODO consider restriction on salt and readding 'checkStartsWith'
 
 /// @title OnitSafeProxyFactory
 /// @notice Factory contract to deploy OnitSafeProxy contracts

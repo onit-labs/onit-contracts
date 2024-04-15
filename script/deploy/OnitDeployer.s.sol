@@ -10,24 +10,51 @@ import {Script, console2} from "forge-std/Script.sol";
  * @notice Deploy the Onit Safe and the Onit Safe Proxy Factory
  */
 contract OnitDeployer is Script {
-    OnitSafe public onitSafe;
-    OnitSafeProxyFactory public onitSafeFactory;
-
     address public constant COMPATIBILITY_FALLBACK_HANDLER = address(0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99);
+
+    string public constant ONIT_SAFE_VERSION = "0.0.1";
+    uint256 public constant ONIT_SAFE_NONCE = 1;
+
+    string public constant ONIT_SAFE_PROXY_FACTORY_VERSION = "0.0.1";
+    uint256 public constant ONIT_SAFE_PROXY_FACTORY_NONCE = 1;
 
     function setUp() public {}
 
     function run() public {
+        address onitSafe;
+        address onitSafeProxyFactory;
+
+        bytes32 ONIT_SAFE_SALT = keccak256(abi.encode("onit-safe", ONIT_SAFE_VERSION, ONIT_SAFE_NONCE));
+        bytes32 ONIT_SAFE_PROXY_FACTORY_SALT = keccak256(
+            abi.encode("onit-safe-proxy-factory", ONIT_SAFE_PROXY_FACTORY_VERSION, ONIT_SAFE_PROXY_FACTORY_NONCE)
+        );
+
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
 
-        // This implementation which will be deployed as a proxy
-        onitSafe = new OnitSafe();
+        bytes memory onitSafeInitCode = type(OnitSafe).creationCode;
 
-        // The factory which will deploy the proxies
-        onitSafeFactory = new OnitSafeProxyFactory(COMPATIBILITY_FALLBACK_HANDLER, address(onitSafe));
+        assembly {
+            onitSafe := create2(0, add(onitSafeInitCode, 0x20), mload(onitSafeInitCode), ONIT_SAFE_SALT)
+        }
 
-        console2.log("Onit Safe: ", address(onitSafe));
-        console2.log("Onit Safe Factory: ", address(onitSafeFactory));
+        bytes memory onitSafeProxyFactoryInitCode = abi.encodePacked(
+            type(OnitSafeProxyFactory).creationCode, abi.encode(COMPATIBILITY_FALLBACK_HANDLER, onitSafe)
+        );
+
+        assembly {
+            onitSafeProxyFactory :=
+                create2(
+                    0,
+                    add(onitSafeProxyFactoryInitCode, 0x20),
+                    mload(onitSafeProxyFactoryInitCode),
+                    ONIT_SAFE_PROXY_FACTORY_SALT
+                )
+        }
+
+        console2.log("Onit Safe: ", onitSafe);
+        console2.log("Onit Safe Factory: ", onitSafeProxyFactory);
+
+        vm.stopBroadcast();
     }
 }
