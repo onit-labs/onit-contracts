@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 
 import {LibClone} from "../../lib/webauthn-sol/lib/solady/src/utils/LibClone.sol";
 
-// Safe Module which we will deploy and set as fallback / module on our Safes
 import {OnitAccount} from "./OnitAccount.sol";
 
 /// @title OnitAccountProxyFactory
@@ -81,7 +80,7 @@ contract OnitAccountProxyFactory {
             if (!success) revert SafeInitialisationFailed();
 
             bytes memory setOwner =
-                abi.encodeWithSignature("setupOnitAccount(uint256,uint256)", passkeyPublicKeyX, passkeyPublicKeyY);
+                abi.encodeWithSelector(OnitAccount.setupOnitAccount.selector, passkeyPublicKeyX, passkeyPublicKeyY);
 
             (success,) = account.call(setOwner);
             if (!success) revert OnitAccountSetupFailed();
@@ -94,5 +93,11 @@ contract OnitAccountProxyFactory {
     /// @return address The deterministic address of the account
     function getAddress(bytes32 salt) public view virtual returns (address) {
         return LibClone.predictDeterministicAddressERC1967(onitAccountSingletonAddress, salt, address(this));
+    }
+
+    /// @dev Returns the initialization code hash of the ERC4337 account (a minimal ERC1967 proxy).
+    /// Used for mining vanity addresses with create2crunch.
+    function initCodeHash() public view virtual returns (bytes32) {
+        return LibClone.initCodeHashERC1967(onitAccountSingletonAddress);
     }
 }
