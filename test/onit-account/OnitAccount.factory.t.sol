@@ -27,7 +27,7 @@ contract OnitAccountFactoryTestBase is OnitAccountTestCommon {
 
     function testFactorySetupCorrectly() public {
         assertEq(address(onitAccountFactory.compatibilityFallbackHandler()), address(handler));
-        assertEq(onitAccountFactory.safeSingletonAddress(), address(onitSingleton));
+        assertEq(onitAccountFactory.onitAccountSingletonAddress(), address(onitSingleton));
     }
 
     /// -----------------------------------------------------------------------
