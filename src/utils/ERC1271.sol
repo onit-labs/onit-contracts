@@ -24,7 +24,7 @@ abstract contract ERC1271 {
     ///      The original hash must either be:
     ///         - An EIP-191 hash: keccak256("\x19Ethereum Signed Message:\n" || len(someMessage) || someMessage)
     ///         - An EIP-712 hash: keccak256("\x19\x01" || someDomainSeparator || hashStruct(someStruct))
-    bytes32 private constant _MESSAGE_TYPEHASH = keccak256("OnitSafeMessage(bytes32 hash)");
+    bytes32 private constant _MESSAGE_TYPEHASH = keccak256("OnitAccountMessage(bytes32 hash)");
 
     /// @dev EIP-1271 return value: bytes4(keccak256("isValidSignature(bytes32,bytes)")
     bytes4 internal constant UPDATED_EIP1271_MAGIC_VALUE = 0x1626ba7e;
@@ -83,7 +83,7 @@ abstract contract ERC1271 {
     ///      keccak256(
     ///         \x19\x01 ||
     ///         this.domainSeparator ||
-    ///         hashStruct(OnitSafeMessage({ hash: `hash`}))
+    ///         hashStruct(OnitAccountMessage({ hash: `hash`}))
     ///      )
     ///
     /// @param hash The original hash.
@@ -109,24 +109,24 @@ abstract contract ERC1271 {
         );
     }
 
-    /// @notice Returns the EIP-712 typed hash of the `OnitSafeMessage(bytes32 hash)` data structure.
+    /// @notice Returns the EIP-712 typed hash of the `OnitAccountMessage(bytes32 hash)` data structure.
     ///
     /// @dev Implements encode(domainSeparator : 𝔹²⁵⁶, message : 𝕊) = "\x19\x01" || domainSeparator || hashStruct(message).
     /// @dev See https://eips.ethereum.org/EIPS/eip-712#specification.
     ///
-    /// @param hash The `OnitSafeMessage.hash` field to hash.
+    /// @param hash The `OnitAccountMessage.hash` field to hash.
     ////
     /// @return The resulting EIP-712 hash.
     function _eip712Hash(bytes32 hash) internal view virtual returns (bytes32) {
         return keccak256(abi.encodePacked("\x19\x01", eip712DomainSeparator(), _hashStruct(hash)));
     }
 
-    /// @notice Returns the EIP-712 `hashStruct` result of the `OnitSafeMessage(bytes32 hash)` data structure.
+    /// @notice Returns the EIP-712 `hashStruct` result of the `OnitAccountMessage(bytes32 hash)` data structure.
     ///
     /// @dev Implements hashStruct(s : 𝕊) = keccak256(typeHash || encodeData(s)).
     /// @dev See https://eips.ethereum.org/EIPS/eip-712#definition-of-hashstruct.
     ///
-    /// @param hash The `OnitSafeMessage.hash` field.
+    /// @param hash The `OnitAccountMessage.hash` field.
     ///
     /// @return The EIP-712 `hashStruct` result.
     function _hashStruct(bytes32 hash) internal view virtual returns (bytes32) {

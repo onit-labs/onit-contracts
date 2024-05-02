@@ -4,15 +4,15 @@ pragma solidity ^0.8.0;
 import {LibClone} from "../../lib/webauthn-sol/lib/solady/src/utils/LibClone.sol";
 
 // Safe Module which we will deploy and set as fallback / module on our Safes
-import {OnitSafe} from "./OnitSafe.sol";
+import {OnitAccount} from "./OnitAccount.sol";
 
 // TODO consider restriction on salt and readding 'checkStartsWith'
 
-/// @title OnitSafeProxyFactory
-/// @notice Factory contract to deploy OnitSafeProxy contracts
+/// @title OnitAccountProxyFactory
+/// @notice Factory contract to deploy OnitAccountProxy contracts
 /// @author Onit Labs
 /// @author Modified from Solady (https://github.com/Vectorized/solady/blob/main/src/accounts/ERC4337Factory.sol)
-contract OnitSafeProxyFactory {
+contract OnitAccountProxyFactory {
     /// ----------------------------------------------------------------------------------------
     ///							FACTORY STORAGE
     /// ----------------------------------------------------------------------------------------
@@ -70,7 +70,7 @@ contract OnitSafeProxyFactory {
             if (!success) revert SafeInitialisationFailed();
 
             bytes memory setOwner =
-                abi.encodeWithSignature("setupOnitSafe(uint256,uint256)", passkeyPublicKeyX, passkeyPublicKeyY);
+                abi.encodeWithSignature("setupOnitAccount(uint256,uint256)", passkeyPublicKeyX, passkeyPublicKeyY);
 
             (success,) = account.call(setOwner);
             if (!success) revert OnitAccountSetupFailed();

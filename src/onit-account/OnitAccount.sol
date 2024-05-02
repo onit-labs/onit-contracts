@@ -19,7 +19,7 @@ import "../../lib/forge-std/src/console.sol";
  * @author Onit Labs (https://onit.fun)
  * @custom:warning This contract has not been audited, and is likely to change.
  */
-contract OnitSafe is Safe, Onit4337Wrapper, ERC1271 {
+contract OnitAccount is Safe, Onit4337Wrapper, ERC1271 {
     /// ----------------------------------------------------------------------------------------
     ///							ACCOUNT STORAGE
     /// ----------------------------------------------------------------------------------------
@@ -42,7 +42,7 @@ contract OnitSafe is Safe, Onit4337Wrapper, ERC1271 {
         _owner = [1, 1];
     }
 
-    function setupOnitSafe(uint256 ownerX, uint256 ownerY) public {
+    function setupOnitAccount(uint256 ownerX, uint256 ownerY) public {
         if (_owner[0] != 0 || _owner[1] != 0) {
             revert AlreadyInitialized();
         }
@@ -114,7 +114,7 @@ contract OnitSafe is Safe, Onit4337Wrapper, ERC1271 {
     /**
      * @dev
      * The below Safe message methods are moved here from their normal place in the Safe CompatibilityFallbackHandler.
-     * That is because we implement the ISignatureValidator and updated EIP1271 logic here on the OnitSafe contract.
+     * That is because we implement the ISignatureValidator and updated EIP1271 logic here on the OnitAccount contract.
      * Beyond moving these methods here, nothing changes in relation to Safe messages - they are still:
      * - Created by delegate calling the `signMessage` method on the SignMessageLib contract
      * - Written to the signedMessages storage mapping
@@ -172,7 +172,7 @@ contract OnitSafe is Safe, Onit4337Wrapper, ERC1271 {
 
     /// @inheritdoc ERC1271
     function _domainNameAndVersion() internal pure override(ERC1271) returns (string memory, string memory) {
-        return ("OnitSafe", "0.0.1");
+        return ("OnitAccount", "0.0.1");
     }
 
     /// @dev To ensure that only the owner or the account itself can upgrade the implementation.

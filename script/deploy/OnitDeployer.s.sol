@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.23;
 
-import {OnitSafe} from "../../src/onit-safe/OnitSafe.sol";
-import {OnitSafeProxyFactory} from "../../src/onit-safe/OnitSafeFactory.sol";
+import {OnitAccount} from "../../src/onit-account/OnitAccount.sol";
+import {OnitAccountProxyFactory} from "../../src/onit-account/OnitAccountFactory.sol";
 
 import {Script, console2} from "forge-std/Script.sol";
 
@@ -21,39 +21,39 @@ contract OnitDeployer is Script {
     function setUp() public {}
 
     function run() public {
-        address onitSafe;
-        address onitSafeProxyFactory;
+        address onitAccount;
+        address onitAccountProxyFactory;
 
-        bytes32 ONIT_SAFE_SALT = keccak256(abi.encode("onit-safe", ONIT_SAFE_VERSION, ONIT_SAFE_NONCE));
+        bytes32 ONIT_SAFE_SALT = keccak256(abi.encode("onit-account", ONIT_SAFE_VERSION, ONIT_SAFE_NONCE));
         bytes32 ONIT_SAFE_PROXY_FACTORY_SALT = keccak256(
-            abi.encode("onit-safe-proxy-factory", ONIT_SAFE_PROXY_FACTORY_VERSION, ONIT_SAFE_PROXY_FACTORY_NONCE)
+            abi.encode("onit-account-proxy-factory", ONIT_SAFE_PROXY_FACTORY_VERSION, ONIT_SAFE_PROXY_FACTORY_NONCE)
         );
 
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
 
-        bytes memory onitSafeInitCode = type(OnitSafe).creationCode;
+        bytes memory onitAccountInitCode = type(OnitAccount).creationCode;
 
         assembly {
-            onitSafe := create2(0, add(onitSafeInitCode, 0x20), mload(onitSafeInitCode), ONIT_SAFE_SALT)
+            onitAccount := create2(0, add(onitAccountInitCode, 0x20), mload(onitAccountInitCode), ONIT_SAFE_SALT)
         }
 
-        bytes memory onitSafeProxyFactoryInitCode = abi.encodePacked(
-            type(OnitSafeProxyFactory).creationCode, abi.encode(COMPATIBILITY_FALLBACK_HANDLER, onitSafe)
+        bytes memory onitAccountProxyFactoryInitCode = abi.encodePacked(
+            type(OnitAccountProxyFactory).creationCode, abi.encode(COMPATIBILITY_FALLBACK_HANDLER, onitAccount)
         );
 
         assembly {
-            onitSafeProxyFactory :=
+            onitAccountProxyFactory :=
                 create2(
                     0,
-                    add(onitSafeProxyFactoryInitCode, 0x20),
-                    mload(onitSafeProxyFactoryInitCode),
+                    add(onitAccountProxyFactoryInitCode, 0x20),
+                    mload(onitAccountProxyFactoryInitCode),
                     ONIT_SAFE_PROXY_FACTORY_SALT
                 )
         }
 
-        console2.log("Onit Safe: ", onitSafe);
-        console2.log("Onit Safe Factory: ", onitSafeProxyFactory);
+        console2.log("Onit Safe: ", onitAccount);
+        console2.log("Onit Safe Factory: ", onitAccountProxyFactory);
 
         vm.stopBroadcast();
     }

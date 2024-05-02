@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.15;
 
-import {OnitSafeTestCommon, Enum, PackedUserOperation, Safe, OnitSafe} from "../OnitSafe.common.t.sol";
+import {OnitAccountTestCommon, Enum, PackedUserOperation, Safe, OnitAccount} from "../OnitAccount.common.t.sol";
 
 import {WebAuthnUtils, WebAuthnInfo} from "../../src/utils/WebAuthnUtils.sol";
 import {WebAuthn} from "../../lib/webauthn-sol/src/WebAuthn.sol";
@@ -12,7 +12,7 @@ import {OnitSafeModule} from "../../src/onit-safe-module/OnitSafeModule.sol";
 /**
  * @notice Some variables and functions used to test the Onit Safe Module
  */
-contract OnitSafeModuleTestBase is OnitSafeTestCommon {
+contract OnitSafeModuleTestBase is OnitAccountTestCommon {
     /// -----------------------------------------------------------------------
     /// Setup
     /// -----------------------------------------------------------------------
@@ -58,7 +58,7 @@ contract OnitSafeModuleTestBase is OnitSafeTestCommon {
         // bytes memory initCode = abi.encodePacked(address(proxyFactory), initCallData);
 
         onitAccountAddress = payable(proxyFactory.createProxyWithNonce(address(singleton), initializer, 99));
-        onitAccount = OnitSafe(onitAccountAddress);
+        onitAccount = OnitAccount(onitAccountAddress);
 
         deal(onitAccountAddress, 1 ether);
     }

@@ -2,24 +2,24 @@
 pragma solidity ^0.8.15;
 
 import {
-    OnitSafeTestCommon,
+    OnitAccountTestCommon,
     Safe,
     Enum,
     PackedUserOperation,
-    OnitSafe,
-    OnitSafeProxyFactory,
+    OnitAccount,
+    OnitAccountProxyFactory,
     Onit4337Wrapper,
     SafeInstance,
     EnumTestTools,
     console
-} from "../OnitSafe.common.t.sol";
+} from "../OnitAccount.common.t.sol";
 
 import {UUPSUpgradeable} from "../../lib/webauthn-sol/lib/solady/src/utils/UUPSUpgradeable.sol";
 
 /**
  * @notice Some variables and functions used to test the Onit Safe Module
  */
-contract OnitSafeTestBase is OnitSafeTestCommon {
+contract OnitAccountTestBase is OnitAccountTestCommon {
     bytes32 internal constant _ERC1967_IMPLEMENTATION_SLOT =
         0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
@@ -28,10 +28,10 @@ contract OnitSafeTestBase is OnitSafeTestCommon {
     /// -----------------------------------------------------------------------
     function setUp() public virtual {
         // Deploy contracts
-        onitSingleton = new OnitSafe();
-        onitSafeFactory = new OnitSafeProxyFactory(address(handler), address(onitSingleton));
+        onitSingleton = new OnitAccount();
+        onitAccountFactory = new OnitAccountProxyFactory(address(handler), address(onitSingleton));
 
-        onitAccount = OnitSafe(payable(onitSafeFactory.createAccount(publicKeyBase[0], publicKeyBase[1], 1)));
+        onitAccount = OnitAccount(payable(onitAccountFactory.createAccount(publicKeyBase[0], publicKeyBase[1], 1)));
         onitAccountAddress = payable(address(onitAccount));
 
         // Deal funds to account
@@ -47,8 +47,8 @@ contract OnitSafeTestBase is OnitSafeTestCommon {
 
     function testCannotSetupSingleton() public {
         // Try to setup the Onit function on singleton
-        vm.expectRevert(OnitSafe.AlreadyInitialized.selector);
-        onitSingleton.setupOnitSafe(publicKeyBase[0], publicKeyBase[1]);
+        vm.expectRevert(OnitAccount.AlreadyInitialized.selector);
+        onitSingleton.setupOnitAccount(publicKeyBase[0], publicKeyBase[1]);
 
         // Check that the owner is still the placeholder
         assertEq(onitSingleton.owner()[0], 1);
@@ -91,7 +91,7 @@ contract OnitSafeTestBase is OnitSafeTestCommon {
         userOp = webauthnSignUserOperation(userOp, passkeyPrivateKey);
 
         bytes memory validateUserOpCalldata =
-            abi.encodeWithSelector(OnitSafe.validateUserOp.selector, userOp, entryPoint.getUserOpHash(userOp), 0);
+            abi.encodeWithSelector(OnitAccount.validateUserOp.selector, userOp, entryPoint.getUserOpHash(userOp), 0);
 
         // We prank entrypoint and call like this for _requireFromEntryPoint check
         vm.prank(entryPointAddress);
@@ -100,7 +100,7 @@ contract OnitSafeTestBase is OnitSafeTestCommon {
 
         userOp.signature = new bytes(200);
         validateUserOpCalldata =
-            abi.encodeWithSelector(OnitSafe.validateUserOp.selector, userOp, entryPoint.getUserOpHash(userOp), 0);
+            abi.encodeWithSelector(OnitAccount.validateUserOp.selector, userOp, entryPoint.getUserOpHash(userOp), 0);
 
         // Returns 1 for  failed signature verification
         vm.prank(entryPointAddress);
@@ -116,7 +116,7 @@ contract OnitSafeTestBase is OnitSafeTestCommon {
         userOp = webauthnSignUserOperation(userOp, passkeyPrivateKey);
 
         bytes memory validateUserOpCalldata = abi.encodeWithSelector(
-            OnitSafe.validateUserOp.selector, userOp, entryPoint.getUserOpHash(userOp), 0.5 ether
+            OnitAccount.validateUserOp.selector, userOp, entryPoint.getUserOpHash(userOp), 0.5 ether
         );
 
         // We prank entrypoint and call like this for _requireFromEntryPoint check
@@ -382,7 +382,7 @@ contract OnitSafeTestBase is OnitSafeTestCommon {
     // /// -----------------------------------------------------------------------
 
     function testUpgradeTo() public {
-        OnitSafe impl2 = new OnitSafe();
+        OnitAccount impl2 = new OnitAccount();
 
         vm.prank(entryPointAddress);
         onitAccount.upgradeToAndCall(address(impl2), bytes(""));
