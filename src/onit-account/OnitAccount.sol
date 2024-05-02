@@ -8,13 +8,7 @@ import {Onit4337Wrapper, PackedUserOperation} from "../Onit4337Wrapper.sol";
 import {ERC1271} from "../utils/ERC1271.sol";
 
 /**
- * @TODO
- * - Implement _validateNonce
- * - Consider all paths that could lead to isValidSignature (from Safe for a contract signature, from dapp etc)
- */
-
-/**
- * @notice ERC4337 Safe Account
+ * @notice ERC4337 Safe Account with passkey signer
  * @author Onit Labs (https://onit.fun)
  * @custom:warning This contract has not been audited, and is likely to change.
  */
@@ -131,7 +125,7 @@ contract OnitAccount is Safe, Onit4337Wrapper, ERC1271 {
 
     /// @inheritdoc ERC1271
     function _domainNameAndVersion() internal pure override(ERC1271) returns (string memory, string memory) {
-        return ("OnitAccount", "0.0.1");
+        return ("OnitAccount", "0.0.2");
     }
 
     /// @dev To ensure that only the owner or the account itself can upgrade the implementation.

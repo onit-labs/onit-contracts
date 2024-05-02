@@ -12,11 +12,11 @@ import {Script, console2} from "forge-std/Script.sol";
 contract OnitDeployer is Script {
     address public constant COMPATIBILITY_FALLBACK_HANDLER = address(0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99);
 
-    string public constant ONIT_SAFE_VERSION = "0.0.1";
-    uint256 public constant ONIT_SAFE_NONCE = 1;
+    string public constant ONIT_ACCOUNT_VERSION = "0.0.2";
+    uint256 public constant ONIT_ACCOUNT_NONCE = 1; // In case we need to redeploy thsi version to another address
 
-    string public constant ONIT_SAFE_PROXY_FACTORY_VERSION = "0.0.1";
-    uint256 public constant ONIT_SAFE_PROXY_FACTORY_NONCE = 1;
+    string public constant ONIT_ACCOUNT_PROXY_FACTORY_VERSION = "0.0.2";
+    uint256 public constant ONIT_ACCOUNT_PROXY_FACTORY_NONCE = 1; // In case we need to redeploy thsi version to another address
 
     function setUp() public {}
 
@@ -24,9 +24,11 @@ contract OnitDeployer is Script {
         address onitAccount;
         address onitAccountProxyFactory;
 
-        bytes32 ONIT_SAFE_SALT = keccak256(abi.encode("onit-account", ONIT_SAFE_VERSION, ONIT_SAFE_NONCE));
-        bytes32 ONIT_SAFE_PROXY_FACTORY_SALT = keccak256(
-            abi.encode("onit-account-proxy-factory", ONIT_SAFE_PROXY_FACTORY_VERSION, ONIT_SAFE_PROXY_FACTORY_NONCE)
+        bytes32 ONIT_ACCOUNT_SALT = keccak256(abi.encode("onit-account", ONIT_ACCOUNT_VERSION, ONIT_ACCOUNT_NONCE));
+        bytes32 ONIT_ACCOUNT_PROXY_FACTORY_SALT = keccak256(
+            abi.encode(
+                "onit-account-proxy-factory", ONIT_ACCOUNT_PROXY_FACTORY_VERSION, ONIT_ACCOUNT_PROXY_FACTORY_NONCE
+            )
         );
 
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
@@ -35,7 +37,7 @@ contract OnitDeployer is Script {
         bytes memory onitAccountInitCode = type(OnitAccount).creationCode;
 
         assembly {
-            onitAccount := create2(0, add(onitAccountInitCode, 0x20), mload(onitAccountInitCode), ONIT_SAFE_SALT)
+            onitAccount := create2(0, add(onitAccountInitCode, 0x20), mload(onitAccountInitCode), ONIT_ACCOUNT_SALT)
         }
 
         bytes memory onitAccountProxyFactoryInitCode = abi.encodePacked(
@@ -48,7 +50,7 @@ contract OnitDeployer is Script {
                     0,
                     add(onitAccountProxyFactoryInitCode, 0x20),
                     mload(onitAccountProxyFactoryInitCode),
-                    ONIT_SAFE_PROXY_FACTORY_SALT
+                    ONIT_ACCOUNT_PROXY_FACTORY_SALT
                 )
         }
 
