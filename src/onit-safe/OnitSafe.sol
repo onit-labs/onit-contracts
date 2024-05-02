@@ -168,12 +168,12 @@ contract OnitSafe is Safe, Onit4337Wrapper, ERC1271 {
      * @inheritdoc Onit4337Wrapper
      * @dev Not used yet, implemented to complete abstract contract
      */
-    function _validateNonce(uint256 nonce) internal view virtual override {
-        // TODO
-    }
+    function _validateNonce(uint256 nonce) internal view virtual override {}
 
-    // TODO
-    function _domainNameAndVersion() internal view override(ERC1271) returns (string memory, string memory) {}
+    /// @inheritdoc ERC1271
+    function _domainNameAndVersion() internal pure override(ERC1271) returns (string memory, string memory) {
+        return ("OnitSafe", "0.0.1");
+    }
 
     /// @dev To ensure that only the owner or the account itself can upgrade the implementation.
     function _authorizeUpgrade(address) internal virtual override {
