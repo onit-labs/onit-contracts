@@ -1,6 +1,6 @@
 # Onit Contracts
 
-Onit accounts are [ERC4337](https://eips.ethereum.org/EIPS/eip-4337) accounts built on top of [Gnosis Safe](https://docs.gnosis.io/safe/docs/contracts_overview/) contracts. 
+Onit accounts are [ERC4337](https://eips.ethereum.org/EIPS/eip-4337) accounts built on top of [Safe](https://safe.global/wallet) contracts. 
 
 ## Highlights
 
@@ -10,7 +10,7 @@ New users create a passkey on their phone (currently only available on iOS, requ
 
 This means **no more seed phrases**, you can add new memebrs to your Safe by sharing a link, the new member does not need to create an EOA account to take part.
 
-https://user-images.githubusercontent.com/68289880/225950006-dd4879ef-84a3-4ebf-9a6a-b2aba46fcc86.MP4
+https://github.com/onit-labs/onit-contracts/assets/68289880/b74d5d6e-79e3-4b98-97d4-aca08f25144b
 
 ### **Chat focus**
 
