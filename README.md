@@ -14,9 +14,10 @@ https://github.com/onit-labs/onit-contracts/assets/68289880/b74d5d6e-79e3-4b98-9
 
 ### **Chat focus**
 
-Groups can discuss and execute trades directly from an in app group chat (Telegram/Discord/Messenger integrations coming soon)
+Groups can discuss and execute trades directly from an [XMTP](https://xmtp.org/) group chat
 
-https://user-images.githubusercontent.com/68289880/225950435-df2bf9d1-63d9-49d8-8b0f-9d26ea0e4ee6.mp4
+https://github.com/onit-labs/onit-contracts/assets/68289880/475d865e-a1ba-4d6f-a27e-68373df5a543
+
 
 ### **Extensions**
 
