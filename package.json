@@ -36,9 +36,10 @@
 		"web3-utils": "^1.7.1"
 	},
 	"scripts": {
-		"test": "forge test $(if [ $1 != '' ]; then echo '--match-test' $1  ; fi) $(if [ $2 != '' ]; then echo '-vvvv'; else '-vvv'  ; fi);   ",
-		"gas": "yarn test --gas-report  ",
-		"relay": "yarn ts-node services/oz-defender/autotasks/scripts/test/relay-user-op.ts",
-		"deploy": "forge script script/deploy/$1.s.sol:$1 --rpc-url $(grep $2'_RPC_URL' .env | cut -d '=' -f2) --chain-id $(grep $2'_CHAIN_ID' .env | cut -d '=' -f2)  --private-key $(grep $2'_PRIVATE_KEY' .env | cut -d '=' -f2) --etherscan-api-key  $(grep $2'_EXPLORER_API_KEY' .env | cut -d '=' -f2) $(if [ $3 = 'b' ]; then echo '--verify --broadcast --legacy'; fi); "
+		"test": "forge test -vvv",
+		"test:prod": "FOUNDRY_PROFILE=prod forge build; pnpm run test",
+		"test:match": "sh -c 'forge test --match-test=$1 -vvvv$2' --",
+		"gas": "pnpm test -- --gas-report",
+		"deploy": "sh -c 'forge script script/deploy/$1.s.sol:$1 --rpc-url $(grep $2\"_RPC_URL\" .env | cut -d \"=\" -f2) --chain-id $(grep $2\"_CHAIN_ID\" .env | cut -d \"=\" -f2)  --private-key $(grep $2\"_PRIVATE_KEY\" .env | cut -d \"=\" -f2) --etherscan-api-key  $(grep $2\"_EXPLORER_API_KEY\" .env | cut -d \"=\" -f2) $(if [ \"$3\" = \"b\" ]; then echo \"--verify --broadcast --legacy\"; fi)' --"
 	}
 }

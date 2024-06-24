@@ -25,3 +25,11 @@ line_length = 120
 multiline_func_header = "params_first"
 number_underscore = "thousands"
 # handle sorting of imports
+
+[rpc_endpoints]
+base = "${BASE_RPC_URL}"
+base_sepolia = "${BASE_SEPOLIA_RPC_URL}"
+
+[etherscan]
+base = "${BASE_EXPLORER_API_KEY}"
+api_key = "${BASE_SEPOLIA_EXPLORER_API_KEY}"
