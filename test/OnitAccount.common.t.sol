@@ -15,8 +15,8 @@ import {Base64} from "../lib/webauthn-sol/lib/openzeppelin-contracts/contracts/u
 import {Onit4337Wrapper} from "../src/Onit4337Wrapper.sol";
 
 // Onit Safe imports
-import {OnitSafe} from "../src/onit-safe/OnitSafe.sol";
-import {OnitSafeProxyFactory} from "../src/onit-safe/OnitSafeFactory.sol";
+import {OnitAccount} from "../src/onit-account/OnitAccount.sol";
+import {OnitAccountProxyFactory} from "../src/onit-account/OnitAccountFactory.sol";
 
 // Onit Safe Module imports
 import {OnitSafeModule} from "../src/onit-safe-module/OnitSafeModule.sol";
@@ -25,22 +25,22 @@ import {OnitSafeModuleFactory} from "../src/onit-safe-module/OnitSafeModuleFacto
 /**
  * @notice Some variables and functions used in most tests of the Onit Safe
  */
-contract OnitSafeTestCommon is AddressTestConfig, ERC4337TestConfig, SafeTestConfig {
-    OnitSafe internal onitSingleton;
+contract OnitAccountTestCommon is AddressTestConfig, ERC4337TestConfig, SafeTestConfig {
+    OnitAccount internal onitSingleton;
 
     // The Onit account is a Safe controlled by an ERC4337 module with passkey signer
-    OnitSafe internal onitAccount;
+    OnitAccount internal onitAccount;
     address payable internal onitAccountAddress;
 
     // The Onit account factory
-    OnitSafeProxyFactory internal onitSafeFactory;
-    address internal onitSafeFactoryAddress;
+    OnitAccountProxyFactory internal onitAccountFactory;
+    address internal onitAccountFactoryAddress;
 
-    // The Onit account module - WIP!
+    // The Onit safe module - WIP!
     OnitSafeModule internal onitSafeModule;
     address internal onitSafeModuleAddress;
 
-    // The Onit account module factory - WIP!
+    // The Onit safe module factory - WIP!
     OnitSafeModuleFactory internal onitSafeModuleFactory;
     address internal onitSafeModuleFactoryAddress;
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.15;
 
-import {OnitSafeTestCommon, OnitSafe, OnitSafeProxyFactory} from "../OnitSafe.common.t.sol";
+import {OnitAccountTestCommon, OnitAccount, OnitAccountProxyFactory} from "../OnitAccount.common.t.sol";
 
 import {WebAuthnUtils, WebAuthnInfo} from "../../src/utils/WebAuthnUtils.sol";
 import {WebAuthn} from "../../lib/webauthn-sol/src/WebAuthn.sol";
@@ -10,15 +10,15 @@ import {Base64} from "../../lib/webauthn-sol/lib/openzeppelin-contracts/contract
 /**
  * @notice Some variables and functions used to test the Onit Safe
  */
-contract OnitSafeFactoryTestBase is OnitSafeTestCommon {
+contract OnitAccountFactoryTestBase is OnitAccountTestCommon {
     /// -----------------------------------------------------------------------
     /// Setup
     /// -----------------------------------------------------------------------
 
     function setUp() public virtual {
         // Deploy contracts
-        onitSingleton = new OnitSafe();
-        onitSafeFactory = new OnitSafeProxyFactory(address(handler), address(onitSingleton));
+        onitSingleton = new OnitAccount();
+        onitAccountFactory = new OnitAccountProxyFactory(address(handler), address(onitSingleton));
     }
 
     /// -----------------------------------------------------------------------
@@ -26,17 +26,17 @@ contract OnitSafeFactoryTestBase is OnitSafeTestCommon {
     /// -----------------------------------------------------------------------
 
     function testFactorySetupCorrectly() public {
-        assertEq(address(onitSafeFactory.compatibilityFallbackHandler()), address(handler));
-        assertEq(onitSafeFactory.safeSingletonAddress(), address(onitSingleton));
+        assertEq(address(onitAccountFactory.compatibilityFallbackHandler()), address(handler));
+        assertEq(onitAccountFactory.onitAccountSingletonAddress(), address(onitSingleton));
     }
 
     /// -----------------------------------------------------------------------
     /// Create account tests
     /// -----------------------------------------------------------------------
 
-    function testCreateOnitSafe() public {
-        onitAccountAddress = payable(onitSafeFactory.createAccount(publicKeyBase[0], publicKeyBase[1], 0));
-        onitAccount = OnitSafe(onitAccountAddress);
+    function testCreateOnitAccount() public {
+        onitAccountAddress = payable(onitAccountFactory.createAccount(publicKeyBase[0], publicKeyBase[1], 0));
+        onitAccount = OnitAccount(onitAccountAddress);
 
         // Check Safe values
         assertEq(onitAccount.getOwners()[0], address(0xdead));
@@ -50,9 +50,9 @@ contract OnitSafeFactoryTestBase is OnitSafeTestCommon {
 
     function testGetAddressMatchesDeployedAddress() public {
         bytes32 salt = keccak256(abi.encodePacked(publicKeyBase[0], publicKeyBase[1], uint256(0)));
-        address predictedAddress = onitSafeFactory.getAddress(salt);
+        address predictedAddress = onitAccountFactory.getAddress(salt);
 
-        onitAccountAddress = payable(onitSafeFactory.createAccount(publicKeyBase[0], publicKeyBase[1], 0));
+        onitAccountAddress = payable(onitAccountFactory.createAccount(publicKeyBase[0], publicKeyBase[1], 0));
         assertEq(predictedAddress, onitAccountAddress);
     }
 

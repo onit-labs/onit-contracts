@@ -15,13 +15,16 @@ pragma solidity ^0.8.4;
 /// @author Coinbase (https://github.com/coinbase/smart-wallet)
 /// @author Solady (https://github.com/vectorized/solady/blob/main/src/accounts/ERC1271.sol)
 abstract contract ERC1271 {
+    /// @dev `keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")`.
+    bytes32 internal constant _DOMAIN_TYPEHASH = 0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f;
+
     /// @dev Precomputed `typeHash` used to produce EIP-712 compliant hash when applying the anti
     ///      cross-account-replay layer.
     ///
     ///      The original hash must either be:
     ///         - An EIP-191 hash: keccak256("\x19Ethereum Signed Message:\n" || len(someMessage) || someMessage)
     ///         - An EIP-712 hash: keccak256("\x19\x01" || someDomainSeparator || hashStruct(someStruct))
-    bytes32 private constant _MESSAGE_TYPEHASH = keccak256("CoinbaseSmartWalletMessage(bytes32 hash)");
+    bytes32 private constant _MESSAGE_TYPEHASH = keccak256("OnitAccountMessage(bytes32 hash)");
 
     /// @dev EIP-1271 return value: bytes4(keccak256("isValidSignature(bytes32,bytes)")
     bytes4 internal constant UPDATED_EIP1271_MAGIC_VALUE = 0x1626ba7e;
@@ -80,7 +83,7 @@ abstract contract ERC1271 {
     ///      keccak256(
     ///         \x19\x01 ||
     ///         this.domainSeparator ||
-    ///         hashStruct(CoinbaseSmartWalletMessage({ hash: `hash`}))
+    ///         hashStruct(OnitAccountMessage({ hash: `hash`}))
     ///      )
     ///
     /// @param hash The original hash.
@@ -101,33 +104,29 @@ abstract contract ERC1271 {
         (string memory name, string memory version) = _domainNameAndVersion();
         return keccak256(
             abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256(bytes(name)),
-                keccak256(bytes(version)),
-                block.chainid,
-                address(this)
+                _DOMAIN_TYPEHASH, keccak256(bytes(name)), keccak256(bytes(version)), block.chainid, address(this)
             )
         );
     }
 
-    /// @notice Returns the EIP-712 typed hash of the `CoinbaseSmartWalletMessage(bytes32 hash)` data structure.
+    /// @notice Returns the EIP-712 typed hash of the `OnitAccountMessage(bytes32 hash)` data structure.
     ///
     /// @dev Implements encode(domainSeparator : 𝔹²⁵⁶, message : 𝕊) = "\x19\x01" || domainSeparator || hashStruct(message).
     /// @dev See https://eips.ethereum.org/EIPS/eip-712#specification.
     ///
-    /// @param hash The `CoinbaseSmartWalletMessage.hash` field to hash.
+    /// @param hash The `OnitAccountMessage.hash` field to hash.
     ////
     /// @return The resulting EIP-712 hash.
     function _eip712Hash(bytes32 hash) internal view virtual returns (bytes32) {
         return keccak256(abi.encodePacked("\x19\x01", eip712DomainSeparator(), _hashStruct(hash)));
     }
 
-    /// @notice Returns the EIP-712 `hashStruct` result of the `CoinbaseSmartWalletMessage(bytes32 hash)` data structure.
+    /// @notice Returns the EIP-712 `hashStruct` result of the `OnitAccountMessage(bytes32 hash)` data structure.
     ///
     /// @dev Implements hashStruct(s : 𝕊) = keccak256(typeHash || encodeData(s)).
     /// @dev See https://eips.ethereum.org/EIPS/eip-712#definition-of-hashstruct.
     ///
-    /// @param hash The `CoinbaseSmartWalletMessage.hash` field.
+    /// @param hash The `OnitAccountMessage.hash` field.
     ///
     /// @return The EIP-712 `hashStruct` result.
     function _hashStruct(bytes32 hash) internal view virtual returns (bytes32) {

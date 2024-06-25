@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.15;
 
-import {OnitSafeTestCommon, Enum, PackedUserOperation, OnitSafe} from "../OnitSafe.common.t.sol";
+import {OnitAccountTestCommon, Enum, PackedUserOperation, OnitAccount} from "../OnitAccount.common.t.sol";
 
 import {WebAuthnUtils, WebAuthnInfo} from "../../src/utils/WebAuthnUtils.sol";
 import {WebAuthn} from "../../lib/webauthn-sol/src/WebAuthn.sol";
@@ -13,7 +13,7 @@ import {OnitSafeModuleFactory} from "../../src/onit-safe-module/OnitSafeModuleFa
 /**
  * @notice Some variables and functions used to test the Onit Safe Module
  */
-contract OnitSafeModuleFactoryTestBase is OnitSafeTestCommon {
+contract OnitSafeModuleFactoryTestBase is OnitAccountTestCommon {
     /// -----------------------------------------------------------------------
     /// Setup
     /// -----------------------------------------------------------------------
