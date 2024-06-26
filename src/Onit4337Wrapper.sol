@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.23;
 
-import {IEntryPoint, PackedUserOperation} from "../lib/account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import {UUPSUpgradeable} from "../lib/webauthn-sol/lib/solady/src/utils/UUPSUpgradeable.sol";
+import {IEntryPoint, PackedUserOperation} from "account-abstraction/interfaces/IEntryPoint.sol";
 
 /**
  * TODO
@@ -15,7 +15,8 @@ import {UUPSUpgradeable} from "../lib/webauthn-sol/lib/solady/src/utils/UUPSUpgr
  * @author Onit Labs (https://onit.fun)
  * @author Modified from https://github.com/vectorized/solady/main/src/accounts/ERC4337.sol
  * @author Infinitism https://github.com/eth-infinitism/account-abstraction/develop/contracts/samples/SimpleAccount.sol
- * @dev An adaptation of the v0.7.0 ERC4337 Base Account. Intended to be inherited and constructed into an account elsewhere
+ * @dev An adaptation of the v0.7.0 ERC4337 Base Account. Intended to be inherited and constructed into an account
+ * elsewhere
  * @custom:warning This contract has not been audited, and is likely to change.
  */
 abstract contract Onit4337Wrapper is UUPSUpgradeable {

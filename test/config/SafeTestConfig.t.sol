@@ -2,19 +2,19 @@
 pragma solidity ^0.8.13;
 
 // Safe imports
-import {Safe, Enum} from "../../lib/safe-smart-account/contracts/Safe.sol";
-import {MultiSend} from "../../lib/safe-smart-account/contracts/libraries/MultiSend.sol";
+import {Enum, Safe} from "@safe/Safe.sol";
+import {MultiSend} from "@safe/libraries/MultiSend.sol";
 
-import {AddModulesLib} from "../../src/libraries/AddModulesLib.sol";
+import {AddModulesLib} from "@libraries/AddModulesLib.sol";
 
 /// @dev Take care that version of Safe in SafeTestTools .gitmodule matches ours
 import {
-    SafeTestTools,
     CompatibilityFallbackHandler,
-    SafeProxyFactory,
-    SignMessageLib,
+    Enum as EnumTestTools,
     SafeInstance,
-    Enum as EnumTestTools
+    SafeProxyFactory,
+    SafeTestTools,
+    SignMessageLib
 } from "../../lib/safe-tools/src/SafeTestTools.sol";
 
 // General setup helper for all safe contracts

@@ -3,8 +3,8 @@ pragma solidity ^0.8.13;
 
 /* solhint-disable no-console */
 
-import {Test} from "../../lib/forge-std/src/Test.sol";
-import {Strings} from "../../lib/webauthn-sol/lib/openzeppelin-contracts/contracts/utils/Strings.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {Test} from "forge-std/Test.sol";
 
 /**
  * @notice - This contract runs the signatureHelper.ts script

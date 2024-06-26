@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <=0.8.23;
 
-import {StdCheats} from "../../lib/forge-std/src/StdCheats.sol";
+import {StdCheats} from "forge-std/StdCheats.sol";
 
 /**
  * @title AddressTestConfig

@@ -111,7 +111,8 @@ abstract contract ERC1271 {
 
     /// @notice Returns the EIP-712 typed hash of the `OnitAccountMessage(bytes32 hash)` data structure.
     ///
-    /// @dev Implements encode(domainSeparator : 𝔹²⁵⁶, message : 𝕊) = "\x19\x01" || domainSeparator || hashStruct(message).
+    /// @dev Implements encode(domainSeparator : 𝔹²⁵⁶, message : 𝕊) = "\x19\x01" || domainSeparator ||
+    /// hashStruct(message).
     /// @dev See https://eips.ethereum.org/EIPS/eip-712#specification.
     ///
     /// @param hash The `OnitAccountMessage.hash` field to hash.

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.15;
 
-import {OnitAccountTestCommon, OnitAccount, OnitAccountProxyFactory} from "../OnitAccount.common.t.sol";
+import {OnitAccount, OnitAccountProxyFactory, OnitAccountTestCommon} from "../OnitAccount.common.t.sol";
 
-import {WebAuthnUtils, WebAuthnInfo} from "../../src/utils/WebAuthnUtils.sol";
-import {WebAuthn} from "../../lib/webauthn-sol/src/WebAuthn.sol";
 import {Base64} from "../../lib/webauthn-sol/lib/openzeppelin-contracts/contracts/utils/Base64.sol";
+import {WebAuthn} from "../../lib/webauthn-sol/src/WebAuthn.sol";
+import {WebAuthnInfo, WebAuthnUtils} from "../../src/utils/WebAuthnUtils.sol";
 
 /**
  * @notice Some variables and functions used to test the Onit Safe

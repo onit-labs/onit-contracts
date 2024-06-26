@@ -2,15 +2,15 @@
 pragma solidity ^0.8.15;
 
 import {
-    OnitAccountTestCommon,
-    Safe,
     Enum,
-    PackedUserOperation,
+    EnumTestTools,
+    Onit4337Wrapper,
     OnitAccount,
     OnitAccountProxyFactory,
-    Onit4337Wrapper,
+    OnitAccountTestCommon,
+    PackedUserOperation,
+    Safe,
     SafeInstance,
-    EnumTestTools,
     console
 } from "../OnitAccount.common.t.sol";
 
@@ -343,11 +343,13 @@ contract OnitAccountTestBase is OnitAccountTestCommon {
     //     assertEq(onitAccount.signedMessages(messageHash), 0);
 
     //     // Create a userop to set the signed message on the onit safe
-    //     bytes memory signMessageCalldata = abi.encodeWithSelector(signMessageLib.signMessage.selector, transferCalldata);
+    //     bytes memory signMessageCalldata = abi.encodeWithSelector(signMessageLib.signMessage.selector,
+    // transferCalldata);
     //     bytes memory executeSignMessageCalldata = abi.encodeWithSelector(
     //         Onit4337Wrapper.delegateExecute.selector, address(signMessageLib), signMessageCalldata
     //     );
-    //     PackedUserOperation memory userOp = buildUserOp(onitAccountAddress, 0, new bytes(0), executeSignMessageCalldata);
+    //     PackedUserOperation memory userOp = buildUserOp(onitAccountAddress, 0, new bytes(0),
+    // executeSignMessageCalldata);
 
     //     // Sign the userop with the passkey onit safe & format signature into webauthn format
     //     userOp = webauthnSignUserOperation(userOp, passkeyPrivateKey);

@@ -2,12 +2,13 @@
 pragma solidity ^0.8.15;
 
 // 4337 imports
-import {EntryPoint} from "../../lib/account-abstraction/contracts/core/EntryPoint.sol";
-import {UserOperationLib} from "../../lib/account-abstraction/contracts/core/UserOperationLib.sol";
-import {PackedUserOperation} from "../../lib/account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {EntryPoint} from "account-abstraction/core/EntryPoint.sol";
+import {UserOperationLib} from "account-abstraction/core/UserOperationLib.sol";
+import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 
 // Test imports
-import {Test, console} from "../../lib/forge-std/src/Test.sol";
+import {Test, console} from "forge-std/Test.sol";
+
 // TODO update sig helper to use built in signp256
 //import {SignatureHelper} from "./SignatureHelper.t.sol";
 
@@ -127,7 +128,8 @@ contract ERC4337TestConfig is Test {
 
     //     // If signer2 is not empty, get signature for it
     //     if (bytes(signer2).length > 0) {
-    //         sig2 = signMessageForPublicKey(signer2, Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(userOp))));
+    //         sig2 = signMessageForPublicKey(signer2,
+    // Base64.encode(abi.encodePacked(entryPoint.getUserOpHash(userOp))));
     //         signerCount = 2;
     //     } else {
     //         signerCount = 1;

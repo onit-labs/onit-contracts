@@ -89,7 +89,8 @@ contract OnitAccountProxyFactory {
     }
 
     /// @dev Returns the deterministic address of the account created via `createAccount`.
-    /// @param salt The salt used to create the account: `keccak256(abi.encodePacked(passkeyPublicKeyX, passkeyPublicKeyY, _salt))` where _salt is some uint256
+    /// @param salt The salt used to create the account: `keccak256(abi.encodePacked(passkeyPublicKeyX,
+    /// passkeyPublicKeyY, _salt))` where _salt is some uint256
     /// @return address The deterministic address of the account
     function getAddress(bytes32 salt) public view virtual returns (address) {
         return LibClone.predictDeterministicAddressERC1967(onitAccountSingletonAddress, salt, address(this));

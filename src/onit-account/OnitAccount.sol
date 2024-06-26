@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.23;
 
-import {Safe} from "../../lib/safe-smart-account/contracts/Safe.sol";
-import {WebAuthn} from "../../lib/webauthn-sol/src/WebAuthn.sol";
+import {Safe} from "@safe/Safe.sol";
+import {WebAuthn} from "@webauthn-sol/WebAuthn.sol";
 
 import {Onit4337Wrapper, PackedUserOperation} from "../Onit4337Wrapper.sol";
-import {ERC1271} from "../utils/ERC1271.sol";
+import {ERC1271} from "@utils/ERC1271.sol";
 
 /**
  * @notice ERC4337 Safe Account with passkey signer
