@@ -9,3 +9,7 @@
 	path = lib/webauthn-sol
 	url = https://github.com/base-org/webauthn-sol
 	branch = v1.0.0
+[submodule "lib/onit-smart-wallet"]
+	path = lib/onit-smart-wallet
+	url = https://github.com/onit-labs/smart-wallet
+	branch = onit-smart-wallet
