@@ -28,3 +28,4 @@ openzeppelin-contracts/=lib/webauthn-sol/lib/openzeppelin-contracts/
 @webauthn-sol/=lib/webauthn-sol/src/
 @oz/=node_modules/@openzeppelin/
 @utils/=src/utils/
+@solady-0.0.210=dependencies/solady-0.0.210

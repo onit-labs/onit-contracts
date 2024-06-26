@@ -1,18 +1,16 @@
-node_modules
 .env
 coverage
 coverage.json
 
-#Foundry files
+# Packages
+node_modules
+dependencies
+
+# Foundry files
 out
 forge-cache
 
-#Deployment folder
+# Deployment folder
 deployments/
 broadcast/
 local.json
-
-#oz-defender files
-dist/
-
-
