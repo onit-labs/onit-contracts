@@ -11,8 +11,6 @@
 		"@typechain/ethers-v5": "^7.2.0",
 		"@types/node": "^18.14.2",
 		"crypto": "^1.0.1",
-		"defender-autotask-client": "^1.39.0",
-		"defender-relay-client": "^1.39.0",
 		"dotenv": "^10.0.0",
 		"elliptic": "^6.5.4",
 		"eslint-plugin-prettier": "^4.0.0",
@@ -23,9 +21,7 @@
 		"solhint": "^3.3.6",
 		"solidity-coverage": "^0.7.17",
 		"ts-loader": "^9.4.2",
-		"typechain": "^5.2.0",
-		"webpack": "^5.75.0",
-		"webpack-cli": "^4.9.2"
+		"typechain": "^5.2.0"
 	},
 	"dependencies": {
 		"@openzeppelin/contracts": "^4.5.0",
