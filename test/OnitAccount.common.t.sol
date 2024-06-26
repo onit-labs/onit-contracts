@@ -8,19 +8,15 @@ import "./config/SafeTestConfig.t.sol";
 import "forge-std/console.sol";
 
 // Webauthn imports for handling passkey signatures
-import {WebAuthnUtils, WebAuthnInfo} from "../src/utils/WebAuthnUtils.sol";
-import {WebAuthn} from "../lib/webauthn-sol/src/WebAuthn.sol";
 import {Base64} from "../lib/webauthn-sol/lib/openzeppelin-contracts/contracts/utils/Base64.sol";
+import {WebAuthn} from "../lib/webauthn-sol/src/WebAuthn.sol";
+import {WebAuthnInfo, WebAuthnUtils} from "../src/utils/WebAuthnUtils.sol";
 
 import {Onit4337Wrapper} from "../src/Onit4337Wrapper.sol";
 
 // Onit Safe imports
 import {OnitAccount} from "../src/onit-account/OnitAccount.sol";
 import {OnitAccountProxyFactory} from "../src/onit-account/OnitAccountFactory.sol";
-
-// Onit Safe Module imports
-import {OnitSafeModule} from "../src/onit-safe-module/OnitSafeModule.sol";
-import {OnitSafeModuleFactory} from "../src/onit-safe-module/OnitSafeModuleFactory.sol";
 
 /**
  * @notice Some variables and functions used in most tests of the Onit Safe
@@ -35,14 +31,6 @@ contract OnitAccountTestCommon is AddressTestConfig, ERC4337TestConfig, SafeTest
     // The Onit account factory
     OnitAccountProxyFactory internal onitAccountFactory;
     address internal onitAccountFactoryAddress;
-
-    // The Onit safe module - WIP!
-    OnitSafeModule internal onitSafeModule;
-    address internal onitSafeModuleAddress;
-
-    // The Onit safe module factory - WIP!
-    OnitSafeModuleFactory internal onitSafeModuleFactory;
-    address internal onitSafeModuleFactoryAddress;
 
     // Some calldata for transactions
     bytes internal basicTransferCalldata;
