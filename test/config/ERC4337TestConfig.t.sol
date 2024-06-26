@@ -7,12 +7,9 @@ import {UserOperationLib} from "account-abstraction/core/UserOperationLib.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 
 // Test imports
-import {Test, console} from "forge-std/Test.sol";
+import {AddressTestConfig} from "./AddressTestConfig.t.sol";
 
-// TODO update sig helper to use built in signp256
-//import {SignatureHelper} from "./SignatureHelper.t.sol";
-
-contract ERC4337TestConfig is Test {
+contract ERC4337TestConfig is AddressTestConfig {
     using UserOperationLib for PackedUserOperation;
 
     // Entry point

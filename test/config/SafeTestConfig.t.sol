@@ -1,21 +1,20 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-// Safe imports
-import {Enum, Safe} from "@safe/Safe.sol";
-import {MultiSend} from "@safe/libraries/MultiSend.sol";
-
 import {AddModulesLib} from "@libraries/AddModulesLib.sol";
 
 /// @dev Take care that version of Safe in SafeTestTools .gitmodule matches ours
 import {
     CompatibilityFallbackHandler,
-    Enum as EnumTestTools,
+    Enum,
+    Safe,
     SafeInstance,
     SafeProxyFactory,
     SafeTestTools,
     SignMessageLib
-} from "../../lib/safe-tools/src/SafeTestTools.sol";
+} from "safe-tools/SafeTestTools.sol";
+
+import {MultiSend} from "safe-contracts/libraries/MultiSend.sol";
 
 // General setup helper for all safe contracts
 contract SafeTestConfig is SafeTestTools {

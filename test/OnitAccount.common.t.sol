@@ -2,10 +2,8 @@
 pragma solidity ^0.8.15;
 
 // Test config imports
-import "./config/AddressTestConfig.t.sol";
 import "./config/ERC4337TestConfig.t.sol";
 import "./config/SafeTestConfig.t.sol";
-import "forge-std/console.sol";
 
 // Webauthn imports for handling passkey signatures
 import {Base64} from "../lib/webauthn-sol/lib/openzeppelin-contracts/contracts/utils/Base64.sol";
@@ -21,7 +19,7 @@ import {OnitAccountProxyFactory} from "../src/onit-account/OnitAccountFactory.so
 /**
  * @notice Some variables and functions used in most tests of the Onit Safe
  */
-contract OnitAccountTestCommon is AddressTestConfig, ERC4337TestConfig, SafeTestConfig {
+contract OnitAccountTestCommon is ERC4337TestConfig, SafeTestConfig {
     OnitAccount internal onitSingleton;
 
     // The Onit account is a Safe controlled by an ERC4337 module with passkey signer

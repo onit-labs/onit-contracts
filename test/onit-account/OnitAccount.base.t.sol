@@ -3,15 +3,13 @@ pragma solidity ^0.8.15;
 
 import {
     Enum,
-    EnumTestTools,
     Onit4337Wrapper,
     OnitAccount,
     OnitAccountProxyFactory,
     OnitAccountTestCommon,
     PackedUserOperation,
     Safe,
-    SafeInstance,
-    console
+    SafeInstance
 } from "../OnitAccount.common.t.sol";
 
 import {UUPSUpgradeable} from "../../lib/webauthn-sol/lib/solady/src/utils/UUPSUpgradeable.sol";

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <=0.8.23;
 
-import {StdCheats} from "forge-std/StdCheats.sol";
+import {Test} from "forge-std-1.8.2/Test.sol";
 
 /**
  * @title AddressTestConfig
  * @notice Create some commonly used addresses and private keys for testing
  */
-abstract contract AddressTestConfig is StdCheats {
+abstract contract AddressTestConfig is Test {
     // Used to create addresses for users beyond first 5
     bytes32 internal nextUser = keccak256(abi.encodePacked("user address"));
 
