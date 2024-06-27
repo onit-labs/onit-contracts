@@ -13,7 +13,7 @@ import {OnitSmartWallet} from "../lib/onit-smart-wallet/src/OnitSmartWallet.sol"
 import {OnitSmartWalletFactory} from "../lib/onit-smart-wallet/src/OnitSmartWalletFactory.sol";
 
 /**
- * @notice Some variables and functions used in most tests of the Onit Safe
+ * @notice Some variables and functions used in most tests of the Onit Account
  */
 contract OnitSmartWalletTestCommon is ERC4337TestConfig {
     OnitSmartWallet internal onitSingleton;
