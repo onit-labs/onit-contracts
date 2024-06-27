@@ -15,7 +15,7 @@ import {OnitSmartWalletFactory} from "../lib/onit-smart-wallet/src/OnitSmartWall
 /**
  * @notice Some variables and functions used in most tests of the Onit Safe
  */
-contract OnitAccountTestCommon is ERC4337TestConfig {
+contract OnitSmartWalletTestCommon is ERC4337TestConfig {
     OnitSmartWallet internal onitSingleton;
 
     // The Onit account is a fork of the Base Smart Wallet

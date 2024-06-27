@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.15;
 
-import {OnitAccountTestCommon, OnitSmartWallet, OnitSmartWalletFactory} from "../OnitAccount.common.t.sol";
+import {OnitSmartWallet, OnitSmartWalletFactory, OnitSmartWalletTestCommon} from "../OnitSmartWallet.common.t.sol";
 
 /**
  * @notice Some variables and functions used to test the Onit Account
  * @dev More in depth tests of the Onit Smart Wallet can be found in the Onit Smart Wallet repo
  *      https://github.com/onit-labs/smart-wallet
  */
-contract OnitAccountTestBase is OnitAccountTestCommon {
+contract OnitAccountTestBase is OnitSmartWalletTestCommon {
     /// -----------------------------------------------------------------------
     /// Setup
     /// -----------------------------------------------------------------------
