@@ -13,9 +13,10 @@ contract ERC4337TestConfig is AddressTestConfig {
     using UserOperationLib for PackedUserOperation;
 
     // Entry point
-    EntryPoint public entryPoint;
+    //EntryPoint public entryPointV6;
+    address internal constant ENTRY_POINT_V6 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
+    EntryPoint public entryPointV7;
     address internal constant ENTRY_POINT_V7 = 0x0000000071727De22E5E9d8BAf0edAc6f37da032;
-    address internal entryPointAddress = ENTRY_POINT_V7;
 
     uint192 internal constant BASE_NONCE_KEY = 0;
     uint256 internal constant INITIAL_BALANCE = 100 ether;
@@ -28,9 +29,8 @@ contract ERC4337TestConfig is AddressTestConfig {
     uint128 internal constant MAX_PRIORITY_FEE_PER_GAS = 1_000_000_000;
 
     constructor() {
-        entryPoint = new EntryPoint();
-        vm.etch(entryPointAddress, address(entryPoint).code);
-        entryPoint = EntryPoint(payable(entryPointAddress));
+        vm.etch(ENTRY_POINT_V7, address(new EntryPoint()).code);
+        entryPointV7 = EntryPoint(payable(ENTRY_POINT_V7));
     }
 
     // -----------------------------------------------------------------------
