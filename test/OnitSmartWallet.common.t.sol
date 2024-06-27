@@ -44,11 +44,11 @@ contract OnitSmartWalletTestCommon is ERC4337TestConfig {
     // /// -----------------------------------------------------------------------
 
     function webauthnSignUserOperation(
-        PackedUserOperation memory userOp,
+        UserOperation memory userOp,
         uint256 privateKey
-    ) internal returns (PackedUserOperation memory) {
+    ) internal returns (UserOperation memory) {
         // Get the webauthn struct which will be verified by the module
-        bytes32 challenge = entryPointV7.getUserOpHash(userOp);
+        bytes32 challenge = entryPointV6.getUserOpHash(userOp);
 
         // Sign the challenge with the private key
         bytes memory pksig = webauthnSignHash(challenge, privateKey);

@@ -24,7 +24,7 @@ contract OnitAccountTestBase is OnitSmartWalletTestCommon {
 
     function testOnitSingletonDeployedCorrectly() public {
         assertEq(address(onitSingleton.entryPoint()), ENTRY_POINT_V6);
-        assertEq(entryPointV7.getNonce(address(onitSingleton), 0), 0);
+        assertEq(entryPointV6.getNonce(address(onitSingleton), 0), 0);
         assertEq(onitSingleton.isOwnerAddress(address(0)), true);
         assertEq(onitSingleton.nextOwnerIndex(), 1);
     }

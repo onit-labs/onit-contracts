@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.15;
 
-import {PackedUserOperation} from "../config/ERC4337TestConfig.t.sol";
 import {
     CompatibilityFallbackHandler,
     Enum,
@@ -14,6 +13,7 @@ import {
     SignMessageLib
 } from "../config/SafeTestConfig.t.sol";
 import {OnitAccountTestBase, OnitSmartWallet, OnitSmartWalletFactory} from "./OnitAccount.base.t.sol";
+import {UserOperation} from "account-abstraction/interfaces/IAccount.sol";
 
 contract OnitAccountAsSafeSignerTest is OnitAccountTestBase, SafeTestConfig {
     /// -----------------------------------------------------------------------
@@ -80,11 +80,15 @@ contract OnitAccountAsSafeSignerTest is OnitAccountTestBase, SafeTestConfig {
     }
 
     function testSignAsOwnerOnASafeViaEntrypoint() public {
+        // Create a test onit account to sign the safe tx
         bytes[] memory accountOwners = new bytes[](1);
         accountOwners[0] = abi.encodePacked(publicKeyBase[0], publicKeyBase[1]);
-
         OnitSmartWallet testAccount = OnitSmartWallet(onitAccountFactory.createAccount(accountOwners, 1));
         address testAccountAddress = address(testAccount);
+
+        // Give test account some funds and set deposit on entrypoint for later call
+        vm.deal(testAccountAddress, 1 ether);
+        entryPointV6.depositTo{value: 0.1 ether}(testAccountAddress);
 
         // Setup a test safe where the onit account is an owner
         address[] memory owners = new address[](2);
@@ -123,8 +127,10 @@ contract OnitAccountAsSafeSignerTest is OnitAccountTestBase, SafeTestConfig {
             passkeyPrivateKey
         );
 
-        // format the sig into [r, s, v, signature] format (used for contract sigs on safe)
-        bytes memory formattedSafeSig = abi.encode(address(uint160(owners[1])), uint256(128), uint8(0), sig);
+        bytes memory wrappedSig = abi.encode(0, sig);
+
+        // Format the sig into [r, s, v, signature] format (used for contract sigs on safe)
+        bytes memory formattedSafeSig = abi.encode(address(uint160(owners[1])), uint256(128), uint8(0), wrappedSig);
 
         // Create the calldata the entrypoint will execute for the passkey account
         bytes memory executeTxCalldata = abi.encodeWithSelector(
@@ -147,15 +153,18 @@ contract OnitAccountAsSafeSignerTest is OnitAccountTestBase, SafeTestConfig {
         );
 
         // Create the user operation for the passkey account
-        PackedUserOperation memory userOp = buildUserOp(testAccountAddress, 0, new bytes(0), executeTxCalldata);
+        UserOperation memory userOp = buildUserOp(testAccountAddress, 0, new bytes(0), executeTxCalldata);
 
         // Sign the user operation and format signature into webauthn format to verify
         userOp = webauthnSignUserOperation(userOp, passkeyPrivateKey);
 
+        // Wrap the userop sig for the onit wallet to execute the userop
+        userOp.signature = abi.encode(0, userOp.signature);
+
         // Execute the call from the Onit account via the entrypoint
-        PackedUserOperation[] memory userOps = new PackedUserOperation[](1);
+        UserOperation[] memory userOps = new UserOperation[](1);
         userOps[0] = userOp;
-        entryPointV7.handleOps(userOps, payable(alice));
+        entryPointV6.handleOps(userOps, payable(alice));
 
         assertEq(address(testSafe).balance, 0.9 ether);
         assertEq(bob.balance, 100.1 ether);

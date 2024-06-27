@@ -2,21 +2,23 @@
 pragma solidity ^0.8.15;
 
 // 4337 imports
-import {EntryPoint} from "account-abstraction/core/EntryPoint.sol";
-import {UserOperationLib} from "account-abstraction/core/UserOperationLib.sol";
-import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
+import {IAccount, UserOperation} from "account-abstraction/interfaces/IAccount.sol";
+import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
+//import {UserOperationLib} from "account-abstraction/core/UserOperationLib.sol";
+// import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 
 // Test imports
 import {AddressTestConfig} from "./AddressTestConfig.t.sol";
+import {Erc4337EntrypointV6} from "./Erc4337EntrypointV6.sol";
 
 contract ERC4337TestConfig is AddressTestConfig {
-    using UserOperationLib for PackedUserOperation;
+    //using UserOperationLib for PackedUserOperation;
 
     // Entry point
-    //EntryPoint public entryPointV6;
     address internal constant ENTRY_POINT_V6 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
-    EntryPoint public entryPointV7;
-    address internal constant ENTRY_POINT_V7 = 0x0000000071727De22E5E9d8BAf0edAc6f37da032;
+    IEntryPoint public entryPointV6 = IEntryPoint(ENTRY_POINT_V6);
+    //EntryPoint public entryPointV7;
+    //address internal constant ENTRY_POINT_V7 = 0x0000000071727De22E5E9d8BAf0edAc6f37da032;
 
     uint192 internal constant BASE_NONCE_KEY = 0;
     uint256 internal constant INITIAL_BALANCE = 100 ether;
@@ -29,22 +31,35 @@ contract ERC4337TestConfig is AddressTestConfig {
     uint128 internal constant MAX_PRIORITY_FEE_PER_GAS = 1_000_000_000;
 
     constructor() {
-        vm.etch(ENTRY_POINT_V7, address(new EntryPoint()).code);
-        entryPointV7 = EntryPoint(payable(ENTRY_POINT_V7));
+        vm.etch(ENTRY_POINT_V6, Erc4337EntrypointV6.ENTRY_POINT_BYTES);
     }
 
     // -----------------------------------------------------------------------
     // 4337 Helper Functions
     // -----------------------------------------------------------------------
 
-    PackedUserOperation public userOpBase = PackedUserOperation({
+    // PackedUserOperation public userOpBase = PackedUserOperation({
+    //     sender: address(0),
+    //     nonce: 0,
+    //     initCode: new bytes(0),
+    //     callData: new bytes(0),
+    //     accountGasLimits: bytes32(0),
+    //     preVerificationGas: PRE_VERIFICATION_GAS,
+    //     gasFees: bytes32(0),
+    //     paymasterAndData: new bytes(0),
+    //     signature: new bytes(0)
+    // });
+
+    UserOperation public userOpBase = UserOperation({
         sender: address(0),
         nonce: 0,
         initCode: new bytes(0),
         callData: new bytes(0),
-        accountGasLimits: bytes32(0),
+        callGasLimit: 0,
+        verificationGasLimit: 0,
         preVerificationGas: PRE_VERIFICATION_GAS,
-        gasFees: bytes32(0),
+        maxFeePerGas: MAX_FEE_PER_GAS,
+        maxPriorityFeePerGas: MAX_PRIORITY_FEE_PER_GAS,
         paymasterAndData: new bytes(0),
         signature: new bytes(0)
     });
@@ -72,7 +87,7 @@ contract ERC4337TestConfig is AddressTestConfig {
         uint256 nonce,
         bytes memory initCode,
         bytes memory callData
-    ) public view returns (PackedUserOperation memory userOp) {
+    ) public view returns (UserOperation memory userOp) {
         // Build on top of base op
         userOp = userOpBase;
 
@@ -81,8 +96,28 @@ contract ERC4337TestConfig is AddressTestConfig {
         userOp.nonce = nonce;
         userOp.initCode = initCode;
         userOp.callData = callData;
-        userOp.accountGasLimits = packHigh128(VERIFICATION_GAS_LIMIT) | packLow128(CALL_GAS_LIMIT);
+        userOp.callGasLimit = CALL_GAS_LIMIT;
+        userOp.verificationGasLimit = VERIFICATION_GAS_LIMIT;
+        userOp.maxFeePerGas = MAX_FEE_PER_GAS;
+        userOp.maxPriorityFeePerGas = MAX_PRIORITY_FEE_PER_GAS;
     }
+
+    // function buildUserOpV7(
+    //     address sender,
+    //     uint256 nonce,
+    //     bytes memory initCode,
+    //     bytes memory callData
+    // ) public view returns (PackedUserOperation memory userOp) {
+    //     // Build on top of base op
+    //     userOp = userOpBase;
+
+    //     // Add sender and calldata to op
+    //     userOp.sender = sender;
+    //     userOp.nonce = nonce;
+    //     userOp.initCode = initCode;
+    //     userOp.callData = callData;
+    //     userOp.accountGasLimits = packHigh128(VERIFICATION_GAS_LIMIT) | packLow128(CALL_GAS_LIMIT);
+    // }
 
     // // Build payload which the entryPoint will call on the sender 4337 account
     // function buildExecutionPayload(
