@@ -1,6 +1,6 @@
 # Onit Contracts
 
-Onit accounts are [ERC4337](https://eips.ethereum.org/EIPS/eip-4337) accounts built on top of [Safe](https://safe.global/wallet) contracts. 
+Onit accounts are a fork of the [Base Smart Wallet](https://github.com/coinbase/smart-wallet). They are deigned to easily onboard new users with passkeys, and have been modified to allow the account to easily work as an owner on a Safe. 
 
 ## Highlights
 
@@ -27,8 +27,8 @@ Onit groups will be extendedable with additional functionality, such as Fundrais
 
 | Contract              |                                                            Address                                                            | Description                                     |
 | :-------------------- | :---------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------- |
- Onit Account         | [0xf43a5dB4f70A14bbDdaC363bE8a1Cd2278bEc922](https://sepolia.basescan.org/address/0xf43a5db4f70a14bbddac363be8a1cd2278bec922#code) | ERC4337 enabled Safe with P-256 passkey owner   |
-| Onit Account Factory | [0xEcCF89c619DaDf187fd3C5CeFf4C1106DaF8d109](https://sepolia.basescan.org/address/0xEcCF89c619DaDf187fd3C5CeFf4C1106DaF8d109#code) | Factory for Onit Accounts                      |
+ Onit Account         | tbd (local testing) | Smart wallet with EOA or passkey owners   |
+| Onit Account Factory | tbd (local testing) | Factory for Onit Accounts                      |
 
 <br>
 <br>
