@@ -19,7 +19,8 @@ pragma solidity ^0.8.3;
 /**
  * @title Utils
  * @notice Common utility methods used by modules.
- * @author Modified from Argent (https://github.com/argentlabs/argent-contracts/blob/develop/contracts/modules/common/Utils.sol)
+ * @author Modified from Argent
+ * (https://github.com/argentlabs/argent-contracts/blob/develop/contracts/modules/common/Utils.sol)
  */
 library Utils {
     /**
@@ -28,11 +29,11 @@ library Utils {
      * @param _signatures The concatenated signatures.
      * @param _index The index of the signature to recover.
      */
-    function recoverSigner(bytes32 _signedHash, bytes memory _signatures, uint256 _index)
-        internal
-        pure
-        returns (address)
-    {
+    function recoverSigner(
+        bytes32 _signedHash,
+        bytes memory _signatures,
+        uint256 _index
+    ) internal pure returns (address) {
         uint8 v;
         bytes32 r;
         bytes32 s;

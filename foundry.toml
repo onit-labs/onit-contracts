@@ -19,12 +19,17 @@ optimize = true
 optimizer_runs = 40000
 via_ir = true
 
+# https://github.com/mario-eth/soldeer/blob/main/README.md
+[dependencies]
+solady = { version = "0.0.210" }
+forge-std = { version = "1.8.2" }
 
 [fmt]
 line_length = 120
 multiline_func_header = "params_first"
 number_underscore = "thousands"
-# handle sorting of imports
+sort_imports = true
+wrap_comments = true
 
 [rpc_endpoints]
 base = "${BASE_RPC_URL}"

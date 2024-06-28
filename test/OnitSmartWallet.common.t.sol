@@ -2,47 +2,29 @@
 pragma solidity ^0.8.15;
 
 // Test config imports
-import "./config/AddressTestConfig.t.sol";
 import "./config/ERC4337TestConfig.t.sol";
-import "./config/SafeTestConfig.t.sol";
-import "forge-std/console.sol";
 
 // Webauthn imports for handling passkey signatures
-import {WebAuthnUtils, WebAuthnInfo} from "../src/utils/WebAuthnUtils.sol";
-import {WebAuthn} from "../lib/webauthn-sol/src/WebAuthn.sol";
 import {Base64} from "../lib/webauthn-sol/lib/openzeppelin-contracts/contracts/utils/Base64.sol";
+import {WebAuthn} from "../lib/webauthn-sol/src/WebAuthn.sol";
+import {WebAuthnInfo, WebAuthnUtils} from "../src/utils/WebAuthnUtils.sol";
 
-import {Onit4337Wrapper} from "../src/Onit4337Wrapper.sol";
-
-// Onit Safe imports
-import {OnitAccount} from "../src/onit-account/OnitAccount.sol";
-import {OnitAccountProxyFactory} from "../src/onit-account/OnitAccountFactory.sol";
-
-// Onit Safe Module imports
-import {OnitSafeModule} from "../src/onit-safe-module/OnitSafeModule.sol";
-import {OnitSafeModuleFactory} from "../src/onit-safe-module/OnitSafeModuleFactory.sol";
+import {OnitSmartWallet} from "../lib/onit-smart-wallet/src/OnitSmartWallet.sol";
+import {OnitSmartWalletFactory} from "../lib/onit-smart-wallet/src/OnitSmartWalletFactory.sol";
 
 /**
- * @notice Some variables and functions used in most tests of the Onit Safe
+ * @notice Some variables and functions used in most tests of the Onit Account
  */
-contract OnitAccountTestCommon is AddressTestConfig, ERC4337TestConfig, SafeTestConfig {
-    OnitAccount internal onitSingleton;
+contract OnitSmartWalletTestCommon is ERC4337TestConfig {
+    OnitSmartWallet internal onitSingleton;
 
-    // The Onit account is a Safe controlled by an ERC4337 module with passkey signer
-    OnitAccount internal onitAccount;
+    // The Onit account is a fork of the Base Smart Wallet
+    OnitSmartWallet internal onitAccount;
     address payable internal onitAccountAddress;
 
     // The Onit account factory
-    OnitAccountProxyFactory internal onitAccountFactory;
+    OnitSmartWalletFactory internal onitAccountFactory;
     address internal onitAccountFactoryAddress;
-
-    // The Onit safe module - WIP!
-    OnitSafeModule internal onitSafeModule;
-    address internal onitSafeModuleAddress;
-
-    // The Onit safe module factory - WIP!
-    OnitSafeModuleFactory internal onitSafeModuleFactory;
-    address internal onitSafeModuleFactoryAddress;
 
     // Some calldata for transactions
     bytes internal basicTransferCalldata;
@@ -62,11 +44,11 @@ contract OnitAccountTestCommon is AddressTestConfig, ERC4337TestConfig, SafeTest
     // /// -----------------------------------------------------------------------
 
     function webauthnSignUserOperation(
-        PackedUserOperation memory userOp,
+        UserOperation memory userOp,
         uint256 privateKey
-    ) internal returns (PackedUserOperation memory) {
+    ) internal returns (UserOperation memory) {
         // Get the webauthn struct which will be verified by the module
-        bytes32 challenge = entryPoint.getUserOpHash(userOp);
+        bytes32 challenge = entryPointV6.getUserOpHash(userOp);
 
         // Sign the challenge with the private key
         bytes memory pksig = webauthnSignHash(challenge, privateKey);
