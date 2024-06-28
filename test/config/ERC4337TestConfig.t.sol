@@ -4,16 +4,12 @@ pragma solidity ^0.8.15;
 // 4337 imports
 import {IAccount, UserOperation} from "account-abstraction/interfaces/IAccount.sol";
 import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
-//import {UserOperationLib} from "account-abstraction/core/UserOperationLib.sol";
-// import {PackedUserOperation} from "account-abstraction/interfaces/PackedUserOperation.sol";
 
 // Test imports
 import {AddressTestConfig} from "./AddressTestConfig.t.sol";
 import {Erc4337EntrypointV6} from "./Erc4337EntrypointV6.sol";
 
 contract ERC4337TestConfig is AddressTestConfig {
-    //using UserOperationLib for PackedUserOperation;
-
     // Entry point
     address internal constant ENTRY_POINT_V6 = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
     IEntryPoint public entryPointV6 = IEntryPoint(ENTRY_POINT_V6);

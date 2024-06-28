@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {AddModulesLib} from "@libraries/AddModulesLib.sol";
-
 /// @dev Take care that version of Safe in SafeTestTools .gitmodule matches ours
 import {
     CompatibilityFallbackHandler,
@@ -20,7 +18,6 @@ import {MultiSend} from "safe-contracts/libraries/MultiSend.sol";
 contract SafeTestConfig is SafeTestTools {
     MultiSend internal multisend;
     SignMessageLib internal signMessageLib;
-    AddModulesLib internal addModulesLib;
 
     // Used to store the address of the safe created in tests
     address internal safeAddress;
@@ -32,7 +29,6 @@ contract SafeTestConfig is SafeTestTools {
     constructor() {
         multisend = new MultiSend();
         signMessageLib = new SignMessageLib();
-        addModulesLib = new AddModulesLib();
     }
 
     /// -----------------------------------------------------------------------
