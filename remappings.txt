@@ -12,3 +12,5 @@ ds-test/=lib/safe-tools/lib/forge-std/lib/ds-test/src/
 forge-std/=lib/safe-tools/lib/forge-std/src/
 webauthn-sol/=lib/webauthn-sol/src/
 @solady-0.0.210=dependencies/solady-0.0.210
+solady/=lib/onit-smart-wallet/lib/solady/src/
+@forge-std-1.8.2=dependencies/forge-std-1.8.2
