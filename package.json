@@ -1,8 +1,8 @@
 {
-	"name": "contracts",
-	"version": "0.2.0",
+	"name": "onit-contracts",
+	"version": "0.0.3",
 	"description": "Smart contracts and tests for Onit accounts",
-	"repository": "https://github.com/forumdaos/contracts",
+	"repository": "https://github.com/onit-labs/onit-contracts",
 	"author": "Onit Labs Ltd",
 	"license": "GPL-3.0-or-later",
 	"private": true,

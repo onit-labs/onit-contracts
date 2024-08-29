@@ -27,8 +27,8 @@ Onit groups will be extendedable with additional functionality, such as Fundrais
 
 | Contract              |                                                            Address                                                            | Description                                     |
 | :-------------------- | :---------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------- |
- Onit Account         | [0xe324DA4192aA61684717C2F8C994Ee0C34B15B72](https://sepolia.basescan.org/address/0xe324da4192aa61684717c2f8c994ee0c34b15b72#code) | Smart wallet with EOA or passkey owners   |
-| Onit Account Factory | [0x8472B610aDEabC68ebb27069EE18d88dF7254B2B](https://sepolia.basescan.org/address/0x8472b610adeabc68ebb27069ee18d88df7254b2b#code) | Factory for Onit Accounts                      |
+ Onit Account         | [0x448ae6DAD7D745b0f714de0Ee1e2D8E9d81F59f1](https://sepolia.basescan.org/address/0x448ae6DAD7D745b0f714de0Ee1e2D8E9d81F59f1#code) | Smart wallet with EOA or passkey owners   |
+| Onit Account Factory | [0x50D9EB4Cf5Edf13ECd2F033030b04cF3F9Fe1351](https://sepolia.basescan.org/address/0x50D9EB4Cf5Edf13ECd2F033030b04cF3F9Fe1351#code) | Factory for Onit Accounts                      |
 
 <br>
 <br>
