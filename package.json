@@ -33,6 +33,7 @@
 		"test:prod": "FOUNDRY_PROFILE=prod forge build; pnpm run test",
 		"test:match": "sh -c 'forge test --match-test=$1 -vvvv$2' --",
 		"gas": "pnpm test -- --gas-report",
-		"deploy": "sh -c 'forge script script/deploy/$1.s.sol:$1 --rpc-url $(grep $2\"_RPC_URL\" .env | cut -d \"=\" -f2) --chain-id $(grep $2\"_CHAIN_ID\" .env | cut -d \"=\" -f2)  --private-key $(grep $2\"_PRIVATE_KEY\" .env | cut -d \"=\" -f2) --etherscan-api-key  $(grep $2\"_EXPLORER_API_KEY\" .env | cut -d \"=\" -f2) $(if [ \"$3\" = \"b\" ]; then echo \"--verify --broadcast --legacy\"; fi)' --"
+		"deploy": "sh -c 'forge script script/deploy/$1.s.sol:$1 --rpc-url $(grep $2\"_RPC_URL\" .env | cut -d \"=\" -f2) --chain-id $(grep $2\"_CHAIN_ID\" .env | cut -d \"=\" -f2)  --private-key $(grep $2\"_PRIVATE_KEY\" .env | cut -d \"=\" -f2) --etherscan-api-key  $(grep $2\"_EXPLORER_API_KEY\" .env | cut -d \"=\" -f2) $(if [ \"$3\" = \"b\" ]; then echo \"--verify --broadcast --legacy\"; fi)' --",
+		"deploy:prod":"FOUNDRY_PROFILE=prod forge build; pnpm run deploy $1 $2"
 	}
 }
